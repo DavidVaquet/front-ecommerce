@@ -48,3 +48,31 @@ export const addProduct = async ({nombre, descripcion, precio, imagen_url, subca
         throw new Error(error.message || 'Error al subir un producto.')
     }
 };
+
+
+export const getProducts = async () => {
+
+    try {
+         const token = localStorage.getItem('token');
+    
+         if (!token) {
+            throw new Error('El token es obligatorio.')
+         };
+
+         const response = await fetch(`${API_URL}/getProducts`, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`}
+         });
+
+         const data = await response.json();
+
+         if (!response.ok) {
+            throw new Error(data.msg)
+         };
+
+         return data;
+    } catch (error) {
+        console.error(error);
+        throw new Error(error.message);
+    }
+}

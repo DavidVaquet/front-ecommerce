@@ -1,5 +1,7 @@
 "use client"
-
+import { clientesActivoServices } from "../../../services/clienteServices";
+import { registrarVentaService } from "../../../services/ventasServices";
+import { getProducts } from "../../../services/productServices";
 import { useState, useEffect } from "react"
 import {
   Button,
@@ -39,79 +41,7 @@ import {
   Zap,
   BarChart3,
 } from "lucide-react"
-import { clientesActivoServices } from "../../../services/clienteServices"
 
-// Datos de ejemplo expandidos
-const PRODUCTOS_DISPONIBLES = [
-  {
-    id: 1,
-    nombre: "Zapatillas deportivas premium",
-    precio: 89.99,
-    stock: 45,
-    categoria: "Calzado",
-    imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-    popular: true,
-    descuento: 10,
-  },
-  {
-    id: 2,
-    nombre: "Camiseta de algodón orgánico",
-    precio: 24.99,
-    stock: 120,
-    categoria: "Ropa",
-    imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-    popular: false,
-    descuento: 0,
-  },
-  {
-    id: 3,
-    nombre: "Reloj inteligente Serie 5",
-    precio: 199.99,
-    stock: 18,
-    categoria: "Electrónica",
-    imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-    popular: true,
-    descuento: 15,
-  },
-  {
-    id: 4,
-    nombre: "Auriculares inalámbricos",
-    precio: 129.99,
-    stock: 25,
-    categoria: "Electrónica",
-    imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-    popular: true,
-    descuento: 5,
-  },
-  {
-    id: 5,
-    nombre: "Mochila resistente al agua",
-    precio: 59.99,
-    stock: 35,
-    categoria: "Accesorios",
-    imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-    popular: false,
-    descuento: 0,
-  },
-  {
-    id: 6,
-    nombre: "Botella térmica 500ml",
-    precio: 19.99,
-    stock: 8,
-    categoria: "Hogar",
-    imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-    popular: false,
-    descuento: 0,
-  },
-]
-
-const CLIENTES = [
-  { id: 1, nombre: "Juan Pérez", email: "juan@email.com", telefono: "+1234567890", vip: true },
-  { id: 2, nombre: "María García", email: "maria@email.com", telefono: "+1234567891", vip: false },
-  { id: 3, nombre: "Carlos López", email: "carlos@email.com", telefono: "+1234567892", vip: true },
-  { id: 4, nombre: "Ana Martínez", email: "ana@email.com", telefono: "+1234567893", vip: false },
-  { id: 5, nombre: "Cliente General", email: "", telefono: "", vip: false },
-]
 
 export const RegistrarVenta = () => {
   const [productosVenta, setProductosVenta] = useState([]);
@@ -119,25 +49,42 @@ export const RegistrarVenta = () => {
   const [clienteSeleccionado, setClienteSeleccionado] = useState("");
   const [metodoPago, setMetodoPago] = useState("");
   const [descuentoGeneral, setDescuentoGeneral] = useState(0);
-  const [impuesto, setImpuesto] = useState(16) // IVA 16%
+  const [impuesto, setImpuesto] = useState(21) // IVA 21%
   const [activeTab, setActiveTab] = useState("todos");
   const [mostrarAlerta, setMostrarAlerta] = useState(false);
   const [tipoAlerta, setTipoAlerta] = useState("success");
   const [mensajeAlerta, setMensajeAlerta] = useState("");
   const [clientes, setClientes] = useState([]);
+  const [productos, setProductos] = useState([]);
+  const [canal, setCanal] = useState('local');
 
   useEffect(() => {
     const fetchClientes = async () => {
       try {
         const clientesActivos = await clientesActivoServices();
         setClientes(clientesActivos);
+        console.log("Clientes cargados:", clientesActivos);
       } catch (error) {
         console.error(error);
       }
     }
     fetchClientes();
   
+  }, []);
+
+  useEffect(() => {
+    const fetchProductos = async () => {
+      try {
+        const response = await getProducts();
+        console.log(response.products);
+        setProductos(response.products);
+      } catch (error) {
+        console.error(error)
+      }
+    }
+    fetchProductos()
   }, [])
+  
   
 
   // Estadísticas del día
@@ -151,14 +98,14 @@ export const RegistrarVenta = () => {
     const productoExistente = productosVenta.find((p) => p.id === producto.id)
 
     if (productoExistente) {
-      if (productoExistente.cantidad < producto.stock) {
-        setProductosVenta(productosVenta.map((p) => (p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p)))
+      if (productoExistente.cantidadSeleccionada < producto.cantidad) {
+        setProductosVenta(productosVenta.map((p) => (p.id === producto.id ? { ...p, cantidadSeleccionada: p.cantidadSeleccionada + 1 } : p)))
         mostrarNotificacion("success", "Cantidad actualizada")
       } else {
         mostrarNotificacion("error", "Stock insuficiente")
       }
     } else {
-      setProductosVenta([...productosVenta, { ...producto, cantidad: 1 }])
+      setProductosVenta([...productosVenta, { ...producto, cantidadSeleccionada: 1 }])
       mostrarNotificacion("success", `${producto.nombre} agregado a la venta`)
     }
     setBusquedaProducto("")
@@ -170,13 +117,13 @@ export const RegistrarVenta = () => {
       return
     }
 
-    const producto = PRODUCTOS_DISPONIBLES.find((p) => p.id === id)
-    if (nuevaCantidad > producto.stock) {
+    const producto = productos.find((p) => p.id === id)
+    if (nuevaCantidad > producto.cantidad) {
       mostrarNotificacion("error", "Stock insuficiente")
       return
     }
 
-    setProductosVenta(productosVenta.map((p) => (p.id === id ? { ...p, cantidad: nuevaCantidad } : p)))
+    setProductosVenta(productosVenta.map((p) => (p.id === id ? { ...p, cantidadSeleccionada: nuevaCantidad } : p)))
   }
 
   const eliminarProducto = (id) => {
@@ -193,8 +140,9 @@ export const RegistrarVenta = () => {
 
   const calcularSubtotal = () => {
     return productosVenta.reduce((total, producto) => {
-      const precioConDescuento = producto.precio * (1 - producto.descuento / 100)
-      return total + precioConDescuento * producto.cantidad
+      const descuento = producto.descuento || 0;
+      const precioConDescuento = producto.precio * (1 - descuento / 100)
+      return total + precioConDescuento * producto.cantidadSeleccionada
     }, 0)
   }
 
@@ -211,21 +159,22 @@ export const RegistrarVenta = () => {
     return calcularSubtotal() - calcularDescuentoGeneral() + calcularImpuestos()
   }
 
-  const productosFiltrados = PRODUCTOS_DISPONIBLES.filter((producto) => {
+  const productosFiltrados = productos.filter((producto) => {
     const coincideBusqueda = producto.nombre.toLowerCase().includes(busquedaProducto.toLowerCase())
-    const tieneStock = producto.stock > 0
+    const tieneStock = producto.cantidad > 0
 
     if (activeTab === "todos") return coincideBusqueda && tieneStock
     if (activeTab === "populares") return coincideBusqueda && tieneStock && producto.popular
     if (activeTab === "ofertas") return coincideBusqueda && tieneStock && producto.descuento > 0
-    if (activeTab === "bajo-stock") return coincideBusqueda && tieneStock && producto.stock <= 10
+    if (activeTab === "bajo-stock") return coincideBusqueda && tieneStock && producto.cantidad <= 10
 
-    return coincideBusqueda && tieneStock && producto.categoria.toLowerCase() === activeTab
+    return coincideBusqueda && tieneStock && producto.categoria_nombre.toLowerCase() === activeTab
   })
 
   const clienteActual = clientes.find((cli) => cli.id.toString() === clienteSeleccionado);
 
-  const procesarVenta = () => {
+  const handleCreateVenta = async() => {
+
     if (productosVenta.length === 0) {
       mostrarNotificacion("error", "Agrega productos a la venta")
       return
@@ -239,14 +188,38 @@ export const RegistrarVenta = () => {
       return
     }
 
-    mostrarNotificacion("success", "¡Venta procesada exitosamente!")
-    // Aquí iría la lógica para procesar la venta
-    setTimeout(() => {
-      setProductosVenta([])
-      setClienteSeleccionado("")
-      setMetodoPago("")
-      setDescuentoGeneral(0)
-    }, 2000)
+    try {
+      
+      await registrarVentaService({
+        canal,
+        medio_pago: metodoPago,
+        cliente_id: Number(clienteSeleccionado),
+        productos: productosVenta.map((p) => ({
+          producto_id: p.id,
+          cantidad: p.cantidadSeleccionada,
+          precio: Number(p.precio),
+          descuento: Number(p.descuento || 0)
+        })),
+        total: calcularTotal()
+      })
+      mostrarNotificacion("success", "¡Venta procesada exitosamente!")
+      setTimeout(() => {
+        setProductosVenta([])
+        setClienteSeleccionado("")
+        setMetodoPago("")
+        setDescuentoGeneral(0)
+      }, 2000)
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  const limpiarVenta = () => {
+        setProductosVenta([])
+        setClienteSeleccionado("")
+        setMetodoPago("")
+        setDescuentoGeneral(0)
+        setImpuesto(0)
   }
 
   // Atajos de teclado
@@ -256,7 +229,7 @@ export const RegistrarVenta = () => {
         switch (e.key) {
           case "Enter":
             e.preventDefault()
-            procesarVenta()
+            handleCreateVenta()
             break
           case "Escape":
             e.preventDefault()
@@ -289,7 +262,7 @@ export const RegistrarVenta = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Registrar Nueva Venta</h1>
+            <h1 className="text-3xl font-bold tracking-tight uppercase">Registrar Nueva Venta</h1>
             <p className="text-gray-600 mt-1">
               Agrega productos, selecciona cliente y procesa la venta de forma rápida.
             </p>
@@ -313,7 +286,7 @@ export const RegistrarVenta = () => {
               color="deep-orange"
               className="flex items-center gap-2 normal-case shadow-md"
               size="lg"
-              onClick={procesarVenta}
+              onClick={handleCreateVenta}
             >
               <Calculator className="h-5 w-5" />
               Procesar Venta
@@ -450,9 +423,9 @@ export const RegistrarVenta = () => {
                       label="Seleccionar cliente"
                       value={clienteSeleccionado?.toString() || ""}
                       onChange={(value) =>  {
-                      console.log("Cliente seleccionado:", value);
-                      setClienteSeleccionado(value.toString())}}
-                  >
+                        console.log("Cliente seleccionado:", value);
+                        setClienteSeleccionado(value.toString())}}
+                        >
                     {clientes.map((cli) => (
                       <Option key={cli.id} value={cli.id.toString()}>
                         <div className="flex items-center gap-2">
@@ -523,13 +496,13 @@ export const RegistrarVenta = () => {
                   <Tab value="populares">
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4" />
-                      Populares
+                      Ofertas
                     </div>
                   </Tab>
                   <Tab value="ofertas">
                     <div className="flex items-center gap-1">
                       <Tag className="h-4 w-4" />
-                      Ofertas
+                      Inactivos
                     </div>
                   </Tab>
                   <Tab value="bajo-stock">
@@ -548,24 +521,28 @@ export const RegistrarVenta = () => {
                   value={busquedaProducto}
                   onChange={(e) => setBusquedaProducto(e.target.value)}
                   className="!border-gray-300"
-                />
+                  />
 
                 {/* Dropdown de productos mejorado */}
                 {busquedaProducto && productosFiltrados.length > 0 && (
                   <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-10 mt-1 max-h-80 overflow-y-auto">
-                    {productosFiltrados.slice(0, 8).map((producto) => (
-                      <div
+                    {productosFiltrados.slice(0, 8).map((producto) => {
+                      const ruta = producto.imagen_url ? producto.imagen_url.replace(/\\/g, '/') : 'uploads/default.jpg';
+                      const imagenPrincipal = `http://localhost:5002/${ruta}`;
+                      
+                      return (
+                        <div
                         key={producto.id}
                         onClick={() => agregarProducto(producto)}
                         className="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
-                      >
+                        >
                         <Avatar
-                          src={producto.imagen}
+                          src={imagenPrincipal}
                           alt={producto.nombre}
                           size="md"
                           variant="rounded"
                           className="border border-gray-200"
-                        />
+                          />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Typography variant="small" color="blue-gray" className="font-medium">
@@ -576,17 +553,17 @@ export const RegistrarVenta = () => {
                           </div>
                           <div className="flex items-center gap-4">
                             <Typography variant="small" color="gray">
-                              Stock: {producto.stock}
+                              Stock: {producto.cantidad}
                             </Typography>
                             <Typography variant="small" color="blue-gray" className="font-medium">
-                              ${producto.precio.toFixed(2)}
+                              ${Number(producto.precio).toFixed(2)}
                             </Typography>
-                            <Chip size="sm" value={producto.categoria} color="blue-gray" />
+                            <Chip size="sm" value={producto.categoria_nombre} color="blue-gray" />
                           </div>
                         </div>
                         <PlusCircle className="h-5 w-5 text-deep-orange-500" />
                       </div>
-                    ))}
+                      )})}
                   </div>
                 )}
               </div>
@@ -597,8 +574,8 @@ export const RegistrarVenta = () => {
           <Card className="shadow-sm border border-gray-200">
             <CardBody className="p-6">
               <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5" />
-                Productos en la Venta ({productosVenta.length})
+                <ShoppingCart className="h-5 w-5 mb-1" />
+                Productos en el carrito ({productosVenta.length})
               </Typography>
 
               {productosVenta.length === 0 ? (
@@ -615,22 +592,25 @@ export const RegistrarVenta = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {productosVenta.map((producto, index) => (
-                    <div
+                  {productosVenta.map((producto, index) => {
+                    const ruta = producto.imagen_url ? producto.imagen_url.replace(/\\/g, '/') : 'uploads/default.jpg';
+                    const imagenPrincipal = `http://localhost:5002/${ruta}`;
+                    return (
+                      <div
                       key={producto.id}
                       className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
-                    >
+                      >
                       <div className="flex items-center gap-1">
                         <Typography variant="small" color="gray" className="w-6">
                           {index + 1}.
                         </Typography>
                         <Avatar
-                          src={producto.imagen}
+                          src={imagenPrincipal}
                           alt={producto.nombre}
                           size="lg"
                           variant="rounded"
                           className="border border-gray-200"
-                        />
+                          />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -642,7 +622,7 @@ export const RegistrarVenta = () => {
                         </div>
                         <div className="flex items-center gap-4">
                           <Typography variant="small" color="gray">
-                            ${producto.precio.toFixed(2)} c/u
+                            ${Number(producto.precio).toFixed(2)} c/u
                           </Typography>
                           {producto.descuento > 0 && (
                             <Typography variant="small" color="green" className="font-medium">
@@ -656,26 +636,26 @@ export const RegistrarVenta = () => {
                           <IconButton
                             variant="outlined"
                             size="sm"
-                            onClick={() => actualizarCantidad(producto.id, producto.cantidad - 1)}
+                            onClick={() => actualizarCantidad(producto.id, producto.cantidadSeleccionada - 1)}
                             className="rounded-full"
-                          >
+                            >
                             <span className="text-lg">-</span>
                           </IconButton>
                           <Typography variant="small" color="blue-gray" className="w-8 text-center font-medium">
-                            {producto.cantidad}
+                            {producto.cantidadSeleccionada}
                           </Typography>
                           <IconButton
                             variant="outlined"
                             size="sm"
-                            onClick={() => actualizarCantidad(producto.id, producto.cantidad + 1)}
-                            disabled={producto.cantidad >= producto.stock}
+                            onClick={() => actualizarCantidad(producto.id, producto.cantidadSeleccionada + 1)}
+                            // disabled={producto.cantidad >= producto.stock}
                             className="rounded-full"
-                          >
+                            >
                             <span className="text-lg">+</span>
                           </IconButton>
                         </div>
                         <Typography variant="small" color="blue-gray" className="font-bold w-24 text-right">
-                          ${(producto.precio * (1 - producto.descuento / 100) * producto.cantidad).toFixed(2)}
+                          ${producto.precio}
                         </Typography>
                         <IconButton
                           variant="text"
@@ -683,12 +663,12 @@ export const RegistrarVenta = () => {
                           size="sm"
                           onClick={() => eliminarProducto(producto.id)}
                           className="rounded-full"
-                        >
+                          >
                           <Trash2 className="h-4 w-4" />
                         </IconButton>
                       </div>
                     </div>
-                  ))}
+                    )})}
                 </div>
               )}
             </CardBody>
@@ -732,7 +712,7 @@ export const RegistrarVenta = () => {
                     }
                     className="!border-gray-300"
                     icon={<Tag className="h-4 w-4" />}
-                  />
+                    />
                 </div>
 
                 <div>
@@ -751,7 +731,7 @@ export const RegistrarVenta = () => {
                     onChange={(e) => setImpuesto(Math.max(0, Math.min(100, Number.parseFloat(e.target.value) || 0)))}
                     className="!border-gray-300"
                     size="sm"
-                  />
+                    />
                 </div>
 
                 <hr className="border-gray-200" />
@@ -784,27 +764,19 @@ export const RegistrarVenta = () => {
                     color="deep-orange"
                     className="w-full flex items-center justify-center gap-2"
                     disabled={productosVenta.length === 0}
-                    onClick={procesarVenta}
+                    onClick={handleCreateVenta}
                     size="lg"
-                  >
+                    >
                     <Calculator className="h-5 w-5" />
                     Procesar Venta
                   </Button>
-                  <Button variant="outlined" color="blue-gray" className="w-full">
-                    <Receipt className="h-4 w-4 mr-2" />
-                    Guardar Borrador
-                  </Button>
                   <Button
-                    variant="text"
-                    color="red"
-                    className="w-full"
-                    onClick={() => {
-                      setProductosVenta([])
-                      mostrarNotificacion("success", "Venta limpiada")
-                    }}
-                    disabled={productosVenta.length === 0}
+                  variant="outlined"
+                  color="blue-gray"
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={limpiarVenta}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-4 w-4" />
                     Limpiar Venta
                   </Button>
                 </div>

@@ -164,7 +164,7 @@ const handleFileChange = (e) => {
 
   }
 
-  const handleNewSubcategory = async (e) => {
+  const handleNewSubcategory = async(e) => {
     e.preventDefault();
     if (!nombreSubcategoria.trim()) {
     toast.error('El nombre de la categoría es obligatorio.');
