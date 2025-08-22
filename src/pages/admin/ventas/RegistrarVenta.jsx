@@ -1,5 +1,5 @@
 "use client"
-import { clientesActivoServices } from "../../../services/clienteServices";
+import { clientesEstado } from "../../../services/clienteServices";
 import { registrarVentaService } from "../../../services/ventasServices";
 import { getProducts } from "../../../services/productServices";
 import { useState, useEffect } from "react"
@@ -41,6 +41,9 @@ import {
   Zap,
   BarChart3,
 } from "lucide-react"
+import { useProductos } from "../../../context/ProductsContext";
+import { useVentas } from "../../../context/VentasContext";
+import { useClientes } from "../../../context/ClientesContext";
 
 
 export const RegistrarVenta = () => {
@@ -49,7 +52,7 @@ export const RegistrarVenta = () => {
   const [clienteSeleccionado, setClienteSeleccionado] = useState("");
   const [metodoPago, setMetodoPago] = useState("");
   const [descuentoGeneral, setDescuentoGeneral] = useState(0);
-  const [impuesto, setImpuesto] = useState(21) // IVA 21%
+  const [impuesto, setImpuesto] = useState(0) 
   const [activeTab, setActiveTab] = useState("todos");
   const [mostrarAlerta, setMostrarAlerta] = useState(false);
   const [tipoAlerta, setTipoAlerta] = useState("success");
@@ -58,32 +61,36 @@ export const RegistrarVenta = () => {
   const [productos, setProductos] = useState([]);
   const [canal, setCanal] = useState('local');
 
+  // CONTEXT
+  const { recargarProductos, setRecargarProductos } = useProductos();
+  const { setVentasContext } = useVentas();
+  const { clientesContext } = useClientes();
+
   useEffect(() => {
     const fetchClientes = async () => {
       try {
-        const clientesActivos = await clientesActivoServices();
+        const clientesActivos = await clientesEstado({activo: true});
         setClientes(clientesActivos);
-        console.log("Clientes cargados:", clientesActivos);
       } catch (error) {
         console.error(error);
       }
     }
     fetchClientes();
   
-  }, []);
+  }, [clientesContext]);
 
   useEffect(() => {
     const fetchProductos = async () => {
       try {
         const response = await getProducts();
-        console.log(response.products);
+        // console.log(response.products);
         setProductos(response.products);
       } catch (error) {
         console.error(error)
       }
     }
     fetchProductos()
-  }, [])
+  }, [recargarProductos])
   
   
 
@@ -190,25 +197,35 @@ export const RegistrarVenta = () => {
 
     try {
       
-      await registrarVentaService({
+      const venta = await registrarVentaService({
         canal,
         medio_pago: metodoPago,
         cliente_id: Number(clienteSeleccionado),
         productos: productosVenta.map((p) => ({
-          producto_id: p.id,
+          product_id: p.id,
           cantidad: p.cantidadSeleccionada,
           precio: Number(p.precio),
           descuento: Number(p.descuento || 0)
         })),
-        total: calcularTotal()
+        total: Number(calcularTotal()),
+        subtotal: Number(calcularSubtotal()),
+        descuento: Number(calcularDescuentoGeneral()),
+        impuestos: Number(calcularImpuestos())
+
       })
-      mostrarNotificacion("success", "¡Venta procesada exitosamente!")
-      setTimeout(() => {
-        setProductosVenta([])
-        setClienteSeleccionado("")
-        setMetodoPago("")
-        setDescuentoGeneral(0)
-      }, 2000)
+
+      if (venta) {
+        setVentasContext((prev) => prev + 1);
+        setRecargarProductos((prev) => prev + 1);
+        mostrarNotificacion("success", "¡Venta procesada exitosamente!")
+        setTimeout(() => {
+          setProductosVenta([])
+          setClienteSeleccionado("")
+          setMetodoPago("")
+          setDescuentoGeneral(0)
+        }, 1000)
+
+      }
     } catch (error) {
       console.error(error);
     }

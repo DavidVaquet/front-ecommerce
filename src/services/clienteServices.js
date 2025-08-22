@@ -1,5 +1,7 @@
 const API_URL = `${import.meta.env.VITE_API_URL}/clientes`;
 
+export const toQueryBool = (v) => (v === undefined ? undefined : (v ? 'true' : 'false'));
+
 export const crearClienteServices = async (formData) => {
 
         try {
@@ -36,15 +38,20 @@ export const crearClienteServices = async (formData) => {
         }
      }
 
-export const clientesActivoServices = async () => {
+export const clientesEstado = async ({activo}) => {
 
     try {
+
+        const url = new URL(`${API_URL}/obtener-clientes`);
+        const qActivo = toQueryBool(activo);
+        if (qActivo !== undefined) url.searchParams.set('activo', qActivo); 
+
         const token = localStorage.getItem('token');
         if (!token) throw new Error('Vuelve a iniciar sesión, el token es obligatorio.')
         
-        const response = await fetch(`${API_URL}/obtener-clientes-activos`, {
+        const response = await fetch(`${url}`, {
             method: 'GET',
-            headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`}
+            headers: {'Accept': 'application/json', 'Authorization': `Bearer ${token}`}
         })
 
         const data = await response.json();
@@ -60,3 +67,89 @@ export const clientesActivoServices = async () => {
         throw new Error(error.message);
     }
 }
+
+
+export const clientesConCompras = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('El token es necesario, vuelve a iniciar sesión.');
+
+        const response = await fetch(`${API_URL}/obtener-clientes-compras`, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`}
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.msg || 'Error al obtener los clientes con compras realizadas.')
+        };
+
+        return data;
+    } catch (error) {
+        console.error(error);
+    }
+}
+export const bajaCliente = async ({ id, email, estado }) => {
+    
+    try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("El token es necesario, vuelve a iniciar sesión.");
+
+        const response = await fetch(`${API_URL}/suspender-cliente/${id}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email, estado }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+        throw new Error(data.msg || "Error al cambiar el estado del cliente.");
+        }
+
+        return data;
+    } catch (error) {
+        console.error("Error en bajaCliente:", error);
+    }
+};
+export const editarClienteService = async ({
+    nombre,
+    apellido, 
+    telefono, 
+    tipo_cliente, 
+    direccion, 
+    ciudad, 
+    pais, 
+    codigo_postal, 
+    notas,
+    es_vip,
+    provincia,
+    id}) => {
+    
+    try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("El token es necesario, vuelve a iniciar sesión.");
+
+        const response = await fetch(`${API_URL}/editar-cliente/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ nombre, apellido, telefono, tipo_cliente, direccion, ciudad, pais, codigo_postal, notas, es_vip, provincia }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+        throw new Error(data.msg || "Error al modificar el cliente.");
+        }
+
+        return data;
+    } catch (error) {
+        console.error("Error en editarClienteService:", error);
+    }
+};

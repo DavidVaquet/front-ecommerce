@@ -1,7 +1,6 @@
 import { addProduct } from "../services/productServices";
-import { addStockServices } from "../services/stockServices";
 
-export const addProductController = async ({ nombre, descripcion, precio, imagen_url, subcategoria_id, marca, estado, visible, imagenUrls, cantidad, toast, resetFields }) => {
+export const addProductController = async ({ nombre, cantidad_minima, cantidad, descripcion_corta, descripcion, precio, imagen_url, subcategoria_id, marca, estado, destacado, imagenUrls, toast, resetFields }) => {
   
   try {
     const { newProduct } = await addProduct({
@@ -12,15 +11,13 @@ export const addProductController = async ({ nombre, descripcion, precio, imagen
       subcategoria_id,
       marca,
       estado,
-      visible,
-      imagenUrls
+      destacado,
+      imagenUrls,
+      descripcion_corta,
+      cantidad_minima,
+      cantidad
     });
 
-    const { producto } = newProduct;
-      await addStockServices({
-      product_id: producto.id,
-      cantidad: parseInt(cantidad, 10)
-    });
     toast.success('Producto cargado correctamente.');
     if (typeof resetFields === 'function') resetFields();
     return { success: true };

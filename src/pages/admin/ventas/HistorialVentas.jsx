@@ -1,6 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react";
+import { obtenerVentasConDetallesService } from "../../../services/ventasServices";
+import { formatearPesos, formatearPesosRedondeo } from "../../../helpers/formatearPesos";
+import { mostrarImagen } from "../../../helpers/mostrarImagen";
+import { formatearFechaHora } from "../../../helpers/formatoFecha";
+import { useNotificacion } from "../../../hooks/useNotificacion";
 import {
   Button,
   Card,
@@ -18,6 +23,10 @@ import {
   MenuList,
   MenuItem,
   Progress,
+  Dialog,
+  DialogHeader,
+  DialogBody,
+  DialogFooter
 } from "@material-tailwind/react"
 import {
   Search,
@@ -37,145 +46,51 @@ import {
   MoreVertical,
   Clock,
   MapPin,
+  Mail,
   Smartphone,
+  Phone,
 } from "lucide-react"
+import { XMarkIcon } from "@heroicons/react/24/outline"
+import { useVentas } from "../../../context/VentasContext";
+import { descargarRecibo, enviarReciboServices, generarReciboServices } from "../../../services/reciboServices";
 
-// Datos de ejemplo de ventas
-const VENTAS = [
-  {
-    id: "VTA-2024-001",
-    fecha: "2024-01-15T14:30:00",
-    tipo: "local", // local o ecommerce
-    cliente: {
-      nombre: "Juan Pérez",
-      email: "juan@email.com",
-      telefono: "+52 123 456 7890",
-    },
-    productos: [
-      {
-        id: 1,
-        nombre: "Zapatillas deportivas premium",
-        precio: 89.99,
-        cantidad: 2,
-        imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-      },
-      {
-        id: 2,
-        nombre: "Camiseta de algodón orgánico",
-        precio: 24.99,
-        cantidad: 1,
-        imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-      },
-    ],
-    subtotal: 204.97,
-    descuento: 10.25,
-    impuestos: 31.15,
-    total: 225.87,
-    metodoPago: "Efectivo",
-    vendedor: "Ana García",
-    sucursal: "Sucursal Centro",
-  },
-  {
-    id: "ECM-2024-002",
-    fecha: "2024-01-15T10:15:00",
-    tipo: "ecommerce",
-    cliente: {
-      nombre: "María López",
-      email: "maria@email.com",
-      telefono: "+52 987 654 3210",
-    },
-    productos: [
-      {
-        id: 3,
-        nombre: "Reloj inteligente Serie 5",
-        precio: 199.99,
-        cantidad: 1,
-        imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-      },
-    ],
-    subtotal: 199.99,
-    descuento: 0,
-    impuestos: 32.0,
-    total: 231.99,
-    metodoPago: "Tarjeta de Crédito",
-    plataforma: "Tienda Online",
-    numeroOrden: "ORD-2024-002",
-  },
-  {
-    id: "VTA-2024-003",
-    fecha: "2024-01-14T16:45:00",
-    tipo: "local",
-    cliente: {
-      nombre: "Carlos Rodríguez",
-      email: "carlos@email.com",
-      telefono: "+52 555 123 4567",
-    },
-    productos: [
-      {
-        id: 4,
-        nombre: "Auriculares inalámbricos",
-        precio: 129.99,
-        cantidad: 1,
-        imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-      },
-      {
-        id: 5,
-        nombre: "Mochila resistente al agua",
-        precio: 59.99,
-        cantidad: 2,
-        imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-      },
-    ],
-    subtotal: 249.97,
-    descuento: 25.0,
-    impuestos: 36.0,
-    total: 260.97,
-    metodoPago: "Tarjeta de Débito",
-    vendedor: "Luis Martín",
-    sucursal: "Sucursal Norte",
-  },
-  {
-    id: "ECM-2024-004",
-    fecha: "2024-01-14T09:20:00",
-    tipo: "ecommerce",
-    cliente: {
-      nombre: "Ana Fernández",
-      email: "ana@email.com",
-      telefono: "+52 444 987 6543",
-    },
-    productos: [
-      {
-        id: 6,
-        nombre: "Botella térmica 500ml",
-        precio: 19.99,
-        cantidad: 3,
-        imagen: "https://v0.dev/placeholder.svg?height=200&width=200",
-      },
-    ],
-    subtotal: 59.97,
-    descuento: 5.99,
-    impuestos: 8.64,
-    total: 62.62,
-    metodoPago: "PayPal",
-    plataforma: "Marketplace",
-    numeroOrden: "MKT-2024-004",
-  },
-]
 
 export const HistorialVentas = () => {
   const [activeTab, setActiveTab] = useState("todas")
   const [busqueda, setBusqueda] = useState("")
   const [fechaInicio, setFechaInicio] = useState("")
-  const [fechaFin, setFechaFin] = useState("")
+  const [fechaFin, setFechaFin] = useState("");
+  const [ventas, setVentas] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
+
+  // CONTEXT
+  const { ventasContext } = useVentas();
+
+  useEffect(() => {
+    const fetchVentas = async () =>{
+      try {
+        const ventasDetalles = await obtenerVentasConDetallesService();
+        // console.log(ventasDetalles);
+        setVentas(ventasDetalles);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    fetchVentas();
+  }, [ventasContext])
+  
+  // NOTIFICACION
+  const { mostrarNotificacion, componenteAlerta } = useNotificacion();
 
   // Estadísticas
-  const totalVentas = VENTAS.length
-  const ventasLocal = VENTAS.filter((v) => v.tipo === "local").length
-  const ventasEcommerce = VENTAS.filter((v) => v.tipo === "ecommerce").length
+  const totalVentas = ventas.length
+  const ventasLocal = ventas.filter((v) => v.canal === "local").length
+  const ventasEcommerce = ventas.filter((v) => v.canal === "ecommerce").length
 
-  const totalIngresos = VENTAS.reduce((sum, venta) => sum + venta.total, 0)
-  const ingresosLocal = VENTAS.filter((v) => v.tipo === "local").reduce((sum, venta) => sum + venta.total, 0)
-  const ingresosEcommerce = VENTAS.filter((v) => v.tipo === "ecommerce").reduce((sum, venta) => sum + venta.total, 0)
+  const totalIngresos = ventas.reduce((sum, venta) => sum + Number(venta.total), 0)
+  const ingresosLocal = ventas.filter((v) => v.canal === "local").reduce((sum, venta) => sum + Number(venta.total), 0)
+  const ingresosEcommerce = ventas.filter((v) => v.canal === "ecommerce").reduce((sum, venta) => sum + Number(venta.total), 0)
 
   const promedioVenta = totalIngresos / totalVentas
 
@@ -189,19 +104,65 @@ export const HistorialVentas = () => {
     })
   }
 
-  const ventasFiltradas = VENTAS.filter((venta) => {
-    const coincideBusqueda =
-      venta.id.toLowerCase().includes(busqueda.toLowerCase()) ||
-      venta.cliente.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      venta.cliente.email.toLowerCase().includes(busqueda.toLowerCase())
+  const ventasFiltradas = ventas.filter((venta) => {
+  const coincideBusqueda =
+    (venta.codigo?.toLowerCase() || "").includes(busqueda.toLowerCase()) ||
+    venta.cliente.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+    venta.cliente.email.toLowerCase().includes(busqueda.toLowerCase()) ||
+    venta.usuario.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+    venta.productos?.some((prod) =>
+      prod.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    );
 
-    const coincideFecha =
-      (!fechaInicio || new Date(venta.fecha) >= new Date(fechaInicio)) &&
-      (!fechaFin || new Date(venta.fecha) <= new Date(fechaFin))
+  const fechaVenta = new Date(venta.fecha);
+  const desde = fechaInicio ? new Date(fechaInicio + "T00:00:00") : null;
+  const hasta = fechaFin ? new Date(fechaFin + "T23:59:59") : null;
 
-    if (activeTab === "todas") return coincideBusqueda && coincideFecha
-    return coincideBusqueda && coincideFecha && venta.tipo === activeTab
-  })
+  const coincideFecha =
+    (!desde || fechaVenta >= desde) &&
+    (!hasta || fechaVenta <= hasta);
+
+  if (activeTab === "todas") return coincideBusqueda && coincideFecha;
+  return coincideBusqueda && coincideFecha && venta.canal === activeTab;
+});
+  
+  const handleOpenModal = (venta) => {
+    setOpen(true);
+    setVentaSeleccionada(venta);
+  };
+  const handleCloseModal = () => {
+    setOpen(false);
+    setVentaSeleccionada(null);
+  }
+
+  const imprimirRecibo = async (venta) => {
+  const url = await generarReciboServices(venta);
+  const ventana = window.open(url, "_blank");
+
+  if (ventana) {
+    ventana.focus();
+    ventana.print();
+  } else {
+    console.warn("El navegador bloqueó la ventana emergente.");
+  }
+  };  
+
+  const handleDescargarRecibo = async (venta) => {
+  const nombreArchivo = `recibo-${venta.codigo}.pdf`;
+  await descargarRecibo(nombreArchivo);
+};
+
+  const enviarRecibo = async (venta) => {
+    try {
+      const reciboEnviado = await enviarReciboServices(venta);
+      if (reciboEnviado) {
+        mostrarNotificacion('success', 'Recibo envíado correctamente')
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
 
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
@@ -209,21 +170,21 @@ export const HistorialVentas = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Historial de Ventas</h1>
+            <h1 className="text-3xl font-bold tracking-tight uppercase">Historial de Ventas</h1>
             <p className="text-gray-600 mt-1">
-              Visualiza y analiza todas las ventas realizadas tanto en local como en e-commerce.
+              Visualiza y analiza todas las ventas realizadas tanto en el local como en la tienda e-commerce.
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outlined" color="blue-gray" className="flex items-center gap-2 normal-case">
+            <Button variant="outlined" size="md" color="blue-gray" className="flex items-center gap-2 uppercase">
               <Download className="h-5 w-5" />
               Exportar Reporte
             </Button>
             <Button
               variant="filled"
               color="deep-orange"
-              className="flex items-center gap-2 normal-case shadow-md"
-              size="lg"
+              className="flex items-center gap-2 uppercase shadow-md"
+              size="md"
             >
               <BarChart3 className="h-5 w-5" />
               Ver Analytics
@@ -268,7 +229,8 @@ export const HistorialVentas = () => {
                   Ingresos Totales
                 </Typography>
                 <Typography variant="h3" color="blue-gray" className="font-bold">
-                  ${totalIngresos.toFixed(2)}
+                  
+                  ${formatearPesosRedondeo(totalIngresos)}
                 </Typography>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center">
@@ -292,7 +254,7 @@ export const HistorialVentas = () => {
                   Ventas Local
                 </Typography>
                 <Typography variant="h3" color="blue-gray" className="font-bold">
-                  ${ingresosLocal.toFixed(2)}
+                  ${formatearPesosRedondeo(ingresosLocal)}
                 </Typography>
               </div>
               <div className="h-12 w-12 rounded-full bg-deep-orange-50 flex items-center justify-center">
@@ -315,7 +277,7 @@ export const HistorialVentas = () => {
                   Ventas E-commerce
                 </Typography>
                 <Typography variant="h3" color="blue-gray" className="font-bold">
-                  ${ingresosEcommerce.toFixed(2)}
+                  ${formatearPesosRedondeo(ingresosEcommerce)}
                 </Typography>
               </div>
               <div className="h-12 w-12 rounded-full bg-purple-50 flex items-center justify-center">
@@ -411,19 +373,19 @@ export const HistorialVentas = () => {
                             <div>
                               <div className="flex items-center gap-3 mb-2">
                                 <Typography variant="h6" color="blue-gray" className="font-bold">
-                                  {venta.id}
+                                  {venta.codigo}
                                 </Typography>
                                 <Chip
-                                  value={venta.tipo === "local" ? "Local" : "E-commerce"}
-                                  color={venta.tipo === "local" ? "deep-orange" : "purple"}
+                                  value={venta.canal === "local" ? "Local" : "E-commerce"}
+                                  color={venta.canal === "local" ? "deep-orange" : "purple"}
                                   size="sm"
                                   variant="ghost"
                                   className="rounded-full"
                                   icon={
-                                    venta.tipo === "local" ? (
-                                      <Store className="h-3 w-3" />
+                                    venta.canal === "local" ? (
+                                      <Store className="h-3 w-3 mt-[1px]" />
                                     ) : (
-                                      <Globe className="h-3 w-3" />
+                                      <Globe className="h-3 w-3 mt-[1px]" />
                                     )
                                   }
                                 />
@@ -435,30 +397,30 @@ export const HistorialVentas = () => {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <CreditCard className="h-4 w-4" />
-                                  <span>{venta.metodoPago}</span>
+                                  <span className="capitalize">{venta.medio_pago}</span>
                                 </div>
                               </div>
-                              {venta.tipo === "local" ? (
+                              {venta.canal === "local" ? (
                                 <div className="flex items-center gap-4 text-sm text-gray-600">
                                   <div className="flex items-center gap-1">
                                     <User className="h-4 w-4" />
-                                    <span>Vendedor: {venta.vendedor}</span>
+                                    <span>Vendedor: {venta.usuario.nombre}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <MapPin className="h-4 w-4" />
-                                    <span>{venta.sucursal}</span>
+                                    <span>Sucursal Illia</span>
                                   </div>
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-4 text-sm text-gray-600">
                                   <div className="flex items-center gap-1">
                                     <Smartphone className="h-4 w-4" />
-                                    <span>Plataforma: {venta.plataforma}</span>
+                                    <span>Plataforma: Tienda Ecommerce</span>
                                   </div>
-                                  {venta.numeroOrden && (
+                                  {venta.orden && (
                                     <div className="flex items-center gap-1">
                                       <Package className="h-4 w-4" />
-                                      <span>Orden: {venta.numeroOrden}</span>
+                                      <span>Orden: {venta.orden}</span>
                                     </div>
                                   )}
                                 </div>
@@ -479,7 +441,7 @@ export const HistorialVentas = () => {
                                   <Receipt className="h-4 w-4" />
                                   Imprimir recibo
                                 </MenuItem>
-                                <MenuItem className="flex items-center gap-2">
+                                <MenuItem className="flex items-center gap-2" onClick={() => handleDescargarRecibo(venta)}>
                                   <Download className="h-4 w-4" />
                                   Descargar PDF
                                 </MenuItem>
@@ -527,7 +489,7 @@ export const HistorialVentas = () => {
                                   className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg"
                                 >
                                   <Avatar
-                                    src={producto.imagen}
+                                    src={mostrarImagen(producto.imagen)}
                                     alt={producto.nombre}
                                     size="sm"
                                     variant="rounded"
@@ -596,7 +558,7 @@ export const HistorialVentas = () => {
                                 </div>
                               </div>
                               <div className="mt-4">
-                                <Button color="deep-orange" className="w-full" size="sm">
+                                <Button color="deep-orange" className="w-full" size="sm" onClick={() => handleOpenModal(venta)}>
                                   Ver Detalles Completos
                                 </Button>
                               </div>
@@ -612,6 +574,266 @@ export const HistorialVentas = () => {
           </div>
         </Tabs>
       </Card>
+
+            {/* MODAL DETALLES DE VENTA */}
+            {ventaSeleccionada && (
+            <Dialog size="xl" open={open} handler={handleCloseModal} className="max-h-[90vh] w-full max-w-5xl p-4">
+              {/* HEADER */}
+              <DialogHeader className="relative m-0 block">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center mb-7 h-10 w-10 rounded-full bg-deep-orange-50">
+                    <Receipt className="h-6 w-6 text-deep-orange-500" />
+                  </div>
+                  <div>
+                    <Typography variant="h4" color="blue-gray" className="uppercase">
+                      Detalles de la Venta: {ventaSeleccionada?.codigo}
+                    </Typography>
+                    <Typography className="mt-1 font-normal text-gray-600">
+                      Información completa sobre esta transacción.
+                    </Typography>
+                  </div>
+                </div>
+                <IconButton size="sm" variant="text" className="!absolute right-3.5 top-3.5" onClick={handleCloseModal}>
+                  <XMarkIcon className="h-4 w-4 stroke-2" />
+                </IconButton>
+              </DialogHeader>
+
+              {/* BODY CON SCROLL Y GRID DE DOS COLUMNAS */}
+              <DialogBody className="overflow-y-auto max-h-[60vh] px-1">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* COLUMNA IZQUIERDA - INFORMACIÓN PRINCIPAL Y PRODUCTOS */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Información General de la Venta */}
+                    <Card className="p-4 bg-gray-50">
+                      <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2 uppercase">
+                        <Receipt className="h-5 w-5" />
+                        Información General
+                      </Typography>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-600" />
+                          <Typography variant="small" color="blue-gray">
+                            <strong>Fecha:</strong> {formatearFechaHora(ventaSeleccionada?.fecha)}
+                          </Typography>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-gray-600" />
+                          <Typography variant="small" color="blue-gray">
+                            Método de Pago: <strong className="capitalize">{ventaSeleccionada?.medio_pago}</strong>
+                          </Typography>
+                        </div>
+                                              <div className="flex items-center gap-2">
+                        <Typography variant="small" color="blue-gray">
+                          <strong>Tipo de Venta:</strong>
+                        </Typography>
+                        <Chip
+                          value={ventaSeleccionada.canal === "local" ? "Local" : "E-commerce"}
+                          color={ventaSeleccionada.canal === "local" ? "deep-orange" : "purple"}
+                          size="sm"
+                          variant="ghost"
+                          className="rounded-full capitalize"
+                        />
+                      </div>
+                        {ventaSeleccionada.canal === "local" && (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-600" />
+                              <Typography variant="small" color="blue-gray">
+                                <strong>Vendedor:</strong> {ventaSeleccionada.usuario.nombre}
+                              </Typography>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-gray-600" />
+                              <Typography variant="small" color="blue-gray">
+                                <strong>Sucursal:</strong> Illia
+                              </Typography>
+                            </div>
+                          </>
+                        )}
+                        {ventaSeleccionada.canal === "ecommerce" && (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Smartphone className="h-4 w-4 text-gray-600" />
+                              <Typography variant="small" color="blue-gray">
+                                <strong>Plataforma:</strong> Tienda Ecommerce
+                              </Typography>
+                            </div>
+                            {ventaSeleccionada.orden && (
+                              <div className="flex items-center gap-2">
+                                <Tag className="h-4 w-4 text-gray-600" />
+                                <Typography variant="small" color="blue-gray">
+                                  <strong>N° Orden:</strong> {ventaSeleccionada.orden}
+                                </Typography>
+                              </div>
+                            )}
+                            {ventaSeleccionada.numeroSeguimiento && (
+                              <div className="flex items-center gap-2">
+                                <Truck className="h-4 w-4 text-gray-600" />
+                                <Typography variant="small" color="blue-gray">
+                                  <strong>N° Seguimiento:</strong> {venta.numeroSeguimiento}
+                                </Typography>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </Card>
+
+                    {/* Información del Cliente */}
+                    <Card className="p-4 bg-gray-50">
+                      <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2 uppercase">
+                        <User className="h-5 w-5" />
+                        Información del Cliente
+                      </Typography>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-gray-600" />
+                          <Typography variant="small" color="blue-gray">
+                            <strong>Nombre:</strong> {ventaSeleccionada.cliente?.nombre}
+                          </Typography>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-gray-600" />
+                          <Typography variant="small" color="blue-gray">
+                            <strong>Email:</strong> {ventaSeleccionada.cliente?.email || "N/A"}
+                          </Typography>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-gray-600" />
+                          <Typography variant="small" color="blue-gray">
+                            <strong>Teléfono:</strong> {ventaSeleccionada.cliente?.telefono || "N/A"}
+                          </Typography>
+                        </div>
+                        {ventaSeleccionada.cliente?.direccion && (
+                          <div className="flex items-center gap-2 md:col-span-2">
+                            <MapPin className="h-4 w-4 text-gray-600" />
+                            <Typography variant="small" color="blue-gray">
+                              <strong>Dirección:</strong> {ventaSeleccionada.cliente?.direccion}
+                            </Typography>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+
+                    {/* Productos de la Venta */}
+                    <Card className="p-4 bg-gray-50">
+                      <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2">
+                        <Package className="h-5 w-5" />
+                        PRODUCTOS ({ventaSeleccionada.productos?.length})
+                      </Typography>
+                      <div className="space-y-3">
+                        {ventaSeleccionada?.productos?.map((producto) => (
+                          <div key={producto.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                            <Avatar
+                              src={mostrarImagen(producto.imagen)}
+                              alt={producto.nombre}
+                              size="md"
+                              variant="rounded"
+                              className="border border-gray-200"
+                            />
+                            <div className="flex-1">
+                              <Typography variant="small" color="blue-gray" className="font-medium">
+                                {producto.nombre}
+                              </Typography>
+                              <Typography variant="small" color="gray">
+                                Cantidad: {producto.cantidad} | Precio Unitario: ${producto.precio.toFixed(2)}
+                              </Typography>
+                            </div>
+                            <Typography variant="small" color="blue-gray" className="font-bold">
+                              ${(producto.precio * producto.cantidad).toFixed(2)}
+                            </Typography>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* COLUMNA DERECHA - RESUMEN FINANCIERO */}
+                  <div className="lg:col-span-1 space-y-6">
+                    <Card className="p-4 bg-gradient-to-br from-deep-orange-50 to-orange-50 border border-deep-orange-100">
+                      <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2 uppercase">
+                        <DollarSign className="h-5 w-5" />
+                        Resumen Financiero
+                      </Typography>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <Typography variant="small" color="blue-gray">
+                            Subtotal:
+                          </Typography>
+                          <Typography variant="small" color="blue-gray" className="font-medium">
+                            ${formatearPesos(ventaSeleccionada.subtotal)}
+                          </Typography>
+                        </div>
+                        {ventaSeleccionada.descuento > 0 && (
+                          <div className="flex justify-between">
+                            <Typography variant="small" color="blue-gray">
+                              Descuento:
+                            </Typography>
+                            <Typography variant="small" color="red" className="font-medium">
+                              -${ventaSeleccionada.descuento.toFixed(2)}
+                            </Typography>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <Typography variant="small" color="blue-gray">
+                            Impuestos:
+                          </Typography>
+                          <Typography variant="small" color="blue-gray" className="font-medium">
+                            ${Number(ventaSeleccionada.impuestos).toFixed(2)}
+                          </Typography>
+                        </div>
+                        <hr className="border-gray-300 my-2" />
+                        <div className="flex justify-between items-center">
+                          <Typography variant="h5" color="blue-gray">
+                            Total:
+                          </Typography>
+                          <Typography variant="h4" color="deep-orange" className="font-bold">
+                            ${Number(ventaSeleccionada.total).toFixed(2)}
+                          </Typography>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Acciones Adicionales */}
+                    <Card className="p-4 bg-gray-50">
+                      <Typography variant="h6" color="blue-gray" className="mb-4">
+                        Acciones
+                      </Typography>
+                      <div className="space-y-3">
+                        <Button 
+                        color="blue"
+                        className="w-full flex items-center justify-center gap-2"
+                        onClick={() => imprimirRecibo(ventaSeleccionada)}
+                        >
+                          <Receipt className="h-4 w-4" />
+                          Imprimir Recibo
+                        </Button>
+                        <Button
+                        variant="outlined" 
+                        color="blue-gray" 
+                        className="w-full flex items-center justify-center gap-2"
+                        onClick={() => enviarRecibo(ventaSeleccionada)}>
+                          <Mail className="h-4 w-4" />
+                          Enviar Recibo por Email
+                        </Button>
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              </DialogBody>
+
+              {/* FOOTER FIJO */}
+              <DialogFooter className="border-t border-gray-200 pt-4 sticky bottom-0 bg-white z-10">
+                <Button variant="outlined" color="blue-gray" onClick={handleCloseModal} className="ml-auto">
+                  Cerrar
+                </Button>
+              </DialogFooter>
+            </Dialog>
+            )}
+                                  {componenteAlerta}
     </div>
+      
   )
 }

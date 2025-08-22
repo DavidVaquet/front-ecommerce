@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { crearClienteServices } from "../../../services/clienteServices";
+import { useClientes } from "../../../context/ClientesContext";
 import {
   Button,
   Card,
@@ -48,6 +49,10 @@ export const AltaCliente = () => {
     notas: "",
   })
 
+  // CONTEXTO
+  const { setClientesContext } = useClientes();
+
+  // NOTIFICACIONES
   const [mostrarAlerta, setMostrarAlerta] = useState(false)
   const [tipoAlerta, setTipoAlerta] = useState("success")
   const [mensajeAlerta, setMensajeAlerta] = useState("")
@@ -117,6 +122,7 @@ export const AltaCliente = () => {
       if (!validarFormulario()) return
       await crearClienteServices(formData);
       mostrarNotificacion("success", "Cliente registrado exitosamente")
+      setClientesContext((prev) => prev + 1);
       resetFormulario();
     } catch (error) {
       console.error(error)
@@ -142,13 +148,13 @@ export const AltaCliente = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Registrar Nuevo Cliente</h1>
+            <h1 className="text-3xl font-bold tracking-tight uppercase">Registrar Nuevo Cliente</h1>
             <p className="text-gray-600 mt-1">
               Agrega la información completa del cliente para mejorar la experiencia de compra.
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outlined" color="blue-gray" className="flex items-center gap-2 normal-case">
+            <Button variant="outlined" size="md" color="blue-gray" className="flex items-center gap-2 uppercase">
               <Users className="h-5 w-5" />
               Ver Clientes
             </Button>
@@ -156,7 +162,7 @@ export const AltaCliente = () => {
               variant="filled"
               color="deep-orange"
               className="flex items-center gap-2 uppercase shadow-md"
-              size="lg"
+              size="md"
             >
               <UserPlus className="h-5 w-5" />
               Guardar Cliente
@@ -380,8 +386,6 @@ export const AltaCliente = () => {
                     >
                       <Option value="regular">Cliente Regular</Option>
                       <Option value="mayorista">Cliente Mayorista</Option>
-                      <Option value="corporativo">Cliente Corporativo</Option>
-                      <Option value="distribuidor">Distribuidor</Option>
                     </Select>
                   </div>
 
@@ -419,8 +423,8 @@ export const AltaCliente = () => {
                     <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
                       Dirección Completa
                     </Typography>
-                    <Textarea
-                      label="Calle, número, colonia..."
+                    <Input
+                      label="Calle, número, departamento..."
                       value={formData.direccion}
                       onChange={(e) => handleInputChange("direccion", e.target.value)}
                       className="!border-gray-300"
