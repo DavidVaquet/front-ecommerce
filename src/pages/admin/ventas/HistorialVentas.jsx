@@ -340,13 +340,19 @@ export const HistorialVentas = () => {
             <Tab value="todas" className="text-sm font-medium">
               Todas ({totalVentas})
             </Tab>
-            <Tab value="local" className="text-sm font-medium flex items-center gap-2">
+            <Tab value="local" className="text-sm font-medium">
+              <div className="flex items-center gap-2">
+
               <Store className="h-4 w-4" />
               Local ({ventasLocal})
+              </div>
             </Tab>
-            <Tab value="ecommerce" className="text-sm font-medium flex items-center gap-2">
+            <Tab value="ecommerce" className="text-sm font-medium">
+              <div className="flex items-center gap-2">
+
               <Globe className="h-4 w-4" />
               E-commerce ({ventasEcommerce})
+              </div>
             </Tab>
           </TabsHeader>
 

@@ -1,6 +1,6 @@
 import { addProduct } from "../services/productServices";
 
-export const addProductController = async ({ nombre, cantidad_minima, cantidad, descripcion_corta, descripcion, precio, imagen_url, subcategoria_id, marca, estado, destacado, imagenUrls, toast, resetFields }) => {
+export const addProductController = async ({ nombre, cantidad_minima, cantidad, descripcion_corta, descripcion, precio, imagen_url, subcategoria_id, marca, estado, destacado, imagenUrls, toast, resetFields, precio_costo }) => {
   
   try {
     const { newProduct } = await addProduct({
@@ -15,7 +15,8 @@ export const addProductController = async ({ nombre, cantidad_minima, cantidad, 
       imagenUrls,
       descripcion_corta,
       cantidad_minima,
-      cantidad
+      cantidad,
+      precio_costo
     });
 
     toast.success('Producto cargado correctamente.');

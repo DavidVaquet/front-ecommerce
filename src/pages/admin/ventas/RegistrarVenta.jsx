@@ -1,8 +1,10 @@
 "use client"
 import { clientesEstado } from "../../../services/clienteServices";
 import { registrarVentaService } from "../../../services/ventasServices";
-import { getProducts } from "../../../services/productServices";
-import { useState, useEffect } from "react"
+import { getProductoPorBarcode, getProducts } from "../../../services/productServices";
+import { useState, useEffect } from "react";
+import { isBarcodeLike } from "../../../utils/barcode";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -44,6 +46,7 @@ import {
 import { useProductos } from "../../../context/ProductsContext";
 import { useVentas } from "../../../context/VentasContext";
 import { useClientes } from "../../../context/ClientesContext";
+import { estadisticasVentasServices } from "../../../services/estadisticasServices";
 
 
 export const RegistrarVenta = () => {
@@ -59,7 +62,9 @@ export const RegistrarVenta = () => {
   const [mensajeAlerta, setMensajeAlerta] = useState("");
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [estadisticas, setEstadisticas] = useState([]);
   const [canal, setCanal] = useState('local');
+
 
   // CONTEXT
   const { recargarProductos, setRecargarProductos } = useProductos();
@@ -83,7 +88,6 @@ export const RegistrarVenta = () => {
     const fetchProductos = async () => {
       try {
         const response = await getProducts();
-        // console.log(response.products);
         setProductos(response.products);
       } catch (error) {
         console.error(error)
@@ -91,15 +95,28 @@ export const RegistrarVenta = () => {
     }
     fetchProductos()
   }, [recargarProductos])
-  
-  
 
+  useEffect(() => {
+    const fetchEstadisticas = async () => {
+      try {
+        const response = await estadisticasVentasServices();
+        // console.log(response);
+        setEstadisticas(response);
+      } catch (error) {
+        console.error(error)
+      }
+    }
+    fetchEstadisticas()
+  }, [])
+  
+  
+  const navigate = useNavigate();
   // Estadísticas del día
-  const ventasHoy = 12
-  const totalVentasHoy = 2450.75
-  const productosVendidos = 28
-  const metaVentas = 3000
-  const progresoMeta = (totalVentasHoy / metaVentas) * 100
+  const ventasHoy = estadisticas.ventasHoy;
+  const totalVentasHoy = estadisticas?.totalVentasHoy;
+  const productosVendidos = estadisticas.productosVendidos;
+  const metaVentas = estadisticas?.metaVentas;
+  const progresoMeta = parseFloat(((totalVentasHoy / metaVentas) * 100).toFixed(2));
 
   const agregarProducto = (producto) => {
     const productoExistente = productosVenta.find((p) => p.id === producto.id)
@@ -239,6 +256,39 @@ export const RegistrarVenta = () => {
         setImpuesto(0)
   }
 
+  const handleScanOrSearch = async (value) => {
+  const input = (value || '').trim();
+  if (!input) return;
+
+  if (isBarcodeLike(input)) {
+    try {
+      const producto = await getProductoPorBarcode(input);
+      if (producto) {
+        agregarProducto(producto);
+        mostrarNotificacion("success", `Agregado por código: ${input}`);
+        setBusquedaProducto(""); 
+        return;
+      }
+      mostrarNotificacion("error", "Código no encontrado. Probá buscar por nombre.");
+    } catch (e) {
+      console.error(e);
+      mostrarNotificacion("error", "Error al buscar por código de barras");
+    }
+    return;
+  }
+
+  const primerMatch = productos.find(p => 
+    p.nombre?.toLowerCase().includes(input.toLowerCase()) && p.cantidad > 0
+  );
+  if (primerMatch) {
+    agregarProducto(primerMatch);
+    mostrarNotificacion("success", `Agregado: ${primerMatch.nombre}`);
+    setBusquedaProducto("");
+  } else {
+    mostrarNotificacion("error", "No se encontraron productos con ese nombre");
+  }
+};
+
   // Atajos de teclado
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -288,20 +338,21 @@ export const RegistrarVenta = () => {
                 <Zap className="h-4 w-4" />
                 <span>Ctrl+Enter para procesar</span>
               </div>
-              <div className="flex items-center gap-1 text-sm text-gray-500">
-                <span>Esc para limpiar</span>
-              </div>
             </div>
           </div>
           <div className="flex gap-3">
-            <Button variant="outlined" color="blue-gray" className="flex items-center gap-2 normal-case">
+            <Button
+            variant="outlined" 
+            color="blue-gray" 
+            className="flex items-center gap-2 uppercase"
+            onClick={() => navigate('/admin/ventas/historial-ventas')}>
               <Receipt className="h-5 w-5" />
               Ver Historial
             </Button>
             <Button
               variant="filled"
               color="deep-orange"
-              className="flex items-center gap-2 normal-case shadow-md"
+              className="flex items-center gap-2 uppercase shadow-md"
               size="lg"
               onClick={handleCreateVenta}
             >
@@ -348,7 +399,7 @@ export const RegistrarVenta = () => {
                   Total Ventas Hoy
                 </Typography>
                 <Typography variant="h3" color="blue-gray" className="font-bold">
-                  ${totalVentasHoy.toFixed(2)}
+                  ${totalVentasHoy?.toFixed(2)}
                 </Typography>
               </div>
               <div className="h-12 w-12 rounded-full bg-deep-orange-50 flex items-center justify-center">
@@ -426,7 +477,7 @@ export const RegistrarVenta = () => {
           {/* Información del Cliente */}
           <Card className="shadow-sm border border-gray-200 mb-6">
             <CardBody className="p-6">
-              <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2">
+              <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2 uppercase font-semibold">
                 <Users className="h-5 w-5" />
                 Información del Cliente
               </Typography>
@@ -501,7 +552,7 @@ export const RegistrarVenta = () => {
           {/* Búsqueda y Agregar Productos Mejorada */}
           <Card className="shadow-sm border border-gray-200 mb-6">
             <CardBody className="p-6">
-              <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2">
+              <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2 uppercase font-semibold">
                 <Package className="h-5 w-5" />
                 Agregar Productos
               </Typography>
@@ -533,11 +584,18 @@ export const RegistrarVenta = () => {
 
               <div className="relative">
                 <Input
-                  label="Buscar productos por nombre..."
+                  label="Buscar productos por nombre o código de barra"
                   icon={<Search className="h-5 w-5" />}
                   value={busquedaProducto}
                   onChange={(e) => setBusquedaProducto(e.target.value)}
                   className="!border-gray-300"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleScanOrSearch(busquedaProducto);
+                    }
+                  }}
+                  autoFocus
                   />
 
                 {/* Dropdown de productos mejorado */}
@@ -590,7 +648,7 @@ export const RegistrarVenta = () => {
           {/* Lista de Productos en la Venta Mejorada */}
           <Card className="shadow-sm border border-gray-200">
             <CardBody className="p-6">
-              <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2">
+              <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2 uppercase font-semibold">
                 <ShoppingCart className="h-5 w-5 mb-1" />
                 Productos en el carrito ({productosVenta.length})
               </Typography>
@@ -696,7 +754,7 @@ export const RegistrarVenta = () => {
         <div className="lg:col-span-1">
           <Card className="shadow-sm border border-gray-200 sticky top-6">
             <CardBody className="p-6">
-              <Typography variant="h6" color="blue-gray" className="mb-6 flex items-center gap-2">
+              <Typography variant="h6" color="blue-gray" className="mb-6 flex items-center gap-2 uppercase font-semibold">
                 <Calculator className="h-5 w-5" />
                 Resumen de Venta
               </Typography>

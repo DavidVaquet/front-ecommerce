@@ -85,6 +85,7 @@ export const PublicarProductos = () => {
   const productosFiltrados = productos.filter((producto) => {
     const coincideBusqueda =
       producto.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+      producto.barcode?.toLowerCase().includes(busqueda.toLowerCase()) ||
       producto.descripcion.toLowerCase().includes(busqueda.toLowerCase())
 
     const coincideCategoria = !filtroCategoria || producto.categoria_nombre === filtroCategoria
@@ -317,6 +318,12 @@ export const PublicarProductos = () => {
                 icon={<Search className="h-5 w-5" />}
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.value = ''
+                  }
+                }}
+                autoFocus
               />
             </div>
             <div>

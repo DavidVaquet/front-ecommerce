@@ -1,21 +1,14 @@
+import { apiFetch } from "../helpers/auth";
 const API_URL = `${import.meta.env.VITE_API_URL}/recibos`;
 
 export const generarReciboServices = async (venta) => {
 
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Debes iniciar sesión nuevamente para obtener un token.');
 
-        const response = await fetch(`${API_URL}/generar-recibo`, {
+        const data = await apiFetch(`${API_URL}/generar-recibo`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`},
             body: JSON.stringify(venta)
         })
-
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.msg || 'Error en generar recibo Services')
-        };
 
         return data.url;
     } catch (error) {
@@ -59,21 +52,14 @@ export const descargarRecibo = async (nombreArchivo) => {
 
 export const enviarReciboServices = async (venta) => {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('Se necesita el token.');
 
-    const response = await fetch(`${API_URL}/enviar-recibo`, {
+    const data = await apiFetch(`${API_URL}/enviar-recibo`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json', Authorization: `Bearer ${token}`},
       body: JSON.stringify(venta)
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.msg || 'Error al enviar el recibo');
-    };
-
     return data;
+
   } catch (error) {
     console.error(error);
   }
@@ -81,18 +67,12 @@ export const enviarReciboServices = async (venta) => {
 
 export const enviarEmailServices = async({email, asunto, mensaje}) => {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('Se necesita el token');
-
-    const response = await fetch(`${API_URL}/enviar-email`, {
+    
+    const data = await apiFetch(`${API_URL}/enviar-email`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json', Authorization: `Bearer ${token}`},
       body: JSON.stringify({email, asunto, mensaje})
     })
-    const data = await response.json();
-    if (!response.ok){
-      throw new Error(data.msg || 'Error al enviar el email services.');
-    }
+    
     return data;
     
   } catch (error) {

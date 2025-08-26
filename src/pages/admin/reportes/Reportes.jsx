@@ -274,14 +274,14 @@ export const Reportes = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Reportes</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2 uppercase">Reportes DEL SISTEMA</h1>
             <p className="text-gray-600">Genera, programa y gestiona todos tus reportes de inventario</p>
           </div>
           <div className="flex gap-3">
             <Button
               variant="outlined"
               color="blue-gray"
-              className="flex items-center gap-2 normal-case"
+              className="flex items-center gap-2 uppercase"
               onClick={() => setMostrarConfiguracion(!mostrarConfiguracion)}
             >
               <Settings className="h-4 w-4" />
@@ -289,7 +289,7 @@ export const Reportes = () => {
             </Button>
             <Button
               color="blue"
-              className="flex items-center gap-2 normal-case"
+              className="flex items-center gap-2 uppercase"
               onClick={() => setActiveTab("generar")}
             >
               <Plus className="h-4 w-4" />
@@ -305,7 +305,7 @@ export const Reportes = () => {
           <CardBody className="p-6">
             <div className="flex items-center gap-3 mb-4">
               <Settings className="h-5 w-5 text-blue-600" />
-              <Typography variant="h6" color="blue-gray" className="font-bold">
+              <Typography variant="h6" color="blue-gray" className="font-semibold uppercase">
                 Configuración Global de Reportes
               </Typography>
             </div>
@@ -346,17 +346,23 @@ export const Reportes = () => {
       <Card className="shadow-sm">
         <Tabs value={activeTab} onChange={setActiveTab}>
           <TabsHeader className="bg-gray-50">
-            <Tab value="generar" className="flex items-center gap-2">
+            <Tab value="generar">
+              <div className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Generar Reporte
+              <span>Generar Reporte</span>
+              </div>
             </Tab>
-            <Tab value="historial" className="flex items-center gap-2">
+            <Tab value="historial">
+              <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Historial
+              <span>Historial</span>
+              </div>
             </Tab>
-            <Tab value="programados" className="flex items-center gap-2">
+            <Tab value="programados">
+              <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Programados
+              <span>Programados</span>
+              </div>
             </Tab>
           </TabsHeader>
 
@@ -366,7 +372,7 @@ export const Reportes = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Selección de Tipo de Reporte */}
                 <div className="lg:col-span-2">
-                  <Typography variant="h6" color="blue-gray" className="font-bold mb-4">
+                  <Typography variant="h6" color="blue-gray" className="font-semibold uppercase  mb-4">
                     Selecciona el Tipo de Reporte
                   </Typography>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -387,7 +393,7 @@ export const Reportes = () => {
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center justify-between mb-2">
-                                  <Typography variant="h6" color="blue-gray" className="font-bold">
+                                  <Typography variant="h6" color="blue-gray" className="font-semibold uppercase">
                                     {tipo.nombre}
                                   </Typography>
                                   <Radio
@@ -516,7 +522,7 @@ export const Reportes = () => {
                 <div>
                   <Card className="shadow-sm sticky top-6">
                     <CardBody className="p-6">
-                      <Typography variant="h6" color="blue-gray" className="font-bold mb-4">
+                      <Typography variant="h6" color="blue-gray" className="font-semibold uppercase mb-4">
                         Previsualización
                       </Typography>
                       {reporteSeleccionado ? (
@@ -569,7 +575,7 @@ export const Reportes = () => {
                       )}
                       <Button
                         color="blue"
-                        className="w-full mt-6 flex items-center justify-center gap-2 normal-case"
+                        className="w-full mt-6 flex items-center justify-center gap-2 uppercase"
                         onClick={generarReporte}
                         disabled={!reporteSeleccionado || generandoReporte}
                       >

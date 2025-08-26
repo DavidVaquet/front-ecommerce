@@ -1,6 +1,5 @@
 "use client"
-import { editProduct, obtenerProductosCompletos, deleteProductLogic, activarProductLogic } from "../../../services/productServices";
-import { fetchTSPL } from "../../../services/impresoraServices";
+import { editProduct, obtenerProductosCompletos, deleteProductLogic, activarProductLogic, eliminarProductoServices } from "../../../services/productServices";
 import { useProductos } from "../../../context/ProductsContext";
 import { useCategorias } from "../../../context/CategoriasContext";
 import { useSubcategorias } from "../../../context/SubcategoriasContext";
@@ -8,9 +7,10 @@ import { getAllCategories } from "../../../services/categorieService";
 import { getSubcategories } from "../../../services/subcategorieService";
 import { useState, useEffect } from "react"
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
-import { formatearPesos } from "../../../helpers/formatearPesos";
+import { formatearPesos, formatearMiles, precioToNumber } from "../../../helpers/formatearPesos";
 import { useNotificacion } from "../../../hooks/useNotificacion"; 
-import qz from 'qz-tray';
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
 import {
   Button,
   Card,
@@ -57,7 +57,8 @@ import {
   Tag,
   User,
   CheckCircle,
-  Printer
+  Power,
+  PowerOff
 } from "lucide-react"
 import { XMarkIcon } from "@heroicons/react/24/outline"
 
@@ -82,11 +83,13 @@ const Productos = () => {
     marca: "",
     descripcion: "",
     subcategoria: "",
-    cantidad_stock: ''
+    precio_costo: '',
+    descripcion_corta: ''
   })
 
   // Notificaciones
  const { componenteAlerta, mostrarNotificacion } = useNotificacion();
+ const MySwal = withReactContent(Swal);
   //Context
     const { recargarProductos, setRecargarProductos } = useProductos();
     const { categoriasContext } = useCategorias();
@@ -97,7 +100,7 @@ const Productos = () => {
     const fetchProducts = async () => {
       try {
         const productos = await obtenerProductosCompletos()
-        console.log("Productos obtenidos:", productos)
+        // console.log("Productos obtenidos:", productos)
         setProducts(productos)
       } catch (error) {
         console.error(error)
@@ -108,22 +111,33 @@ const Productos = () => {
 
   // Obtener categorias y subcategorias
   useEffect(() => {
-    const fetchDatos = async () => {
+  const fetchDatos = async () => {
+    try {
       const categoriasData = await getAllCategories();
       const subcategoriasData = await getSubcategories();
-      
+
       setCategorias(categoriasData);
       setSubCategorias(subcategoriasData);
 
       if (selectedProduct) {
+        const subcategoriaActual = subcategoriasData.find(
+          sub => sub.id === selectedProduct.subcategoria_id
+        );
 
-        const subcategoriaActual = subcategoriasData.find(sub => sub.id === selectedProduct.subcategoria_id);
-        setSubCategoriaSeleccionada(subcategoriaActual.id);
-        setCategoriaSeleccionada(subcategoriaActual.categoria_id); 
+        if (subcategoriaActual) {  
+          setSubCategoriaSeleccionada(subcategoriaActual.id);
+          setCategoriaSeleccionada(subcategoriaActual.categoria_id);
+        }
       }
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion('error', error.message);
     }
-    fetchDatos();
-  }, [selectedProduct, categoriasContext, subcategoriasContext])
+  };
+
+  fetchDatos();
+}, [selectedProduct, categoriasContext, subcategoriasContext]);
+
   
   // Resetear página cuando cambien filtros
   useEffect(() => {
@@ -140,19 +154,9 @@ const Productos = () => {
   // Filtrar productos según la pestaña activa
   const filteredProducts = products
     .filter((producto) => {
-      // console.log(
-      //   "Filtrando producto:",
-      //   producto.nombre,
-      //   "Tab activo:",
-      //   activeTab,
-      //   "Estado:",
-      //   producto.estado,
-      //   "Stock:",
-      //   producto.stock_cantidad,
-      // )
 
       if (activeTab === "todos") return true
-      if (activeTab === "activos") return producto.estado === 1 && producto.stock_cantidad > 0
+      if (activeTab === "activos") return producto.estado === 1
       if (activeTab === "sin-stock") return producto.stock_cantidad === 0
       if (activeTab === "bajo-stock") return producto.stock_cantidad > 0 && producto.stock_cantidad < 10
       return true
@@ -160,13 +164,14 @@ const Productos = () => {
     .filter(
       (producto) =>
         producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        producto.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (producto.categoria_nombre && producto.categoria_nombre.toLowerCase().includes(searchTerm.toLowerCase())),
     )
 
   // console.log("Productos filtrados:", filteredProducts.length, "Tab activo:", activeTab)
 
   // Paginación
-  const productsPerPage = 5
+  const productsPerPage = 10
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
   const currentProducts = filteredProducts.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage)
 
@@ -219,8 +224,8 @@ const Productos = () => {
   const handleChange = (e) => {
     const { name, value } = e.target
     let nuevoValor = value;
-    if (["precio", "cantidad_stock"].includes(name)) {
-    nuevoValor = value === '' ? '' : parseFloat(value);
+    if (["precio", "precio_costo"].includes(name)) {
+    nuevoValor = value === '' ? '' : value;
   }
     setFormularioEditar((prev) => ({
       ...prev,
@@ -239,21 +244,23 @@ const Productos = () => {
 
   const validarFormulario = () => {
     if (!formularioEditar.nombre.trim()) {
-      mostrarNotificacion("error", "El nombre es obligatorio")
+      mostrarNotificacion("error", "El nombre es obligatorio.")
       return false
     }
-    if (typeof formularioEditar.precio !== "number" || isNaN(formularioEditar.precio)) {
-      mostrarNotificacion("error", "El precio es obligatorio")
+    if (!formularioEditar.precio) {
+      mostrarNotificacion("error", "El precio es obligatorio.")
       return false
     }
     if (typeof formularioEditar.subcategoria !== "number" || isNaN(formularioEditar.subcategoria)) {
-      mostrarNotificacion("error", "Debes seleccionar una subcategoria")
+      mostrarNotificacion("error", "Debes seleccionar una subcategoria.")
       return false
     }
-    if (typeof formularioEditar.cantidad_stock !== "number" || isNaN(formularioEditar.cantidad_stock)) {
-      mostrarNotificacion("error", "Debes seleccionar una cantidad")
-      return false
+
+    if (!formularioEditar.precio_costo) {
+      mostrarNotificacion('error', 'El costo unitario es obligatorio.');
+      return false;
     }
+
     return true
   }
 
@@ -264,7 +271,8 @@ const Productos = () => {
     marca: producto.marca,
     descripcion: producto.descripcion,
     subcategoria: Number(producto.subcategoria_id),
-    cantidad_stock: Number(producto.stock_cantidad),
+    descripcion_corta: producto.descripcion_corta,
+    precio_costo: producto.precio_costo
   });
   setOpenEdit(true);
   setSelectedProduct(producto);
@@ -277,9 +285,9 @@ const Productos = () => {
       const productoActualizado = await editProduct({
         id: Number(selectedProduct.id),
         ...formularioEditar,
-        cantidad_stock: formularioEditar.cantidad_stock,
-        precio: formularioEditar.precio,
-        subcategoria_id: formularioEditar.subcategoria
+        precio: precioToNumber(formularioEditar.precio),
+        subcategoria_id: formularioEditar.subcategoria,
+        precio_costo: precioToNumber(formularioEditar.precio_costo)
       });
       setRecargarProductos((prev) => prev + 1);
       mostrarNotificacion("success", "Producto actualizado con éxito");
@@ -290,7 +298,6 @@ const Productos = () => {
       marca: "",
       descripcion: "",
       subcategoria: "",
-      cantidad_stock: ''
     })
       
     } catch (error) {
@@ -325,9 +332,33 @@ const Productos = () => {
     }
   }
 
+  const handleDelete = (producto) => {
+  MySwal.fire({
+    title: "¿Estás seguro?",
+    text: "No podrás revertir esta acción",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Sí, eliminar",
+    cancelButtonText: "Cancelar",
+  }).then(async (result) => { 
+    if (!result.isConfirmed) return;
+
+    try {
+      const id = Number(producto?.id);
+      await eliminarProductoServices(id);  
+      mostrarNotificacion("success", "Producto eliminado correctamente.");
+      setRecargarProductos?.((v) => v + 1);
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion("error", error.message || "No se pudo eliminar");
+    }
+  });
+};
 
   return (
-    <div className="text-black flex flex-col w-full py-3 px-8 font-worksans">
+    <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
       {/* Título y Botón */}
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -474,6 +505,12 @@ const Productos = () => {
                 icon={<Search className="h-5 w-5" />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.value = '';
+                  }
+                }}
+                autoFocus
               />
             </div>
             <div className="flex gap-2">
@@ -501,10 +538,10 @@ const Productos = () => {
         </CardBody>
       </Card>
 
-      {/* Debug info - puedes eliminar esto después */}
+      {/* Debug info - puedes eliminar esto después
       <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
         Debug: Tab activo: {activeTab} | Productos totales: {products.length} | Filtrados: {filteredProducts.length}
-      </div>
+      </div> */}
 
       {/* Tabs y Tabla de Productos */}
       <Card className="shadow-sm border border-gray-200">
@@ -542,7 +579,12 @@ const Productos = () => {
                     </th>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
                       <Typography variant="small" color="blue-gray" className="font-medium leading-none">
-                        Precio
+                        Precio venta
+                      </Typography>
+                    </th>
+                    <th className="border-b border-gray-200 bg-gray-50 p-4">
+                      <Typography variant="small" color="blue-gray" className="font-medium leading-none">
+                        Costo
                       </Typography>
                     </th>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
@@ -579,9 +621,16 @@ const Productos = () => {
                             variant="rounded"
                             className="border border-gray-200 p-1"
                           />
-                          <Typography variant="small" color="blue-gray" className="font-medium">
-                            {producto.nombre}
-                          </Typography>
+
+                          {/* Contenedor para nombre + barcode */}
+                          <div className="flex flex-col">
+                            <Typography variant="small" color="blue-gray" className="font-medium">
+                              {producto.nombre}
+                            </Typography>
+                            <Typography variant="small" color="blue-gray" className="text-xs">
+                              Barcode: {producto.barcode}
+                            </Typography>
+                          </div>
                         </div>
                       </td>
                       <td className="p-4 border-b border-gray-200">
@@ -592,6 +641,11 @@ const Productos = () => {
                       <td className="p-4 border-b border-gray-200">
                         <Typography variant="small" color="blue-gray" className="font-medium">
                           ${formatearPesos(producto.precio)}
+                        </Typography>
+                      </td>
+                      <td className="p-4 border-b border-gray-200">
+                        <Typography variant="small" color="blue-gray" className="font-medium">
+                          ${formatearPesos(producto.precio_costo)}
                         </Typography>
                       </td>
                       <td className="p-4 border-b border-gray-200 text-center">
@@ -629,18 +683,21 @@ const Productos = () => {
                           <IconButton variant="text" color="blue" size="sm" onClick={() => comenzarEdicion(producto)}>
                             <Edit className="h-4 w-4" />
                           </IconButton>
-                          <IconButton variant="text" color="black" size="sm" onClick={() => handleOpenLabel(producto)}>
+                          {/* <IconButton variant="text" color="black" size="sm" onClick={() => handleOpenLabel(producto)}>
                             <Printer className="h-4 w-4" />
-                          </IconButton>
+                          </IconButton> */}
                           {producto.estado === 0 ? (
                             <IconButton variant="text" color="green" size="sm" onClick={() => activadoLogico(producto)}>
-                              <CheckCircle className="h-4 w-4"/>
+                              <Power className="h-4 w-4"/>
                             </IconButton>
                           ) : (
                             <IconButton variant="text" color="red" size="sm" onClick={() => deleteLogico(producto)}>
-                            <Trash2 className="h-4 w-4" />
+                            <PowerOff className="h-4 w-4" />
                             </IconButton>
                           )}
+                          <IconButton variant="text" color="red" size="sm" onClick={() => handleDelete(producto)}>
+                            <Trash2 className="h-4 w-4"/>
+                          </IconButton>
                           
                         </div>
                       </td>
@@ -890,7 +947,7 @@ const Productos = () => {
             {/* NOMBRE */}
             <div>
               <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
-                Nombre
+                Nombre <span className="text-red-500">*</span>
               </Typography>
               <Input name="nombre" value={formularioEditar.nombre} onChange={handleChange} placeholder="ej. Iphone 16" />
             </div>
@@ -908,22 +965,34 @@ const Productos = () => {
               />
             </div>
 
+            {/* PRECIO COSTO */}
+            <div>
+              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                Costo unitario <span className="text-red-500">*</span>
+              </Typography>
+              <Input
+                name="precio_costo"
+                value={formatearMiles(formularioEditar.precio_costo)}
+                onChange={handleChange}
+                placeholder="ej. $100.000"
+              />
+            </div>
             {/* PRECIO */}
             <div>
               <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
-                Precio
+                Precio de venta <span className="text-red-500">*</span>
               </Typography>
               <Input
                 name="precio"
-                value={formularioEditar.precio}
+                value={formatearMiles(formularioEditar.precio)}
                 onChange={handleChange}
-                placeholder="ej. $500.000"
+                placeholder="ej. $200.000"
               />
             </div>
             {/* CATEGORIA */}
             <div>
               <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
-                Categoría
+                Categoría <span className="text-red-500">*</span>
               </Typography>
               {categorias.length > 0 && (
               <Select
@@ -941,24 +1010,12 @@ const Productos = () => {
               </Select>
             )}
             </div>
-            {/* CANTIDAD */}
-            <div>
-              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
-                Cantidad
-              </Typography>
-              <Input
-                name="cantidad_stock"
-                value={formularioEditar.cantidad_stock}
-                onChange={handleChange}
-                placeholder="ej. 20"
-              />
-            </div>
 
 
             {/* SUBCATEGORIAS */}
             <div>
               <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
-                Subcategoría
+                Subcategoría <span className="text-red-500">*</span>
               </Typography>
               {subcategorias.length > 0 && categoriaSeleccionada && (
                 <Select
@@ -979,11 +1036,24 @@ const Productos = () => {
                 </Select>
               )}
             </div>
-
-            {/* NOTAS (OCUPA DOS COLUMNAS) */}
-            <div className="md:col-span-2">
+            {/* DESCRIPCION CORTA (OCUPA DOS COLUMNAS) */}
+              <div className="md:col-span-1">
               <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
-                Descripcion (opcional)
+                Descripción corta (opcional)
+              </Typography>
+              <Textarea
+                name="descripcion_corta"
+                value={formularioEditar.descripcion_corta}
+                onChange={handleChange}
+                rows={2}
+                className="h-4 resize-none"
+                placeholder="..."
+              />
+            </div>
+            {/* NOTAS (OCUPA DOS COLUMNAS) */}
+            <div className="md:col-span-1">
+              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                Descripción (opcional)
               </Typography>
               <Textarea
                 name="descripcion"

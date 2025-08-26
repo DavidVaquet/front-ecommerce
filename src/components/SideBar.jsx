@@ -46,6 +46,9 @@ export function Sidebar() {
   };
 
   return (
+    <aside className="sticky top-0 h-screen ">
+
+    
     <Card className="min-h-screen w-full max-w-[20rem]  shadow-xl shadow-blue-gray-900/5 bg-white font-worksans">
       <div className="h-[80px] w-full overflow-hidden">
         <img
@@ -55,12 +58,12 @@ export function Sidebar() {
         />
       </div>
 
-      <div className="p-2">
+      {/* <div className="p-2">
         <Input
           icon={<MagnifyingGlassIcon className="h-5 w-5" />}
           label="Search"
         />
-      </div>
+      </div> */}
       <List>
         <Accordion
           open={open === 1}
@@ -88,23 +91,17 @@ export function Sidebar() {
           </ListItem>
           <AccordionBody className="py-1">
             <List className="p-0">
-              <ListItem>
+              <ListItem onClick={() => navigate('/admin/estadisticas')}>
                 <ListItemPrefix>
                   <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
                 </ListItemPrefix>
                 Estadisticas
               </ListItem>
-              <ListItem>
+              <ListItem onClick={() => navigate('/admin/reportes')}>
                 <ListItemPrefix>
                   <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
                 </ListItemPrefix>
                 Reportes
-              </ListItem>
-              <ListItem>
-                <ListItemPrefix>
-                  <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
-                </ListItemPrefix>
-                Projectos
               </ListItem>
             </List>
           </AccordionBody>
@@ -208,18 +205,57 @@ export function Sidebar() {
                       <ListItemPrefix>
                         <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                       </ListItemPrefix>
-                      Registrar venta
+                      Generar venta
                     </ListItem>
                     <ListItem onClick={() => navigate("/admin/ventas/historial-ventas")}>
                       <ListItemPrefix>
                         <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                       </ListItemPrefix>
-                      Ver ventas
+                      Historial de ventas
                     </ListItem>
                   </List>
                 </AccordionBody>
               </Accordion>
-              <ListItem>
+              {/* SUBMENU STOCK */}
+              <Accordion 
+              open={subOpen === 6}>
+                <ListItem className="p-0" selected={subOpen === 6}>
+                  <AccordionHeader
+                    onClick={() => setSubOpen(subOpen === 6 ? 0 : 6)}
+                    className="border-b-0 px-3 py-2"
+                  >
+                    <ListItemPrefix>
+                      <ChevronRightIcon strokeWidth={3}
+                      className={`h-3 w-5 transition-transform duration-300 ${
+      subOpen === 5 ? "rotate-90" : ""
+    }`}        />
+                    </ListItemPrefix>
+                    <Typography
+                      color="blue-gray"
+                      className="mr-auto font-normal"
+                    >
+                      Stock
+                    </Typography>
+                  </AccordionHeader>
+                </ListItem>
+                <AccordionBody className="py-1 pl-9">
+                  <List className="p-0">
+                    <ListItem onClick={() => navigate("/admin/stock/registrar-movimiento-stock")}>
+                      <ListItemPrefix>
+                        <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
+                      </ListItemPrefix>
+                      Generar movimiento
+                    </ListItem>
+                    <ListItem onClick={() => navigate("/admin/stock/movimientos-stock")}>
+                      <ListItemPrefix>
+                        <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
+                      </ListItemPrefix>
+                      Historial de movimientos
+                    </ListItem>
+                  </List>
+                </AccordionBody>
+              </Accordion>
+              <ListItem onClick={() => navigate('/admin/ordenes')}>
                 <ListItemPrefix>
                   <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
                 </ListItemPrefix>
@@ -268,7 +304,7 @@ export function Sidebar() {
           </AccordionBody>
         </Accordion>
         <hr className="my-2 border-blue-gray-50" />
-        <ListItem>
+        {/* <ListItem>
           <ListItemPrefix>
             <InboxIcon className="h-5 w-5" />
           </ListItemPrefix>
@@ -282,14 +318,14 @@ export function Sidebar() {
               className="rounded-full"
             />
           </ListItemSuffix>
-        </ListItem>
-        <ListItem>
+        </ListItem> */}
+        <ListItem onClick={() => navigate('/admin/perfil')}>
           <ListItemPrefix>
             <UserCircleIcon className="h-5 w-5" />
           </ListItemPrefix>
           Perfil
         </ListItem>
-        <ListItem>
+        <ListItem onClick={() => navigate('/admin/settings')}>
           <ListItemPrefix>
             <Cog6ToothIcon className="h-5 w-5" />
           </ListItemPrefix>
@@ -303,5 +339,6 @@ export function Sidebar() {
         </ListItem>
       </List>
     </Card>
+    </aside>
   );
 }

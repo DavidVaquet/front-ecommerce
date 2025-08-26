@@ -11,7 +11,7 @@ export const useNotificacion = () => {
     setTipoAlerta(tipo);
     setMensajeAlerta(mensaje);
     setMostrarAlerta(true);
-    setTimeout(() => setMostrarAlerta(false), 3000);
+    setTimeout(() => setMostrarAlerta(false), 5000);
   };
 
   const componenteAlerta = mostrarAlerta && (

@@ -9,7 +9,7 @@ import { Ordenes } from './pages/admin/ordenes/Ordenes';
 import { Clientes } from './pages/admin/clientes/Clientes';
 import { HistorialVentas } from './pages/admin/ventas/HistorialVentas';
 import { PrivateRoute } from './components/PrivateRoute';
-import { Estadisticas } from './pages/admin/estadisticas/estadisticas';
+import { Estadisticas } from './pages/admin/estadisticas/Estadisticas';
 import Reportes from './pages/admin/reportes/Reportes';
 import AdminLayout from './layouts/AdminLayout';
 import TiendaLayout from './layouts/TiendaLayout';
@@ -55,8 +55,8 @@ function App() {
           <Route path="clientes/registrar-cliente" element={<AltaCliente />} />
           <Route path="ventas/registrar-venta" element={<RegistrarVenta />} />
           <Route path="ventas/historial-ventas" element={<HistorialVentas />} />
-          <Route path="movimientos-stock" element={<MovimientosStock />} />
-          <Route path="registrar-movimiento-stock" element={<RegistrarMovimientoStock />} />
+          <Route path="stock/movimientos-stock" element={<MovimientosStock />} />
+          <Route path="stock/registrar-movimiento-stock" element={<RegistrarMovimientoStock />} />
           <Route path="ordenes" element={<Ordenes />} />
           <Route path="estadisticas" element={<Estadisticas />} />
           <Route path="reportes" element={<Reportes />} />

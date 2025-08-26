@@ -7,6 +7,7 @@ import { addCategoryController } from "../../../controllers/categorieController"
 import { addProductController } from "../../../controllers/productController";
 import { addSubcategoryController } from "../../../controllers/subcategoriesController";
 import { getSubcategoriesController } from "../../../controllers/subcategoriesController";
+import { formatearMiles, precioToNumber } from "../../../helpers/formatearPesos";
 import { toast } from "react-hot-toast";
 import {
   Button,
@@ -33,6 +34,7 @@ export const SubirProducto = () => {
   const [descripcion, setDescripcion] = useState("");
   const [descripcionCorta, setDescripcionCorta] = useState("");
   const [precio, setPrecio] = useState("");
+  const [precioCosto, setPrecioCosto] = useState("");
   const [images, setImages] = useState([]);
   const [marca, setMarca] = useState("");
   const [categorias, setCategorias] = useState([]);
@@ -99,6 +101,7 @@ export const SubirProducto = () => {
     setImagenUrls([]);
     setCategory_id("");
     setCantidadMinima("");
+    setPrecioCosto("")
   };
 
   const resetFieldsCategorys = () => {
@@ -158,13 +161,24 @@ export const SubirProducto = () => {
       toast.error("Debes seleccionar un estado.");
       return;
     }
-    await addCategoryController({
+
+    try {
+      const cate = await addCategoryController({
       nombre: nombreCategoria,
       descripcion: descripcionCategoria,
       activo: estadoCategoria === "true",
+      toast
     });
-    resetFieldsCategorys();
-    setRecargarCategoriaContext((prev) => prev + 1);
+
+      if (cate) {
+        resetFieldsCategorys();
+        setRecargarCategoriaContext((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    
+    
   };
 
   const handleNewSubcategory = async (e) => {
@@ -203,7 +217,11 @@ export const SubirProducto = () => {
         return;
       }
       if (!precio) {
-        toast.error("El precio es obligatorio.");
+        toast.error("El precio de venta es obligatorio.");
+        return;
+      }
+      if (!precioCosto) {
+        toast.error("El precio de costo es obligatorio.");
         return;
       }
       if (!subCategory_id) {
@@ -217,7 +235,7 @@ export const SubirProducto = () => {
       const productData = {
         nombre,
         descripcion,
-        precio: parseFloat(precio),
+        precio: precioToNumber(precio),
         imagen_url,
         imagenUrls,
         subcategoria_id: subCategory_id,
@@ -227,6 +245,7 @@ export const SubirProducto = () => {
         cantidad: parseInt(cantidad),
         cantidad_minima: parseInt(cantidadMinima),
         descripcion_corta: descripcionCorta,
+        precio_costo: precioToNumber(precioCosto),
         toast,
         resetFields,
       };
@@ -354,7 +373,7 @@ export const SubirProducto = () => {
                         color="blue-gray"
                         className="mb-2 font-medium"
                       >
-                        Nombre del Producto*
+                        Nombre del Producto <span className="text-red-700 font-bold">*</span>
                       </Typography>
                       <Input
                         size="lg"
@@ -374,7 +393,7 @@ export const SubirProducto = () => {
                         color="blue-gray"
                         className="mb-2 font-medium"
                       >
-                        Categoría*
+                        Categoría <span className="text-red-700 font-bold">*</span>
                       </Typography>
                       <Select
                         label="Seleccionar categoría"
@@ -397,7 +416,7 @@ export const SubirProducto = () => {
                         color="blue-gray"
                         className="mb-2 font-medium"
                       >
-                        Subcategoría*
+                        Subcategoría <span className="text-red-700 font-bold">*</span>
                       </Typography>
                       <Select
                         label="Seleccionar categoría"
@@ -448,14 +467,35 @@ export const SubirProducto = () => {
                         color="blue-gray"
                         className="mb-2 font-medium"
                       >
-                        Precio regular*
+                        Precio venta <span className="text-red-700 font-bold">*</span>
                       </Typography>
                       <Input
-                        type="number"
+                        type="text"
                         size="lg"
                         placeholder="0.00"
                         onChange={(e) => setPrecio(e.target.value)}
-                        value={precio}
+                        value={formatearMiles(precio)}
+                        className="!border-gray-300 focus:!border-deep-orange-500"
+                        icon="$"
+                        labelProps={{
+                          className: "hidden",
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="mb-2 font-medium"
+                      >
+                        Precio costo <span className="text-red-700 font-bold">*</span>
+                      </Typography>
+                      <Input
+                        type="text"
+                        size="lg"
+                        placeholder="0.00"
+                        onChange={(e) => setPrecioCosto(e.target.value)}
+                        value={formatearMiles(precioCosto)}
                         className="!border-gray-300 focus:!border-deep-orange-500"
                         icon="$"
                         labelProps={{
@@ -468,7 +508,7 @@ export const SubirProducto = () => {
 
                 <div>
                   <Typography variant="h6" color="blue-gray" className="mb-4">
-                    Cantidad actual
+                    Cantidad actual <span className="text-red-700 font-bold">*</span>
                   </Typography>
                   <Input
                     type="number"
@@ -505,7 +545,7 @@ export const SubirProducto = () => {
                 <div className="space-y-5  pr-2 max-h-full">
                   <div>
                     <Typography variant="h6" color="blue-gray" className="mb-4">
-                      Imágenes del producto
+                      Imágenes del producto <span className="text-red-700 font-bold">*</span>
                     </Typography>
                     <div
                       onClick={() =>

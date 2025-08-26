@@ -126,7 +126,6 @@ const ConfiguracionesDashboard = () => {
     { label: "Ventas", value: "ventas", icon: ShoppingCart },
     { label: "Usuarios", value: "usuarios", icon: Users },
     { label: "Notificaciones", value: "notificaciones", icon: Bell },
-    { label: "Seguridad", value: "seguridad", icon: Shield },
     { label: "Avanzado", value: "avanzado", icon: Settings },
   ]
 
@@ -1155,9 +1154,8 @@ const ConfiguracionesDashboard = () => {
               </TabPanel>
 
               {/* Pestaña Seguridad */}
-              <TabPanel value="seguridad" className="p-0">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Configuraciones de Sesión */}
+              {/* <TabPanel value="seguridad" className="p-0"> */}
+                {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card className="shadow-sm">
                     <CardBody>
                       <div className="flex items-center gap-2 mb-6">
@@ -1240,10 +1238,10 @@ const ConfiguracionesDashboard = () => {
                         </div>
                       </div>
                     </CardBody>
-                  </Card>
+                  </Card> */}
 
                   {/* Configuraciones de Backup */}
-                  <Card className="shadow-sm">
+                  {/* <Card className="shadow-sm">
                     <CardBody>
                       <div className="flex items-center gap-2 mb-6">
                         <Database size={20} />
@@ -1331,7 +1329,7 @@ const ConfiguracionesDashboard = () => {
                   </Card>
 
                   {/* Botones de Acción */}
-                  <div className="lg:col-span-2 flex justify-end gap-3">
+                  {/* <div className="lg:col-span-2 flex justify-end gap-3">
                     <Button
                       variant="outlined"
                       color="red"
@@ -1350,8 +1348,8 @@ const ConfiguracionesDashboard = () => {
                       Guardar Cambios
                     </Button>
                   </div>
-                </div>
-              </TabPanel>
+                </div> */}
+              {/* </TabPanel>  */}
 
               {/* Pestaña Avanzado */}
               <TabPanel value="avanzado" className="p-0">
