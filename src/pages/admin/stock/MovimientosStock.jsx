@@ -5,7 +5,6 @@ import { stockMovementEstadisticasToday, stockMovements } from "../../../service
 import { formatearFecha, fechaHora } from "../../../helpers/formatoFecha";
 import { formatearEntero } from "../../../helpers/numeros";
 import { useVentas } from "../../../context/VentasContext";
-import { useProductos } from "../../../context/ProductsContext";
 import { computeRange } from "../../../helpers/rangoFecha";
 import {
   Search,

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react";
+import { crearReporte, descargarReportes, obtenerReportes } from "../../../services/reportesServices";
 import {
   Button,
   Card,
@@ -42,106 +43,68 @@ import {
   Edit,
   Trash2,
   Copy,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
+
+import { getAllCategories } from "../../../services/categorieService";
+import { useNotificacion } from "../../../hooks/useNotificacion";
 
 // Datos de ejemplo para los reportes
 const TIPOS_REPORTES = [
   {
     id: "inventario",
     nombre: "Reporte de Inventario",
-    descripcion: "Estado actual del inventario con valores y cantidades",
+    descripcion: "Estado actual del inventario con valores y cantidades.",
     icono: Package,
     categoria: "Inventario",
     tiempo_estimado: "2-3 min",
-    formatos: ["PDF", "Excel", "CSV"],
+    formatos: ["xlsx", "pdf"],
   },
   {
     id: "ventas",
     nombre: "Reporte de Ventas",
-    descripcion: "Análisis detallado de ventas por período",
+    descripcion: "Análisis detallado de ventas por período.",
     icono: BarChart3,
     categoria: "Ventas",
     tiempo_estimado: "1-2 min",
-    formatos: ["PDF", "Excel"],
+    formatos: ["xlsx", "pdf"],
   },
   {
     id: "productos_criticos",
     nombre: "Productos Críticos",
-    descripcion: "Productos con bajo stock o sin movimiento",
+    descripcion: "Productos con bajo stock o sin movimiento.",
     icono: AlertTriangle,
     categoria: "Alertas",
     tiempo_estimado: "1 min",
-    formatos: ["PDF", "Excel", "CSV"],
+    formatos: ["xlsx", "pdf"],
   },
   {
     id: "rentabilidad",
     nombre: "Análisis de Rentabilidad",
-    descripcion: "Rentabilidad por producto y categoría",
+    descripcion: "Rentabilidad por producto y categoría.",
     icono: DollarSign,
     categoria: "Financiero",
     tiempo_estimado: "3-4 min",
-    formatos: ["PDF", "Excel"],
-  },
-  {
-    id: "rotacion",
-    nombre: "Rotación de Inventario",
-    descripcion: "Análisis de rotación y movimiento de productos",
-    icono: TrendingUp,
-    categoria: "Inventario",
-    tiempo_estimado: "2-3 min",
-    formatos: ["PDF", "Excel"],
+    formatos: ["xlsx", "pdf"],
   },
   {
     id: "clientes",
     nombre: "Reporte de Clientes",
-    descripcion: "Análisis de comportamiento y segmentación de clientes",
+    descripcion: "Análisis de comportamiento y segmentación de clientes.",
     icono: Users,
     categoria: "Clientes",
     tiempo_estimado: "2 min",
-    formatos: ["PDF", "Excel", "CSV"],
-  },
-]
-
-const HISTORIAL_REPORTES = [
-  {
-    id: 1,
-    nombre: "Reporte de Inventario - Diciembre 2024",
-    tipo: "inventario",
-    fecha_generacion: "2024-12-15 10:30",
-    formato: "PDF",
-    estado: "completado",
-    tamaño: "2.4 MB",
-    generado_por: "Admin",
+    formatos: ["xlsx", "pdf"],
   },
   {
-    id: 2,
-    nombre: "Ventas Mensuales - Noviembre 2024",
-    tipo: "ventas",
-    fecha_generacion: "2024-12-01 09:15",
-    formato: "Excel",
-    estado: "completado",
-    tamaño: "1.8 MB",
-    generado_por: "Admin",
-  },
-  {
-    id: 3,
-    nombre: "Productos Críticos - Semanal",
-    tipo: "productos_criticos",
-    fecha_generacion: "2024-12-14 08:00",
-    formato: "PDF",
-    estado: "programado",
-    tamaño: "-",
-    generado_por: "Sistema",
-  },
-  {
-    id: 4,
-    nombre: "Análisis de Rentabilidad Q4",
-    tipo: "rentabilidad",
-    fecha_generacion: "2024-12-10 14:20",
-    formato: "PDF",
-    estado: "error",
-    tamaño: "-",
-    generado_por: "Admin",
+    id: "movimientos",
+    nombre: "Movimientos del inventario",
+    descripcion: "Análisis detallado de los movimientos del inventario.",
+    icono: Package,
+    categoria: "Stock",
+    tiempo_estimado: "2 min",
+    formatos: ["xlsx", "pdf"],
   },
 ]
 
@@ -184,41 +147,98 @@ const REPORTES_PROGRAMADOS = [
 export const Reportes = () => {
   const [activeTab, setActiveTab] = useState("generar")
   const [reporteSeleccionado, setReporteSeleccionado] = useState("")
-  const [formatoSeleccionado, setFormatoSeleccionado] = useState("PDF")
+  const [formatoSeleccionado, setFormatoSeleccionado] = useState("")
   const [periodoInicio, setPeriodoInicio] = useState("")
   const [periodoFin, setPeriodoFin] = useState("")
-  const [categoriaFiltro, setCategoriaFiltro] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [categoriaFiltro, setCategoriaFiltro] = useState("");
+  const [categoria, setCategoria] = useState([]);
+  const [historial, setHistorial] = useState([]);
   const [generandoReporte, setGenerandoReporte] = useState(false)
-  const [mostrarAlerta, setMostrarAlerta] = useState(false)
-  const [mensajeAlerta, setMensajeAlerta] = useState("")
-  const [tipoAlerta, setTipoAlerta] = useState("success")
-  const [incluirGraficos, setIncluirGraficos] = useState(true)
   const [enviarPorEmail, setEnviarPorEmail] = useState(false)
   const [emailDestino, setEmailDestino] = useState("")
-  const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
+  const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false);
+  const {componenteAlerta, mostrarNotificacion} = useNotificacion();
+  const [recargarHistorial, setRecargarHistorial] = useState(0);
 
-  const mostrarNotificacion = (tipo, mensaje) => {
-    setTipoAlerta(tipo)
-    setMensajeAlerta(mensaje)
-    setMostrarAlerta(true)
-    setTimeout(() => setMostrarAlerta(false), 3000)
-  }
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const cat = await getAllCategories();
+      // console.log(cat);
+      setCategoria(cat);
+    }
+    fetchCategories(); 
+  }, [])
 
-  const generarReporte = () => {
+  const fetchHistorial = useCallback( async () => {
+    const hist = await obtenerReportes();
+    setHistorial(hist.reportes);
+  }, []);
+
+  useEffect(() => {
+     fetchHistorial();
+  }, [fetchHistorial, recargarHistorial])
+  
+
+  const generarReporte = async () => {
     if (!reporteSeleccionado) {
       mostrarNotificacion("error", "Por favor selecciona un tipo de reporte")
       return
     }
+    if (!periodoFin || !periodoInicio) {
+      mostrarNotificacion('error', 'Debes seleccionar una fecha');
+      return;
+    }
+    if (new Date(periodoFin) < new Date(periodoInicio)) {
+      mostrarNotificacion('error', 'El período final debe ser mayor al inicial');
+      return;
+    }
 
-    setGenerandoReporte(true)
-    setTimeout(() => {
-      setGenerandoReporte(false)
-      mostrarNotificacion("success", "Reporte generado exitosamente")
-    }, 3000)
+    setGenerandoReporte(true);
+    try {
+      const report = await crearReporte({
+        type: reporteSeleccionado,
+        format: formatoSeleccionado,
+        date_from: periodoInicio,
+        date_to: periodoFin,
+        filters: {
+          categoria_id: categoriaFiltro === '' ? null : parseInt(categoriaFiltro)
+        },
+        email_to: emailDestino === '' ? null : emailDestino
+      });
+
+      if (report?.ok === false) {
+        throw new Error('No se pudo generar el reporte');
+      }
+
+      
+      setCategoriaFiltro("");
+      setPeriodoInicio("");
+      setPeriodoFin("");
+      mostrarNotificacion('success', 'Reporte generado exitosamente');
+      setRecargarHistorial((prev) => prev + 1);
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion('error', 'Error generando el reporte');
+    } finally {
+      setGenerandoReporte(false);
+    }
+
   }
 
-  const descargarReporte = (reporte) => {
-    mostrarNotificacion("success", `Descargando ${reporte.nombre}`)
+  const descargarReporte = async (reporte) => {
+
+    
+    try {
+      const descarga = await descargarReportes(reporte.id);
+      if (descarga) {
+        mostrarNotificacion("success", `Descargando ${reporte.nombre}`)
+        return true;
+      }
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion('error', error.message || 'Error al descargar el reporte');
+    }
   }
 
   const eliminarReporte = (id) => {
@@ -231,45 +251,56 @@ export const Reportes = () => {
 
   const getEstadoColor = (estado) => {
     switch (estado) {
-      case "completado":
+      case "ready":
         return "green"
-      case "programado":
+      case "program":
         return "blue"
-      case "error":
+      case "failed":
         return "red"
-      case "procesando":
+      case "proccesing":
         return "amber"
       default:
         return "blue-gray"
     }
   }
 
+  const getEstadoLabel = (rawEstado) => {
+    const estado = String(rawEstado ?? "").trim().toLowerCase();
+    switch (estado) {
+      case "ready":
+        return "Listo"
+        case "failed":
+          return "Falló"
+          case "processing":
+            return 'Procesando'
+            case "queued":
+              return "En cola"
+    }
+  };
+
   const getEstadoIcon = (estado) => {
     switch (estado) {
-      case "completado":
+      case "ready":
         return <CheckCircle className="h-4 w-4" />
       case "programado":
         return <Clock className="h-4 w-4" />
-      case "error":
+      case "failed":
         return <XCircle className="h-4 w-4" />
-      case "procesando":
+      case "proccesing":
         return <RefreshCw className="h-4 w-4 animate-spin" />
       default:
         return <FileText className="h-4 w-4" />
     }
   }
 
+   const productsPerPage = 25
+  const totalPages = Math.ceil(historial.length / productsPerPage)
+  const currentHistorial = historial.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage)
+
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
       {/* Alerta flotante */}
-      {mostrarAlerta && (
-        <div className="fixed top-4 right-4 z-50">
-          <Alert color={tipoAlerta === "success" ? "green" : "red"} className="shadow-lg">
-            {mensajeAlerta}
-          </Alert>
-        </div>
-      )}
-
+      {componenteAlerta}
       {/* Header */}
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -314,10 +345,9 @@ export const Reportes = () => {
                 <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
                   Formato por Defecto
                 </Typography>
-                <Select value="PDF">
-                  <Option value="PDF">PDF</Option>
-                  <Option value="Excel">Excel</Option>
-                  <Option value="CSV">CSV</Option>
+                <Select value="xlsx">
+                  <Option value="pdf">PDF</Option>
+                  <Option value="xlsx">Excel</Option>
                 </Select>
               </div>
               <div>
@@ -430,10 +460,16 @@ export const Reportes = () => {
                   {reporteSeleccionado && (
                     <Card className="shadow-sm">
                       <CardBody className="p-6">
-                        <Typography variant="h6" color="blue-gray" className="font-bold mb-4">
+                        <Typography variant="h6" color="blue-gray" className="font-bold mb-4 uppercase">
                           Configuración del Reporte
                         </Typography>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {(reporteSeleccionado === 'ventas' ||
+                            reporteSeleccionado === 'movimientos' ||
+                            reporteSeleccionado === 'rentabilidad' ||
+                            reporteSeleccionado === 'clientes' 
+                            ) && (
+                              <>
                           <div>
                             <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
                               Período de Inicio
@@ -450,17 +486,23 @@ export const Reportes = () => {
                             </Typography>
                             <Input type="date" value={periodoFin} onChange={(e) => setPeriodoFin(e.target.value)} />
                           </div>
+                              </>
+                          )}
                           <div>
                             <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
                               Categoría
                             </Typography>
-                            <Select value={categoriaFiltro} onChange={(value) => setCategoriaFiltro(value)}>
-                              <Option value="">Todas las categorías</Option>
-                              <Option value="calzado">Calzado</Option>
-                              <Option value="ropa">Ropa</Option>
-                              <Option value="electronica">Electrónica</Option>
-                              <Option value="accesorios">Accesorios</Option>
-                            </Select>
+                            <Select
+                                value={categoriaFiltro}
+                                onChange={(value) => setCategoriaFiltro(value)}
+                              >
+
+                                {categoria.map((c) => (
+                                  <Option key={c.id} value={c.id}>
+                                    {c.nombre}
+                                  </Option>
+                                ))}
+                              </Select>
                           </div>
                           <div>
                             <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
@@ -469,7 +511,7 @@ export const Reportes = () => {
                             <Select value={formatoSeleccionado} onChange={(value) => setFormatoSeleccionado(value)}>
                               {TIPOS_REPORTES.find((t) => t.id === reporteSeleccionado)?.formatos.map((formato) => (
                                 <Option key={formato} value={formato}>
-                                  {formato}
+                                  {formato === 'xlsx' ? 'Excel' : 'PDF'}
                                 </Option>
                               ))}
                             </Select>
@@ -478,7 +520,7 @@ export const Reportes = () => {
 
                         {/* Opciones Adicionales */}
                         <div className="mt-6 space-y-4">
-                          <div className="flex items-center justify-between">
+                          {/* <div className="flex items-center justify-between">
                             <div>
                               <Typography variant="small" color="blue-gray" className="font-medium">
                                 Incluir Gráficos
@@ -488,7 +530,7 @@ export const Reportes = () => {
                               </Typography>
                             </div>
                             <Switch checked={incluirGraficos} onChange={(e) => setIncluirGraficos(e.target.checked)} />
-                          </div>
+                          </div> */}
                           <div className="flex items-center justify-between">
                             <div>
                               <Typography variant="small" color="blue-gray" className="font-medium">
@@ -548,7 +590,7 @@ export const Reportes = () => {
                               Formato
                             </Typography>
                             <Typography variant="small" color="gray">
-                              {formatoSeleccionado}
+                              {formatoSeleccionado === 'xlsx' ? 'Excel' : 'PDF'}
                             </Typography>
                           </div>
                           <div className="p-4 bg-gray-50 rounded-lg">
@@ -556,9 +598,9 @@ export const Reportes = () => {
                               Opciones
                             </Typography>
                             <div className="space-y-1">
-                              <Typography variant="small" color="gray">
+                              {/* <Typography variant="small" color="gray">
                                 {incluirGraficos ? "✓" : "✗"} Incluir gráficos
-                              </Typography>
+                              </Typography> */}
                               <Typography variant="small" color="gray">
                                 {enviarPorEmail ? "✓" : "✗"} Enviar por email
                               </Typography>
@@ -608,7 +650,12 @@ export const Reportes = () => {
                     <Filter className="h-4 w-4" />
                     Filtrar
                   </Button>
-                  <Button variant="outlined" color="blue-gray" size="sm" className="flex items-center gap-2">
+                  <Button 
+                  variant="outlined" 
+                  color="blue-gray" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={() => setRecargarHistorial((prev) => prev + 1)}>
                     <RefreshCw className="h-4 w-4" />
                     Actualizar
                   </Button>
@@ -654,7 +701,7 @@ export const Reportes = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {HISTORIAL_REPORTES.map((reporte) => (
+                        {currentHistorial.map((reporte) => (
                           <tr key={reporte.id} className="hover:bg-gray-50">
                             <td className="p-4 border-b border-gray-200">
                               <div className="flex items-center gap-3">
@@ -673,11 +720,11 @@ export const Reportes = () => {
                             </td>
                             <td className="p-4 border-b border-gray-200">
                               <Chip
-                                value={reporte.formato}
-                                color="blue-gray"
+                                value={reporte.formato === 'xlsx' ? 'Excel' : 'Pdf'}
+                                color="cyan"
                                 size="sm"
                                 variant="ghost"
-                                className="rounded-full"
+                                className="rounded-full uppercase"
                               />
                             </td>
                             <td className="p-4 border-b border-gray-200">
@@ -687,11 +734,11 @@ export const Reportes = () => {
                             </td>
                             <td className="p-4 border-b border-gray-200">
                               <Chip
-                                value={reporte.estado}
+                                value={getEstadoLabel(reporte.estado)}
                                 color={getEstadoColor(reporte.estado)}
                                 size="sm"
                                 variant="ghost"
-                                className="rounded-full capitalize"
+                                className="rounded-full w-28 capitalize"
                                 icon={getEstadoIcon(reporte.estado)}
                               />
                             </td>
@@ -702,7 +749,7 @@ export const Reportes = () => {
                             </td>
                             <td className="p-4 border-b border-gray-200">
                               <div className="flex gap-2">
-                                {reporte.estado === "completado" && (
+                                {reporte.estado === "ready" && (
                                   <>
                                     <IconButton
                                       variant="text"
@@ -712,12 +759,7 @@ export const Reportes = () => {
                                     >
                                       <Download className="h-4 w-4" />
                                     </IconButton>
-                                    <IconButton variant="text" color="blue-gray" size="sm">
-                                      <Eye className="h-4 w-4" />
-                                    </IconButton>
-                                    <IconButton variant="text" color="blue-gray" size="sm">
-                                      <Share2 className="h-4 w-4" />
-                                    </IconButton>
+                                    
                                   </>
                                 )}
                                 <IconButton
@@ -735,6 +777,46 @@ export const Reportes = () => {
                       </tbody>
                     </table>
                   </div>
+                  {/* Paginación */}
+            {historial.length > 0 ? (
+              <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                <Typography variant="small" color="blue-gray" className="font-normal">
+                  Mostrando {(currentPage - 1) * productsPerPage + 1} a{" "}
+                  {Math.min(currentPage * productsPerPage, historial.length)} de {historial.length}{" "}
+                  reportes
+                </Typography>
+                <div className="flex gap-2">
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </IconButton>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8">
+                <Package className="h-12 w-12 text-gray-400 mb-3" />
+                <Typography variant="h6" color="blue-gray">
+                  No se encontró ningún historial
+                </Typography>
+                <Typography variant="small" color="gray" className="mt-1">
+                  Intenta con otra búsqueda o agrega nuevos reportes.
+                </Typography>
+              </div>
+            )}
                 </CardBody>
               </Card>
             </TabPanel>

@@ -1,13 +1,10 @@
-import { useState, useEffect } from "react";
-import { useProductos } from "../../../context/ProductsContext";
-import { useCategorias } from "../../../context/CategoriasContext";
-import { useSubcategorias } from "../../../context/SubcategoriasContext";
-import { getAllCategories } from "../../../services/categorieService";
+import { useState, useEffect, useMemo } from "react";
 import { addCategoryController } from "../../../controllers/categorieController";
 import { addProductController } from "../../../controllers/productController";
 import { addSubcategoryController } from "../../../controllers/subcategoriesController";
 import { getSubcategoriesController } from "../../../controllers/subcategoriesController";
 import { formatearMiles, precioToNumber } from "../../../helpers/formatearPesos";
+import { useProductosMutation } from "../../../hooks/useProductosMutation";
 import { toast } from "react-hot-toast";
 import {
   Button,
@@ -28,6 +25,10 @@ import {
   DialogFooter,
 } from "@material-tailwind/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useCategorias } from "../../../hooks/useCategorias";
+import { useCategoriasMutation } from "../../../hooks/useCategoriasMutation";
+import { useSubcategorias } from "../../../hooks/useSubcategorias";
+import { useSubcategoriasMutation } from "../../../hooks/useSubcategoriaMutation";
 
 export const SubirProducto = () => {
   const [nombre, setNombre] = useState("");
@@ -37,11 +38,10 @@ export const SubirProducto = () => {
   const [precioCosto, setPrecioCosto] = useState("");
   const [images, setImages] = useState([]);
   const [marca, setMarca] = useState("");
-  const [categorias, setCategorias] = useState([]);
-  const [subcategorias, setSubCategorias] = useState([]);
   const [subCategory_id, setSubcategory_id] = useState("");
   const [category_id, setCategory_id] = useState("");
   const [estadoCategoria, setEstadoCategoria] = useState("true");
+  const [currency, setCurrency] = useState('ARS');
   const [nombreCategoria, setNombreCategoria] = useState("");
   const [descripcionCategoria, setDescripcionCategoria] = useState("");
   const [nombreSubcategoria, setNombreSubcategoria] = useState("");
@@ -57,35 +57,23 @@ export const SubirProducto = () => {
   const [open, setOpen] = useState(false);
   const [openSub, setOpenSub] = useState(false);
 
-  // Context
-  const { setRecargarProductos } = useProductos();
-  const { categoriasContext, setRecargarCategoriaContext } = useCategorias();
-  const { subcategoriasContext, setRecargarSubcategoriasContext } =
-    useSubcategorias();
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const data = await getAllCategories();
-        setCategorias(data);
-      } catch (error) {
-        console.error("Error al obtener categorias.", error.message);
-      }
-    };
-    fetchCategories();
-  }, [categoriasContext]);
-
-  useEffect(() => {
-    const fetchSubcategories = async () => {
-      try {
-        const data = await getSubcategoriesController({ toast });
-        setSubCategorias(data);
-      } catch (error) {
-        console.error("Error al obtener categorias.", error.message);
-      }
-    };
-    fetchSubcategories();
-  }, [subcategoriasContext]);
+  // MUTATION
+  const { crearProducto } = useProductosMutation();
+  const { crearCategoria } = useCategoriasMutation();
+  const { crearSubcategoria } = useSubcategoriasMutation()
+  // TRAER LOS DATOS DESDE REACT QUERY
+  // CATEGORIAS
+  const filtroCategoria = useMemo(() => ({
+    activo: 'true'
+  }), []);
+  const { data, isLoading, error, refetch, isFetching } = useCategorias(filtroCategoria);
+  const categorias = data || [];
+  // SUBCATEGORIAS
+  const filtroSubcategoria = useMemo(() => ({
+    activo: 'true'
+  }));
+  const { data: dataSubcategoria } = useSubcategorias(filtroSubcategoria);
+  const subcategorias = dataSubcategoria || [];
 
   const resetFields = () => {
     setNombre("");
@@ -99,8 +87,9 @@ export const SubirProducto = () => {
     setDestacado(0);
     setImagen_url("");
     setImagenUrls([]);
-    setCategory_id("");
-    setCantidadMinima("");
+    setCategory_id([]);
+    setSubcategory_id([]);
+    setCantidadMinima(0);
     setPrecioCosto("")
   };
 
@@ -108,6 +97,9 @@ export const SubirProducto = () => {
     setNombreCategoria("");
     setDescripcionCategoria("");
     setEstadoCategoria("true");
+  };
+
+  const resetFieldsSubCategorys = () => {
     setNombreSubcategoria("");
     setDescripcionSubcategoria("");
     setEstadoSubcategoria("true");
@@ -153,7 +145,7 @@ export const SubirProducto = () => {
 
   const handleNewCategory = async (e) => {
     e.preventDefault();
-    if (!nombreCategoria.trim()) {
+    if (!nombreCategoria.trim() || !nombreCategoria) {
       toast.error("El nombre de la categoría es obligatorio.");
       return;
     }
@@ -163,19 +155,21 @@ export const SubirProducto = () => {
     }
 
     try {
-      const cate = await addCategoryController({
+      const payload = {
       nombre: nombreCategoria,
       descripcion: descripcionCategoria,
       activo: estadoCategoria === "true",
-      toast
-    });
+    };
+
+      const cate = crearCategoria.mutateAsync(payload)
 
       if (cate) {
         resetFieldsCategorys();
-        setRecargarCategoriaContext((prev) => prev + 1);
+        toast.success('Categoría creada correctamente');
       }
     } catch (error) {
       console.error(error);
+      toast.success(error.message || 'Error al crear la categoría');
     }
     
     
@@ -183,25 +177,33 @@ export const SubirProducto = () => {
 
   const handleNewSubcategory = async (e) => {
     e.preventDefault();
-    if (!nombreSubcategoria.trim()) {
-      toast.error("El nombre de la categoría es obligatorio.");
-      return;
+  
+  
+  try {
+      if (!nombreSubcategoria.trim() || !nombreSubcategoria) {
+        toast.error("El nombre de la categoría es obligatorio.");
+        return;
+      }
+      if (estadoSubCategoria === "") {
+        toast.error("Debes seleccionar un estado.");
+        return;
+        }
+      
+        const payload = {
+          nombre: nombreSubcategoria,
+          descripcion: descripcionSubcategoria,
+          activo: estadoSubCategoria === "true",
+          categoria_id: Number(categoriaPadre)
+          }
+        
+        const subcate = crearSubcategoria.mutateAsync(payload);
+        if (subcate) {
+          toast.success('Subcategoría creada correctamente');
+          resetFieldsSubCategorys();
+        }
+    } catch (error) {
+        toast.error(error.message || 'Error al crear la subcategoría');
     }
-    if (estadoSubCategoria === "") {
-      toast.error("Debes seleccionar un estado.");
-      return;
-    }
-
-    await addSubcategoryController({
-      nombre: nombreSubcategoria,
-      descripcion: descripcionSubcategoria,
-      activo: estadoSubCategoria === "true",
-      categoria_id: Number(categoriaPadre),
-      toast,
-    });
-
-    resetFieldsCategorys();
-    setRecargarSubcategoriasContext((prev) => prev + 1);
   };
 
   const handleCreateProduct = async (e) => {
@@ -228,6 +230,10 @@ export const SubirProducto = () => {
         toast.error("Debes seleccionar una subcategoria.");
         return;
       }
+      if (!currency) {
+        toast.error('Debes seleccionar una moneda');
+        return;
+      }
 
       const imagen_url = images.length > 0 ? images[0] : null;
       const imagenUrls = images.slice(1);
@@ -242,18 +248,21 @@ export const SubirProducto = () => {
         marca,
         estado,
         destacado: parseInt(destacado),
-        cantidad: parseInt(cantidad),
-        cantidad_minima: parseInt(cantidadMinima),
+        cantidad: parseInt(cantidad) ?? 0,
+        cantidad_minima: parseInt(cantidadMinima) ?? 0,
         descripcion_corta: descripcionCorta,
         precio_costo: precioToNumber(precioCosto),
+        currency,
         toast,
         resetFields,
       };
 
-      const nuevoProducto = await addProductController(productData);
-      if (nuevoProducto) setRecargarProductos((prev) => prev + 1);
+      const producto = crearProducto.mutateAsync(productData);
+      toast.success('Producto creado correctamente');
+      resetFields();
     } catch (error) {
       console.error(error);
+      toast.error(error.message || 'Error al crear el producto');
     }
   };
 
@@ -488,7 +497,29 @@ export const SubirProducto = () => {
                         color="blue-gray"
                         className="mb-2 font-medium"
                       >
-                        Precio costo <span className="text-red-700 font-bold">*</span>
+                        Moneda del producto <span className="text-red-700 font-bold">*</span>
+                      </Typography>
+                      <Select
+                      className="!w-full !border-[1.5px] !border-blue-gray-200/90 !border-t-blue-gray-200/90 bg-white text-gray-800 ring-4 ring-transparent placeholder:text-gray-600 focus:!border-primary focus:!border-t-blue-gray-900 group-hover:!border-primary"
+                      placeholder="1"
+                      value={currency}
+                      onChange={(val) => setCurrency(val)}
+                      labelProps={{
+                        className: "hidden",
+                      }}
+                    >
+                      <Option value="ARS">ARS</Option>
+                      <Option value="USD">USD</Option>
+                    </Select>
+                      
+                    </div>
+                    <div>
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="mb-2 font-medium"
+                      >
+                        Costo Unitario <span className="text-red-700 font-bold">*</span>
                       </Typography>
                       <Input
                         type="text"
@@ -772,6 +803,7 @@ export const SubirProducto = () => {
               color="deep-orange"
               type="submit"
               className="flex items-center gap-2 uppercase shadow-md"
+              disabled={crearProducto.isPending}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -787,7 +819,7 @@ export const SubirProducto = () => {
                   d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
                 />
               </svg>
-              SUBIR PRODUCTO
+              {crearProducto.isPending ? 'SUBIENDO PRODUCTO' : 'SUBIR PRODUCTO'}
             </Button>
           </CardFooter>
         </form>

@@ -28,10 +28,8 @@ import {
   Alert,
 } from "@material-tailwind/react"
 import { getProducts } from "../../../services/productServices"
-import { useProductos } from "../../../context/ProductsContext"
 import { registrarMovStockServices, stockMovements } from "../../../services/stockServices";
 import { useNotificacion } from "../../../hooks/useNotificacion"
-import { useStock } from "../../../context/StockContext"
 import { formatearEntero } from "../../../helpers/numeros";
 import { formatearFechaHora } from "../../../helpers/formatoFecha"
 
@@ -58,8 +56,8 @@ const RegistrarMovimientoStock = () => {
 
 
   // CONTEXT
-    const { recargarProductos, setRecargarProductos } = useProductos();
-    // const { stock, setRecargarStock} = useStock();
+    
+  
 
   // Fetch para traer los productos
   useEffect(() => {
@@ -767,16 +765,6 @@ const RegistrarMovimientoStock = () => {
                       <strong>{prod.nombre}:</strong> {prod.cantidad <= 0 ? 'Sin Stock' : prod.cantidad < 10 ? 'Stock Critico' : 'Stock Regular'} ({prod.cantidad} unidades)
                     </Typography>
                   </Alert>
-                  {/* <Alert color="orange" className="py-2">
-                    <Typography variant="small">
-                      <strong>iPad Air M2:</strong> Stock bajo (5 unidades)
-                    </Typography>
-                  </Alert>
-                  <Alert color="blue" className="py-2">
-                    <Typography variant="small">
-                      <strong>3 productos</strong> requieren reposición
-                    </Typography>
-                  </Alert> */}
                 </div>
 
                 ))}

@@ -1,10 +1,13 @@
-"use client"
-
-import { useState } from "react"
+import { useCallback, useEffect, useState, useRef } from "react";
 import {
   Card,
   CardBody,
   Typography,
+  Dialog,
+  IconButton,
+  DialogBody,
+  DialogHeader,
+  DialogFooter,
   Button,
   Input,
   Switch,
@@ -15,7 +18,12 @@ import {
   TabPanel,
   Chip,
   Alert,
-} from "@material-tailwind/react"
+  Select,
+  Option,
+} from "@material-tailwind/react";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import {
   Settings,
   Building2,
@@ -44,59 +52,385 @@ import {
   Server,
   Zap,
   Webhook,
-} from "lucide-react"
+  Eye,
+  EyeOff,
+  Trash2,
+} from "lucide-react";
+import {
+  getSettingsCompany,
+  patchSettingsCompany,
+  patchSettingsInventory,
+  patchSettingsVentas,
+} from "../../../services/settingServices";
+import {
+  obtenerUsers,
+  register,
+  editUser,
+  eliminarUser,
+} from "../../../services/authServices";
+import { useNotificacion } from "../../../hooks/useNotificacion";
 
 const ConfiguracionesDashboard = () => {
-  const [activeTab, setActiveTab] = useState("general")
-  const [mostrarAlerta, setMostrarAlerta] = useState(false)
-  const [mensajeAlerta, setMensajeAlerta] = useState("")
-  const [tipoAlerta, setTipoAlerta] = useState("success")
+  const [activeTab, setActiveTab] = useState("general");
+  const [open, setOpen] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [showPassord, setShowPassword] = useState(false);
+  const [user, setUser] = useState({
+    nombre: "",
+    email: "",
+    password: "",
+    rol: "",
+    activo: true,
+    apellido: "",
+  });
+  const [formUser, setFormUser] = useState({
+    nombre: "",
+    apellido: "",
+    rol: "",
+    activo: "",
+  });
+  const [usuarios, setUsuarios] = useState([]);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
+  const [triggerUsuarios, setTriggerUsuarios] = useState(0);
+  const [filters, setFilters] = useState({ excludeRole: "cliente" });
+  const fileRef = useRef(null);
+  const MySwal = withReactContent(Swal);
 
-  // Estados para las diferentes configuraciones
+  const fetchUsuarios = useCallback(async () => {
+    const user = await obtenerUsers({ filters });
+    setUsuarios(user.users);
+  }, []);
+
+  // console.log(usuarios);
+
+  useEffect(() => {
+    fetchUsuarios();
+  }, [fetchUsuarios, setTriggerUsuarios]);
+
+  const { componenteAlerta, mostrarNotificacion } = useNotificacion();
+
+  const handleOpen = () => setOpen(!open);
+  const handleOpenEdit = () => setOpenEdit(!openEdit);
+
+  useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        const comp = await getSettingsCompany();
+        console.log(comp);
+        setConfigGeneral(comp);
+        setConfigInventario({
+        stockMinimo: comp.default_min_stock ?? 0,
+        alertaBajoStock: comp.low_stock_alert ?? false,
+        alertaSinStock: comp.out_of_stock_alert ?? false,
+        mostrarCostos: comp.show_costs ?? false,
+        permitirStockNegativo: comp.allow_negative_stock ?? false,
+        categoriaDefecto: comp.default_category_id ?? null,
+      });
+      setConfigVentas({
+      iva: comp.iva_default,
+      descuentoMaximo: comp.max_discount,
+      metodoPagoDefecto: comp.payment_method_default,
+      fx_rate_usd_ars: comp.fx_rate_usd_ar
+      })
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchCompany();
+  }, []);
+
+  // Estados para la información de la empresa
   const [configGeneral, setConfigGeneral] = useState({
-    nombreEmpresa: "Mi Empresa S.A.",
-    direccion: "Av. Corrientes 1234, CABA",
-    telefono: "+54 11 1234-5678",
-    email: "contacto@miempresa.com",
-    sitioWeb: "www.miempresa.com",
-    cuit: "20-12345678-9",
-    logo: null,
-    monedaPrincipal: "ARS",
-    zonaHoraria: "America/Argentina/Buenos_Aires",
-    formatoFecha: "DD/MM/YYYY",
-  })
+    org_id: "",
+    name: "",
+    direction: "",
+    telefono: "",
+    email_empresa: "",
+    website: "",
+    tax_id: "",
+    logo_url: "",
+    logoFile: null,
+    monedaPrincipal: "",
+    timezone: "",
+    date_format: "",
+  });
+
+  // PREVIEW PARA VER LA IMAGEN
+  const [preview, setPreview] = useState(configGeneral.logo_url || "");
+  console.log(preview);
+  // PICK DE LA IMAGEN Y ONCHANGE
+  const onPick = () => fileRef.current?.click();
+
+  const onChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const allowed = ['image/png', 'image/jpeg'];
+    if (!allowed.includes(f.type)) {
+      mostrarNotificacion('error', 'Formato no soportado. Usá PNG o JPG.');
+      e.target.value = '';
+      return;
+    }
+
+    if (f.size > 2 * 1024 * 1024) {
+      mostrarNotificacion('error', 'El archivo supera 5MB.');
+      e.target.value = '';
+      return;
+    }
+    
+    setConfigGeneral(prev => ({...prev, logoFile: f}));
+    setPreview(URL.createObjectURL(f));
+  }
+
+  const guardarConfigGeneral = async (orgId) => {
+    const { logo_url, ...payload } = configGeneral;
+    try {
+      const config = await patchSettingsCompany(orgId, payload);
+      if (config) {
+        mostrarNotificacion("success", "Configuración general guardada");
+        setConfigGeneral((prev) => ({ ...prev, ...config.data }));
+      }
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion("error", error.message);
+    }
+  };
+
+
+  const guardarConfigInventario = async (orgId) => {
+    const { ...payload } = configInventario;
+    try {
+      const config = await patchSettingsInventory(orgId, payload);
+      if (config) {
+        mostrarNotificacion('success', 'Configuración del inventario guardada');
+        setConfigInventario((prev) => ({ ...prev, ...config.data }));
+      }
+      
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion('error', error.message);
+    }
+    
+  }
+  const guardarConfigVentas = async (orgId) => {
+    const { ...payload } = configVentas;
+    try {
+      const config = await patchSettingsVentas(orgId, payload);
+      if (config) {
+        mostrarNotificacion('success', 'Configuración de ventas guardada');
+        setConfigInventario((prev) => ({ ...prev, ...config.data }));
+      }
+      
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion('error', error.message);
+    }
+    
+  }
+
+  const validarFormularioUser = () => {
+    const nombre = user.nombre.trim();
+    if (!nombre) {
+      mostrarNotificacion("error", "Debes ingresar un nombre");
+      return false;
+    }
+    const password = user.password.trim();
+    if (!password) {
+      mostrarNotificacion("error", "La contraseña es obligatoria");
+      return false;
+    }
+    if (password < 6) {
+      mostrarNotificacion(
+        "error",
+        "La contraseña debe tener al menos 6 caracteres"
+      );
+      return false;
+    }
+    const email = user.email.trim();
+    if (!email) {
+      mostrarNotificacion("error", "Ingresá un correo electrónico");
+      return false;
+    }
+    if (!user.rol) {
+      mostrarNotificacion("error", "Debes seleccionar un rol");
+      return false;
+    }
+    const apellido = user.apellido.trim();
+    if (!apellido) {
+      mostrarNotificacion("error", "Debes ingresar un apellido");
+      return false;
+    }
+    return true;
+  };
+  const validarFormularioUserEdit = () => {
+    const nombre = formUser.nombre.trim();
+    if (!nombre) {
+      mostrarNotificacion("error", "Debes ingresar un nombre");
+      return false;
+    }
+
+    if (!formUser.rol) {
+      mostrarNotificacion("error", "Debes seleccionar un rol");
+      return false;
+    }
+
+    const apellido = formUser.apellido.trim();
+    if (!apellido) {
+      mostrarNotificacion("error", "Debes ingresar un apellido");
+      return false;
+    }
+
+    if (!formUser.activo) {
+      mostrarNotificacion("error", "Debes seleccionar un estado");
+      return false;
+    }
+
+    return true;
+  };
+
+  const resetFields = () => {
+    setUser({
+      nombre: "",
+      password: "",
+      email: "",
+      rol: "",
+    });
+  };
+
+  const resetFieldUserEdit = () => {
+    setFormUser({
+      nombre: "",
+      apellido: "",
+      rol: "",
+      activo: "",
+    });
+  };
+
+  const registrarUsuario = async () => {
+    try {
+      if (!validarFormularioUser()) return false;
+      const usuario = await register(user);
+      // console.log(user);
+
+      if (usuario) {
+        mostrarNotificacion("success", "Usuario registrado con éxito");
+        setOpen((v) => !v);
+        resetFields();
+        setTriggerUsuarios((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion("error", "Hubo un problema al crear el usuario");
+    }
+  };
+
+  const colorChipUser = (rol) => {
+    switch (rol) {
+      case "admin":
+        return "purple";
+      case "vendedor":
+        return "green";
+      case "supervisor":
+        return "blue";
+      default:
+        return "yellow";
+    }
+  };
+
+  const comenzarEdicion = (usuario) => {
+    if (!usuario) return;
+    setUsuarioSeleccionado(usuario);
+    setFormUser({
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      rol: usuario.rol,
+      activo:
+        usuario.activo == null ? "" : usuario.activo ? "activo" : "inactivo",
+    });
+    setOpenEdit(true);
+  };
+
+  const guardarEdicionUser = async () => {
+    try {
+      if (!validarFormularioUserEdit) return;
+      const resp = await editUser({
+        id: usuarioSeleccionado.id,
+        nombre: formUser.nombre,
+        apellido: formUser.apellido,
+        rol: formUser.rol,
+        activo: formUser.activo,
+      });
+      const usuarioEdit = resp.usuarioEditado;
+      mostrarNotificacion("success", "Usuario modificado éxitosamente");
+      resetFieldUserEdit();
+      setUsuarioSeleccionado(null);
+      setUsuarios((prev) =>
+        prev.map((u) =>
+          u.id === usuarioEdit.id ? { ...u, ...usuarioEdit } : u
+        )
+      );
+      setOpenEdit(false);
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion(
+        "error",
+        error.msg || "Ocurrió un error al modificar el usuario"
+      );
+    }
+  };
+
+  const handleDelete = (usuario) => {
+    MySwal.fire({
+      title: "¿Estás seguro?",
+      text: "No podrás revertir esta acción",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (!result.isConfirmed) return;
+
+      try {
+        const id = Number(usuario?.id);
+        await eliminarUser(id);
+        mostrarNotificacion("success", "Usuario eliminado correctamente.");
+      } catch (error) {
+        console.error(error);
+        mostrarNotificacion("error", error.message || "No se pudo eliminar");
+      }
+    });
+  };
 
   const [configInventario, setConfigInventario] = useState({
-    stockMinimo: 10,
+    stockMinimo: 0,
     alertaBajoStock: true,
     alertaSinStock: true,
     actualizacionAutomatica: true,
     mostrarCostos: true,
-    permitirStockNegativo: false,
-    unidadMedidaDefecto: "unidad",
     categoriaDefecto: "general",
-  })
+  });
 
+  // console.log(configInventario);
   const [configVentas, setConfigVentas] = useState({
-    iva: 21,
-    descuentoMaximo: 50,
-    permitirVentaSinStock: false,
+    iva: 0,
+    descuentoMaximo: 0,
     facturacionAutomatica: true,
     numeracionAutomatica: true,
     proximoNumeroFactura: 1001,
     metodoPagoDefecto: "efectivo",
-    validezPresupuesto: 30,
-  })
+    fx_rate_usd_ars: 0
+  });
 
-  const [configNotificaciones, setConfigNotificaciones] = useState({
-    emailVentas: true,
-    emailInventario: true,
-    emailReportes: true,
-    pushNotifications: false,
-    smsAlertas: false,
-    frecuenciaReportes: "semanal",
-    horaEnvioReportes: "09:00",
-  })
+  // const [configNotificaciones, setConfigNotificaciones] = useState({
+  //   emailVentas: true,
+  //   emailInventario: true,
+  //   emailReportes: true,
+  //   pushNotifications: false,
+  //   smsAlertas: false,
+  //   frecuenciaReportes: "semanal",
+  //   horaEnvioReportes: "09:00",
+  // });
 
   const [configSeguridad, setConfigSeguridad] = useState({
     sesionExpira: 480, // minutos
@@ -107,7 +441,7 @@ const ConfiguracionesDashboard = () => {
     backupAutomatico: true,
     frecuenciaBackup: "diario",
     retencionBackup: 30, // días
-  })
+  });
 
   const [configAvanzada, setConfigAvanzada] = useState({
     modoDebug: false,
@@ -118,35 +452,30 @@ const ConfiguracionesDashboard = () => {
     apiKey: "",
     integracionContable: false,
     sincronizacionAutomatica: false,
-  })
+  });
 
   const tabsData = [
     { label: "General", value: "general", icon: Building2 },
     { label: "Inventario", value: "inventario", icon: Package },
     { label: "Ventas", value: "ventas", icon: ShoppingCart },
     { label: "Usuarios", value: "usuarios", icon: Users },
-    { label: "Notificaciones", value: "notificaciones", icon: Bell },
     { label: "Avanzado", value: "avanzado", icon: Settings },
-  ]
-
-  const mostrarNotificacion = (tipo, mensaje) => {
-    setTipoAlerta(tipo)
-    setMensajeAlerta(mensaje)
-    setMostrarAlerta(true)
-    setTimeout(() => setMostrarAlerta(false), 3000)
-  }
+  ];
 
   const guardarConfiguracion = (seccion) => {
     // Aquí iría la lógica para guardar en la base de datos
-    console.log(`Guardando configuración de ${seccion}`)
-    mostrarNotificacion("success", `Configuración de ${seccion} guardada exitosamente`)
-  }
+    console.log(`Guardando configuración de ${seccion}`);
+    mostrarNotificacion(
+      "success",
+      `Configuración de ${seccion} guardada exitosamente`
+    );
+  };
 
   const resetearConfiguracion = (seccion) => {
     // Aquí iría la lógica para resetear a valores por defecto
-    console.log(`Reseteando configuración de ${seccion}`)
-    mostrarNotificacion("success", `Configuración de ${seccion} restablecida`)
-  }
+    console.log(`Reseteando configuración de ${seccion}`);
+    mostrarNotificacion("success", `Configuración de ${seccion} restablecida`);
+  };
 
   const exportarConfiguracion = () => {
     // Aquí iría la lógica para exportar configuraciones
@@ -154,35 +483,28 @@ const ConfiguracionesDashboard = () => {
       general: configGeneral,
       inventario: configInventario,
       ventas: configVentas,
-      notificaciones: configNotificaciones,
       seguridad: configSeguridad,
       avanzada: configAvanzada,
-    }
-    console.log("Exportando configuración:", config)
-    mostrarNotificacion("success", "Configuración exportada exitosamente")
-  }
+    };
+    console.log("Exportando configuración:", config);
+    mostrarNotificacion("success", "Configuración exportada exitosamente");
+  };
 
   const importarConfiguracion = () => {
     // Aquí iría la lógica para importar configuraciones
-    console.log("Importando configuración")
-    mostrarNotificacion("success", "Configuración importada exitosamente")
-  }
+    console.log("Importando configuración");
+    mostrarNotificacion("success", "Configuración importada exitosamente");
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Alerta flotante */}
-      {mostrarAlerta && (
-        <div className="fixed top-4 right-4 z-50">
-          <Alert color={tipoAlerta === "success" ? "green" : "red"} className="shadow-lg">
-            {mensajeAlerta}
-          </Alert>
-        </div>
-      )}
+      {componenteAlerta}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <Typography variant="h4" color="blue-gray" className="mb-2">
+          <Typography variant="h4" color="blue-gray" className="mb-2 uppercase">
             Configuraciones del Sistema
           </Typography>
           <Typography color="gray" className="text-lg">
@@ -190,18 +512,28 @@ const ConfiguracionesDashboard = () => {
           </Typography>
         </div>
         <div className="flex items-center gap-3 mt-4 md:mt-0">
-          <Button size="sm" variant="outlined" onClick={importarConfiguracion} className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outlined"
+            onClick={importarConfiguracion}
+            className="flex items-center gap-2"
+          >
             <Upload size={16} />
-            Importar
+            Importar configuración
           </Button>
-          <Button size="sm" variant="outlined" onClick={exportarConfiguracion} className="flex items-center gap-2">
+          {/* <Button
+            size="sm"
+            variant="outlined"
+            onClick={exportarConfiguracion}
+            className="flex items-center gap-2"
+          >
             <Download size={16} />
             Exportar
-          </Button>
-          <Button size="sm" color="blue" className="flex items-center gap-2">
+          </Button> */}
+          {/* <Button size="sm" color="blue" className="flex items-center gap-2">
             <Save size={16} />
             Guardar Todo
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -211,9 +543,11 @@ const ConfiguracionesDashboard = () => {
           <Tabs value={activeTab} onChange={setActiveTab}>
             <TabsHeader className="bg-gray-50">
               {tabsData.map(({ label, value, icon: Icon }) => (
-                <Tab key={value} value={value} className="flex items-center gap-2">
-                  <Icon size={16} />
-                  {label}
+                <Tab key={value} value={value}>
+                  <div className="flex items-center gap-2 text-lg">
+                    <Icon size={16} />
+                    {label}
+                  </div>
                 </Tab>
               ))}
             </TabsHeader>
@@ -227,71 +561,129 @@ const ConfiguracionesDashboard = () => {
                     <CardBody>
                       <div className="flex items-center gap-2 mb-6">
                         <Building2 size={20} />
-                        <Typography variant="h6" color="blue-gray">
+                        <Typography
+                          variant="h6"
+                          color="blue-gray"
+                          className="uppercase"
+                        >
                           Información de la Empresa
                         </Typography>
                       </div>
                       <div className="space-y-4">
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Nombre de la Empresa
                           </Typography>
                           <Input
-                            value={configGeneral.nombreEmpresa}
-                            onChange={(e) => setConfigGeneral({ ...configGeneral, nombreEmpresa: e.target.value })}
+                            value={configGeneral.name}
+                            onChange={(e) =>
+                              setConfigGeneral({
+                                ...configGeneral,
+                                name: e.target.value,
+                              })
+                            }
                             icon={<Building2 size={16} />}
                           />
                         </div>
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Dirección
                           </Typography>
                           <Input
-                            value={configGeneral.direccion}
-                            onChange={(e) => setConfigGeneral({ ...configGeneral, direccion: e.target.value })}
+                            value={configGeneral.direction}
+                            onChange={(e) =>
+                              setConfigGeneral({
+                                ...configGeneral,
+                                direction: e.target.value,
+                              })
+                            }
                             icon={<MapPin size={16} />}
                           />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                            <Typography
+                              variant="small"
+                              color="blue-gray"
+                              className="mb-2 font-medium"
+                            >
                               Teléfono
                             </Typography>
                             <Input
                               value={configGeneral.telefono}
-                              onChange={(e) => setConfigGeneral({ ...configGeneral, telefono: e.target.value })}
+                              onChange={(e) =>
+                                setConfigGeneral({
+                                  ...configGeneral,
+                                  telefono: e.target.value,
+                                })
+                              }
                               icon={<Phone size={16} />}
                             />
                           </div>
                           <div>
-                            <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                            <Typography
+                              variant="small"
+                              color="blue-gray"
+                              className="mb-2 font-medium"
+                            >
                               Email
                             </Typography>
                             <Input
-                              value={configGeneral.email}
-                              onChange={(e) => setConfigGeneral({ ...configGeneral, email: e.target.value })}
+                              value={configGeneral.email_empresa}
+                              onChange={(e) =>
+                                setConfigGeneral({
+                                  ...configGeneral,
+                                  email_empresa: e.target.value,
+                                })
+                              }
                               icon={<Mail size={16} />}
                             />
                           </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                            <Typography
+                              variant="small"
+                              color="blue-gray"
+                              className="mb-2 font-medium"
+                            >
                               Sitio Web
                             </Typography>
                             <Input
-                              value={configGeneral.sitioWeb}
-                              onChange={(e) => setConfigGeneral({ ...configGeneral, sitioWeb: e.target.value })}
+                              value={configGeneral.website}
+                              onChange={(e) =>
+                                setConfigGeneral({
+                                  ...configGeneral,
+                                  website: e.target.value,
+                                })
+                              }
                               icon={<Globe size={16} />}
                             />
                           </div>
                           <div>
-                            <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                            <Typography
+                              variant="small"
+                              color="blue-gray"
+                              className="mb-2 font-medium"
+                            >
                               CUIT/RUT
                             </Typography>
                             <Input
-                              value={configGeneral.cuit}
-                              onChange={(e) => setConfigGeneral({ ...configGeneral, cuit: e.target.value })}
+                              value={configGeneral.tax_id}
+                              onChange={(e) =>
+                                setConfigGeneral({
+                                  ...configGeneral,
+                                  tax_id: e.target.value,
+                                })
+                              }
                               icon={<FileText size={16} />}
                             />
                           </div>
@@ -305,12 +697,16 @@ const ConfiguracionesDashboard = () => {
                     <CardBody>
                       <div className="flex items-center gap-2 mb-6">
                         <Globe size={20} />
-                        <Typography variant="h6" color="blue-gray">
+                        <Typography
+                          variant="h6"
+                          color="blue-gray"
+                          className="uppercase"
+                        >
                           Configuraciones Regionales
                         </Typography>
                       </div>
                       <div className="space-y-4">
-                        <div>
+                        {/* <div>
                           <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
                             Moneda Principal
                           </Typography>
@@ -324,29 +720,46 @@ const ConfiguracionesDashboard = () => {
                             <option value="EUR">Euro (EUR)</option>
                             <option value="BRL">Real Brasileño (BRL)</option>
                           </select>
-                        </div>
+                        </div>  */}
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Zona Horaria
                           </Typography>
                           <select
-                            value={configGeneral.zonaHoraria}
-                            onChange={(e) => setConfigGeneral({ ...configGeneral, zonaHoraria: e.target.value })}
+                            value={configGeneral.timezone}
+                            onChange={(e) =>
+                              setConfigGeneral({
+                                ...configGeneral,
+                                timezone: e.target.value,
+                              })
+                            }
                             className="w-full p-2 border border-gray-300 rounded-md"
                           >
-                            <option value="America/Argentina/Buenos_Aires">Buenos Aires (GMT-3)</option>
-                            <option value="America/Sao_Paulo">São Paulo (GMT-3)</option>
-                            <option value="America/New_York">New York (GMT-5)</option>
-                            <option value="Europe/Madrid">Madrid (GMT+1)</option>
+                            <option value="America/Argentina/Buenos_Aires">
+                              Buenos Aires (GMT-3)
+                            </option>
                           </select>
                         </div>
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Formato de Fecha
                           </Typography>
                           <select
-                            value={configGeneral.formatoFecha}
-                            onChange={(e) => setConfigGeneral({ ...configGeneral, formatoFecha: e.target.value })}
+                            value={configGeneral.date_format}
+                            onChange={(e) =>
+                              setConfigGeneral({
+                                ...configGeneral,
+                                date_format: e.target.value,
+                              })
+                            }
                             className="w-full p-2 border border-gray-300 rounded-md"
                           >
                             <option value="DD/MM/YYYY">DD/MM/YYYY</option>
@@ -355,17 +768,43 @@ const ConfiguracionesDashboard = () => {
                           </select>
                         </div>
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Logo de la Empresa
                           </Typography>
+                          {/* Preview actual o seleccionado */}
+                        <div className="flex items-center gap-4 mb-3">
+                          <div className="h-36 w-44 border rounded flex items-center justify-center overflow-hidden bg-white">
+                            {preview ? (
+                              <img src={configGeneral.logo_url} alt="Logo" className="h-full w-full" />
+                            ) : (
+                              <span className="text-xs text-gray-500 px-2 text-center">Sin logo</span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-3">
-                            <Button size="sm" variant="outlined" className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outlined"
+                              className="flex items-center gap-2"
+                              onClick={onPick}
+                            >
                               <Upload size={16} />
                               Subir Logo
                             </Button>
                             <Typography color="gray" className="text-sm">
                               Formato: PNG, JPG (máx. 2MB)
                             </Typography>
+
+                            <input
+                            type="file"
+                            ref={fileRef}
+                            accept="image/png, image/jpeg"
+                            className="hidden"
+                            onChange={onChange} />
+                          </div>
                           </div>
                         </div>
                       </div>
@@ -385,7 +824,7 @@ const ConfiguracionesDashboard = () => {
                     </Button>
                     <Button
                       color="blue"
-                      onClick={() => guardarConfiguracion("general")}
+                      onClick={() => guardarConfigGeneral(configGeneral.org_id)}
                       className="flex items-center gap-2"
                     >
                       <Save size={16} />
@@ -409,24 +848,35 @@ const ConfiguracionesDashboard = () => {
                       </div>
                       <div className="space-y-4">
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Stock Mínimo por Defecto
                           </Typography>
                           <Input
                             type="number"
                             value={configInventario.stockMinimo}
                             onChange={(e) =>
-                              setConfigInventario({ ...configInventario, stockMinimo: Number.parseInt(e.target.value) })
+                              setConfigInventario({
+                                ...configInventario,
+                                stockMinimo: Number.parseInt(e.target.value),
+                              })
                             }
                           />
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Alerta de Bajo Stock
                             </Typography>
                             <Typography color="gray" className="text-sm">
-                              Notificar cuando el stock esté por debajo del mínimo
+                              Notificar cuando el stock esté por debajo del
+                              mínimo
                             </Typography>
                           </div>
                           <Switch
@@ -434,14 +884,18 @@ const ConfiguracionesDashboard = () => {
                             onChange={() =>
                               setConfigInventario({
                                 ...configInventario,
-                                alertaBajoStock: !configInventario.alertaBajoStock,
+                                alertaBajoStock:
+                                  !configInventario.alertaBajoStock,
                               })
                             }
                           />
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Alerta de Sin Stock
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -453,14 +907,18 @@ const ConfiguracionesDashboard = () => {
                             onChange={() =>
                               setConfigInventario({
                                 ...configInventario,
-                                alertaSinStock: !configInventario.alertaSinStock,
+                                alertaSinStock:
+                                  !configInventario.alertaSinStock,
                               })
                             }
                           />
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Actualización Automática
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -472,14 +930,18 @@ const ConfiguracionesDashboard = () => {
                             onChange={() =>
                               setConfigInventario({
                                 ...configInventario,
-                                actualizacionAutomatica: !configInventario.actualizacionAutomatica,
+                                actualizacionAutomatica:
+                                  !configInventario.actualizacionAutomatica,
                               })
                             }
                           />
                         </div>
-                        <div className="flex justify-between items-center">
+                        {/* <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Permitir Stock Negativo
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -491,11 +953,12 @@ const ConfiguracionesDashboard = () => {
                             onChange={() =>
                               setConfigInventario({
                                 ...configInventario,
-                                permitirStockNegativo: !configInventario.permitirStockNegativo,
+                                permitirStockNegativo:
+                                  !configInventario.permitirStockNegativo,
                               })
                             }
                           />
-                        </div>
+                        </div> */}
                       </div>
                     </CardBody>
                   </Card>
@@ -510,14 +973,21 @@ const ConfiguracionesDashboard = () => {
                         </Typography>
                       </div>
                       <div className="space-y-4">
-                        <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                        {/* <div>
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Unidad de Medida por Defecto
                           </Typography>
                           <select
                             value={configInventario.unidadMedidaDefecto}
                             onChange={(e) =>
-                              setConfigInventario({ ...configInventario, unidadMedidaDefecto: e.target.value })
+                              setConfigInventario({
+                                ...configInventario,
+                                unidadMedidaDefecto: e.target.value,
+                              })
                             }
                             className="w-full p-2 border border-gray-300 rounded-md"
                           >
@@ -527,15 +997,22 @@ const ConfiguracionesDashboard = () => {
                             <option value="metro">Metro</option>
                             <option value="caja">Caja</option>
                           </select>
-                        </div>
+                        </div> */}
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Categoría por Defecto
                           </Typography>
                           <select
                             value={configInventario.categoriaDefecto}
                             onChange={(e) =>
-                              setConfigInventario({ ...configInventario, categoriaDefecto: e.target.value })
+                              setConfigInventario({
+                                ...configInventario,
+                                categoriaDefecto: e.target.value,
+                              })
                             }
                             className="w-full p-2 border border-gray-300 rounded-md"
                           >
@@ -548,7 +1025,10 @@ const ConfiguracionesDashboard = () => {
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Mostrar Costos
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -582,7 +1062,7 @@ const ConfiguracionesDashboard = () => {
                     </Button>
                     <Button
                       color="blue"
-                      onClick={() => guardarConfiguracion("inventario")}
+                      onClick={() => guardarConfigInventario(configGeneral.org_id)}
                       className="flex items-center gap-2"
                     >
                       <Save size={16} />
@@ -606,55 +1086,93 @@ const ConfiguracionesDashboard = () => {
                       </div>
                       <div className="space-y-4">
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             IVA por Defecto (%)
                           </Typography>
                           <Input
                             type="number"
                             value={configVentas.iva}
                             onChange={(e) =>
-                              setConfigVentas({ ...configVentas, iva: Number.parseFloat(e.target.value) })
+                              setConfigVentas({
+                                ...configVentas,
+                                iva: Number.parseFloat(e.target.value),
+                              })
                             }
                             icon={<Percent size={16} />}
                           />
                         </div>
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Descuento Máximo (%)
                           </Typography>
                           <Input
                             type="number"
                             value={configVentas.descuentoMaximo}
                             onChange={(e) =>
-                              setConfigVentas({ ...configVentas, descuentoMaximo: Number.parseFloat(e.target.value) })
+                              setConfigVentas({
+                                ...configVentas,
+                                descuentoMaximo: Number.parseFloat(
+                                  e.target.value
+                                ),
+                              })
                             }
                             icon={<Percent size={16} />}
                           />
                         </div>
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Método de Pago por Defecto
                           </Typography>
                           <select
                             value={configVentas.metodoPagoDefecto}
-                            onChange={(e) => setConfigVentas({ ...configVentas, metodoPagoDefecto: e.target.value })}
+                            onChange={(e) =>
+                              setConfigVentas({
+                                ...configVentas,
+                                metodoPagoDefecto: e.target.value,
+                              })
+                            }
                             className="w-full p-2 border border-gray-300 rounded-md"
                           >
                             <option value="efectivo">Efectivo</option>
-                            <option value="tarjeta_debito">Tarjeta de Débito</option>
-                            <option value="tarjeta_credito">Tarjeta de Crédito</option>
+                            <option value="tarjeta_debito">
+                              Tarjeta de Débito
+                            </option>
+                            <option value="tarjeta_credito">
+                              Tarjeta de Crédito
+                            </option>
                             <option value="transferencia">Transferencia</option>
                           </select>
                         </div>
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
-                            Validez de Presupuestos (días)
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
+                            Tipo de cambio dólar (ARS)
                           </Typography>
                           <Input
                             type="number"
-                            value={configVentas.validezPresupuesto}
+                            value={configVentas.fx_rate_usd_ars}
                             onChange={(e) =>
-                              setConfigVentas({ ...configVentas, validezPresupuesto: Number.parseInt(e.target.value) })
+                              setConfigVentas({
+                                ...configVentas,
+                                validezPresupuesto: Number.parseInt(
+                                  e.target.value
+                                ),
+                              })
                             }
                           />
                         </div>
@@ -673,7 +1191,11 @@ const ConfiguracionesDashboard = () => {
                       </div>
                       <div className="space-y-4">
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Próximo Número de Factura
                           </Typography>
                           <Input
@@ -682,14 +1204,19 @@ const ConfiguracionesDashboard = () => {
                             onChange={(e) =>
                               setConfigVentas({
                                 ...configVentas,
-                                proximoNumeroFactura: Number.parseInt(e.target.value),
+                                proximoNumeroFactura: Number.parseInt(
+                                  e.target.value
+                                ),
                               })
                             }
                           />
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Facturación Automática
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -701,14 +1228,18 @@ const ConfiguracionesDashboard = () => {
                             onChange={() =>
                               setConfigVentas({
                                 ...configVentas,
-                                facturacionAutomatica: !configVentas.facturacionAutomatica,
+                                facturacionAutomatica:
+                                  !configVentas.facturacionAutomatica,
                               })
                             }
                           />
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Numeración Automática
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -720,12 +1251,13 @@ const ConfiguracionesDashboard = () => {
                             onChange={() =>
                               setConfigVentas({
                                 ...configVentas,
-                                numeracionAutomatica: !configVentas.numeracionAutomatica,
+                                numeracionAutomatica:
+                                  !configVentas.numeracionAutomatica,
                               })
                             }
                           />
                         </div>
-                        <div className="flex justify-between items-center">
+                        {/* <div className="flex justify-between items-center">
                           <div>
                             <Typography color="blue-gray" className="font-medium">
                               Permitir Venta sin Stock
@@ -743,7 +1275,7 @@ const ConfiguracionesDashboard = () => {
                               })
                             }
                           />
-                        </div>
+                        </div> */}
                       </div>
                     </CardBody>
                   </Card>
@@ -761,7 +1293,7 @@ const ConfiguracionesDashboard = () => {
                     </Button>
                     <Button
                       color="blue"
-                      onClick={() => guardarConfiguracion("ventas")}
+                      onClick={() => guardarConfigVentas(configGeneral.org_id)}
                       className="flex items-center gap-2"
                     >
                       <Save size={16} />
@@ -780,11 +1312,20 @@ const ConfiguracionesDashboard = () => {
                       <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
                           <Users size={20} />
-                          <Typography variant="h6" color="blue-gray">
+                          <Typography
+                            variant="h6"
+                            color="blue-gray"
+                            className="uppercase"
+                          >
                             Usuarios del Sistema
                           </Typography>
                         </div>
-                        <Button size="sm" color="blue" className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          color="blue"
+                          className="flex items-center gap-2"
+                          onClick={handleOpen}
+                        >
                           <Plus size={16} />
                           Nuevo Usuario
                         </Button>
@@ -792,73 +1333,52 @@ const ConfiguracionesDashboard = () => {
                       <div className="space-y-4">
                         {/* Lista de usuarios simulada */}
                         <div className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                <Users size={16} className="text-blue-600" />
+                          {usuarios.map((u) => (
+                            <div
+                              key={u.id}
+                              className="flex items-center justify-between py-2"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <Users size={16} className="text-blue-600" />
+                                </div>
+                                <div>
+                                  <Typography
+                                    color="blue-gray"
+                                    className="font-medium"
+                                  >
+                                    {u.nombre}
+                                  </Typography>
+                                  <Typography color="gray" className="text-sm">
+                                    {u.email}
+                                  </Typography>
+                                </div>
                               </div>
-                              <div>
-                                <Typography color="blue-gray" className="font-medium">
-                                  Juan Rodríguez
-                                </Typography>
-                                <Typography color="gray" className="text-sm">
-                                  juan@empresa.com
-                                </Typography>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Chip value="Administrador" color="blue" size="sm" />
-                              <Button size="sm" variant="outlined" className="p-2">
-                                <Edit3 size={14} />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                <Users size={16} className="text-green-600" />
-                              </div>
-                              <div>
-                                <Typography color="blue-gray" className="font-medium">
-                                  María García
-                                </Typography>
-                                <Typography color="gray" className="text-sm">
-                                  maria@empresa.com
-                                </Typography>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Chip value="Vendedor" color="green" size="sm" />
-                              <Button size="sm" variant="outlined" className="p-2">
-                                <Edit3 size={14} />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                                <Users size={16} className="text-purple-600" />
-                              </div>
-                              <div>
-                                <Typography color="blue-gray" className="font-medium">
-                                  Carlos López
-                                </Typography>
-                                <Typography color="gray" className="text-sm">
-                                  carlos@empresa.com
-                                </Typography>
+                              <div className="flex items-center gap-2">
+                                <Chip
+                                  value={u.rol}
+                                  color={colorChipUser(u.rol)}
+                                  size="sm"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outlined"
+                                  className="p-2"
+                                  onClick={() => comenzarEdicion(u)}
+                                >
+                                  <Edit3 size={14} />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outlined"
+                                  className="p-2"
+                                  onClick={() => handleDelete(u)}
+                                >
+                                  <Trash2 color="red" size={14} />
+                                </Button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Chip value="Supervisor" color="purple" size="sm" />
-                              <Button size="sm" variant="outlined" className="p-2">
-                                <Edit3 size={14} />
-                              </Button>
-                            </div>
-                          </div>
+                          ))}
                         </div>
                       </div>
                     </CardBody>
@@ -875,71 +1395,126 @@ const ConfiguracionesDashboard = () => {
                       </div>
                       <div className="space-y-4">
                         <div className="border border-gray-200 rounded-lg p-4">
-                          <Typography color="blue-gray" className="font-medium mb-3">
+                          <Typography
+                            color="blue-gray"
+                            className="font-medium mb-3"
+                          >
                             Administrador
                           </Typography>
                           <div className="grid grid-cols-2 gap-2 text-sm">
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={14} className="text-green-600" />
-                              <Typography color="gray">Gestión completa</Typography>
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
+                              <Typography color="gray">
+                                Gestión completa
+                              </Typography>
                             </div>
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={14} className="text-green-600" />
-                              <Typography color="gray">Configuraciones</Typography>
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
+                              <Typography color="gray">
+                                Configuraciones
+                              </Typography>
                             </div>
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={14} className="text-green-600" />
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
                               <Typography color="gray">Reportes</Typography>
                             </div>
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={14} className="text-green-600" />
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
                               <Typography color="gray">Usuarios</Typography>
                             </div>
                           </div>
                         </div>
                         <div className="border border-gray-200 rounded-lg p-4">
-                          <Typography color="blue-gray" className="font-medium mb-3">
+                          <Typography
+                            color="blue-gray"
+                            className="font-medium mb-3"
+                          >
                             Vendedor
                           </Typography>
                           <div className="grid grid-cols-2 gap-2 text-sm">
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={14} className="text-green-600" />
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
                               <Typography color="gray">Ventas</Typography>
                             </div>
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={14} className="text-green-600" />
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
                               <Typography color="gray">Clientes</Typography>
                             </div>
                             <div className="flex items-center gap-2">
-                              <AlertTriangle size={14} className="text-red-600" />
-                              <Typography color="gray">Inventario (solo lectura)</Typography>
+                              <AlertTriangle
+                                size={14}
+                                className="text-red-600"
+                              />
+                              <Typography color="gray">
+                                Inventario (solo lectura)
+                              </Typography>
                             </div>
                             <div className="flex items-center gap-2">
-                              <AlertTriangle size={14} className="text-red-600" />
-                              <Typography color="gray">Reportes limitados</Typography>
+                              <AlertTriangle
+                                size={14}
+                                className="text-red-600"
+                              />
+                              <Typography color="gray">
+                                Reportes limitados
+                              </Typography>
                             </div>
                           </div>
                         </div>
                         <div className="border border-gray-200 rounded-lg p-4">
-                          <Typography color="blue-gray" className="font-medium mb-3">
+                          <Typography
+                            color="blue-gray"
+                            className="font-medium mb-3"
+                          >
                             Supervisor
                           </Typography>
                           <div className="grid grid-cols-2 gap-2 text-sm">
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={14} className="text-green-600" />
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
                               <Typography color="gray">Ventas</Typography>
                             </div>
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={14} className="text-green-600" />
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
                               <Typography color="gray">Inventario</Typography>
                             </div>
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={14} className="text-green-600" />
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
                               <Typography color="gray">Reportes</Typography>
                             </div>
                             <div className="flex items-center gap-2">
-                              <AlertTriangle size={14} className="text-red-600" />
-                              <Typography color="gray">Configuraciones limitadas</Typography>
+                              <AlertTriangle
+                                size={14}
+                                className="text-red-600"
+                              />
+                              <Typography color="gray">
+                                Configuraciones limitadas
+                              </Typography>
                             </div>
                           </div>
                         </div>
@@ -971,9 +1546,9 @@ const ConfiguracionesDashboard = () => {
               </TabPanel>
 
               {/* Pestaña Notificaciones */}
-              <TabPanel value="notificaciones" className="p-0">
+              {/* <TabPanel value="notificaciones" className="p-0">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Configuraciones de Email */}
+                  
                   <Card className="shadow-sm">
                     <CardBody>
                       <div className="flex items-center gap-2 mb-6">
@@ -1070,10 +1645,9 @@ const ConfiguracionesDashboard = () => {
                         </div>
                       </div>
                     </CardBody>
-                  </Card>
+                  </Card> */}
 
-                  {/* Otras Notificaciones */}
-                  <Card className="shadow-sm">
+              {/* <Card className="shadow-sm">
                     <CardBody>
                       <div className="flex items-center gap-2 mb-6">
                         <Bell size={20} />
@@ -1130,7 +1704,6 @@ const ConfiguracionesDashboard = () => {
                     </CardBody>
                   </Card>
 
-                  {/* Botones de Acción */}
                   <div className="lg:col-span-2 flex justify-end gap-3">
                     <Button
                       variant="outlined"
@@ -1151,11 +1724,11 @@ const ConfiguracionesDashboard = () => {
                     </Button>
                   </div>
                 </div>
-              </TabPanel>
+              </TabPanel> */}
 
               {/* Pestaña Seguridad */}
               {/* <TabPanel value="seguridad" className="p-0"> */}
-                {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card className="shadow-sm">
                     <CardBody>
                       <div className="flex items-center gap-2 mb-6">
@@ -1240,8 +1813,8 @@ const ConfiguracionesDashboard = () => {
                     </CardBody>
                   </Card> */}
 
-                  {/* Configuraciones de Backup */}
-                  {/* <Card className="shadow-sm">
+              {/* Configuraciones de Backup */}
+              {/* <Card className="shadow-sm">
                     <CardBody>
                       <div className="flex items-center gap-2 mb-6">
                         <Database size={20} />
@@ -1329,7 +1902,7 @@ const ConfiguracionesDashboard = () => {
                   </Card>
 
                   {/* Botones de Acción */}
-                  {/* <div className="lg:col-span-2 flex justify-end gap-3">
+              {/* <div className="lg:col-span-2 flex justify-end gap-3">
                     <Button
                       variant="outlined"
                       color="red"
@@ -1366,7 +1939,10 @@ const ConfiguracionesDashboard = () => {
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Modo Debug
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -1376,17 +1952,29 @@ const ConfiguracionesDashboard = () => {
                           <Switch
                             checked={configAvanzada.modoDebug}
                             onChange={() =>
-                              setConfigAvanzada({ ...configAvanzada, modoDebug: !configAvanzada.modoDebug })
+                              setConfigAvanzada({
+                                ...configAvanzada,
+                                modoDebug: !configAvanzada.modoDebug,
+                              })
                             }
                           />
                         </div>
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Nivel de Logs
                           </Typography>
                           <select
                             value={configAvanzada.logLevel}
-                            onChange={(e) => setConfigAvanzada({ ...configAvanzada, logLevel: e.target.value })}
+                            onChange={(e) =>
+                              setConfigAvanzada({
+                                ...configAvanzada,
+                                logLevel: e.target.value,
+                              })
+                            }
                             className="w-full p-2 border border-gray-300 rounded-md"
                           >
                             <option value="error">Error</option>
@@ -1397,7 +1985,10 @@ const ConfiguracionesDashboard = () => {
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Cache Habilitado
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -1407,19 +1998,29 @@ const ConfiguracionesDashboard = () => {
                           <Switch
                             checked={configAvanzada.cacheEnabled}
                             onChange={() =>
-                              setConfigAvanzada({ ...configAvanzada, cacheEnabled: !configAvanzada.cacheEnabled })
+                              setConfigAvanzada({
+                                ...configAvanzada,
+                                cacheEnabled: !configAvanzada.cacheEnabled,
+                              })
                             }
                           />
                         </div>
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Límite de Rate API (req/hora)
                           </Typography>
                           <Input
                             type="number"
                             value={configAvanzada.apiRateLimit}
                             onChange={(e) =>
-                              setConfigAvanzada({ ...configAvanzada, apiRateLimit: Number.parseInt(e.target.value) })
+                              setConfigAvanzada({
+                                ...configAvanzada,
+                                apiRateLimit: Number.parseInt(e.target.value),
+                              })
                             }
                           />
                         </div>
@@ -1438,36 +2039,61 @@ const ConfiguracionesDashboard = () => {
                       </div>
                       <div className="space-y-4">
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             Webhook URL
                           </Typography>
                           <Input
                             value={configAvanzada.webhookUrl}
-                            onChange={(e) => setConfigAvanzada({ ...configAvanzada, webhookUrl: e.target.value })}
+                            onChange={(e) =>
+                              setConfigAvanzada({
+                                ...configAvanzada,
+                                webhookUrl: e.target.value,
+                              })
+                            }
                             placeholder="https://tu-webhook.com/endpoint"
                             icon={<Webhook size={16} />}
                           />
                         </div>
                         <div>
-                          <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="mb-2 font-medium"
+                          >
                             API Key
                           </Typography>
                           <div className="relative">
                             <Input
                               type="password"
                               value={configAvanzada.apiKey}
-                              onChange={(e) => setConfigAvanzada({ ...configAvanzada, apiKey: e.target.value })}
+                              onChange={(e) =>
+                                setConfigAvanzada({
+                                  ...configAvanzada,
+                                  apiKey: e.target.value,
+                                })
+                              }
                               placeholder="Tu API Key"
                               icon={<Key size={16} />}
                             />
-                            <Button size="sm" className="absolute right-1 top-1" variant="outlined">
+                            <Button
+                              size="sm"
+                              className="absolute right-1 top-1"
+                              variant="outlined"
+                            >
                               Generar
                             </Button>
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Integración Contable
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -1479,14 +2105,18 @@ const ConfiguracionesDashboard = () => {
                             onChange={() =>
                               setConfigAvanzada({
                                 ...configAvanzada,
-                                integracionContable: !configAvanzada.integracionContable,
+                                integracionContable:
+                                  !configAvanzada.integracionContable,
                               })
                             }
                           />
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <Typography color="blue-gray" className="font-medium">
+                            <Typography
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               Sincronización Automática
                             </Typography>
                             <Typography color="gray" className="text-sm">
@@ -1498,15 +2128,17 @@ const ConfiguracionesDashboard = () => {
                             onChange={() =>
                               setConfigAvanzada({
                                 ...configAvanzada,
-                                sincronizacionAutomatica: !configAvanzada.sincronizacionAutomatica,
+                                sincronizacionAutomatica:
+                                  !configAvanzada.sincronizacionAutomatica,
                               })
                             }
                           />
                         </div>
                         <Alert color="red">
                           <Typography className="text-sm">
-                            ⚠️ Las configuraciones avanzadas pueden afectar el funcionamiento del sistema. Modifica solo
-                            si sabes lo que estás haciendo.
+                            ⚠️ Las configuraciones avanzadas pueden afectar el
+                            funcionamiento del sistema. Modifica solo si sabes
+                            lo que estás haciendo.
                           </Typography>
                         </Alert>
                       </div>
@@ -1539,8 +2171,320 @@ const ConfiguracionesDashboard = () => {
           </Tabs>
         </CardBody>
       </Card>
-    </div>
-  )
-}
 
-export default ConfiguracionesDashboard
+      {/* MODAL PARA CREAR UN USUARIO */}
+      <Dialog size="sm" open={open} handler={handleOpen} className="p-4">
+        <DialogHeader className="relative m-0 block">
+          <Typography variant="h4" color="blue-gray" className="uppercase">
+            Registrar nuevo usuario
+          </Typography>
+          <Typography className="mt-1 font-normal text-gray-600">
+            Complete el formulario para agregar un nuevo usuario al sistema.
+          </Typography>
+          <IconButton
+            size="sm"
+            variant="text"
+            className="!absolute right-3.5 top-3.5"
+            onClick={handleOpen}
+          >
+            <XMarkIcon className="h-4 w-4 stroke-2" />
+          </IconButton>
+        </DialogHeader>
+        <DialogBody className="space-y-4 pb-6">
+          <div className="flex gap-4">
+            <div className="w-full">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 text-left font-medium"
+              >
+                Nombre:
+              </Typography>
+              <Input
+                color="gray"
+                size="lg"
+                placeholder="Ej: Luis"
+                name="name"
+                value={user.nombre}
+                className="placeholder:opacity-100 focus:!border-t-gray-900"
+                onChange={(e) =>
+                  setUser((prev) => ({ ...prev, nombre: e.target.value }))
+                }
+                containerProps={{
+                  className: "!min-w-full",
+                }}
+                labelProps={{
+                  className: "hidden",
+                }}
+              />
+            </div>
+            <div className="w-full">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 text-left font-medium"
+              >
+                Apellido:
+              </Typography>
+              <Input
+                color="gray"
+                size="lg"
+                placeholder="Ej: Cardozo"
+                name="name"
+                value={user.apellido}
+                className="placeholder:opacity-100 focus:!border-t-gray-900"
+                onChange={(e) =>
+                  setUser((prev) => ({ ...prev, apellido: e.target.value }))
+                }
+                containerProps={{
+                  className: "!min-w-full",
+                }}
+                labelProps={{
+                  className: "hidden",
+                }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="relative">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 text-left font-medium"
+              >
+                Contraseña:
+              </Typography>
+              <Input
+                color="gray"
+                size="lg"
+                type={showPassord ? "text" : "password"}
+                placeholder="Minímo 6 caracteres"
+                name="password"
+                value={user.password}
+                className="placeholder:opacity-100 focus:!border-t-gray-900"
+                onChange={(e) =>
+                  setUser((prev) => ({ ...prev, password: e.target.value }))
+                }
+                containerProps={{
+                  className: "!min-w-full",
+                }}
+                labelProps={{
+                  className: "hidden",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-1 top-7 my-auto grid h-9 w-9 place-items-center rounded-md  focus:outline-none"
+              >
+                {showPassord ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="w-full">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 text-left font-medium"
+              >
+                Email:
+              </Typography>
+              <Input
+                color="gray"
+                size="lg"
+                placeholder="ejemplo@gmail.com"
+                name="email"
+                type="email"
+                value={user.email}
+                className="placeholder:opacity-100 focus:!border-t-gray-900"
+                onChange={(e) =>
+                  setUser((prev) => ({ ...prev, email: e.target.value }))
+                }
+                containerProps={{
+                  className: "!min-w-full",
+                }}
+                labelProps={{
+                  className: "hidden",
+                }}
+              />
+            </div>
+            <div className="w-full">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 text-left font-medium"
+              >
+                Rol
+              </Typography>
+              <Select
+                value={user.rol}
+                onChange={(value) =>
+                  setUser((prev) => ({ ...prev, rol: value ?? "" }))
+                }
+              >
+                <Option value="" disabled>
+                  Seleccioná un rol
+                </Option>
+                <Option value="admin">Administrador</Option>
+                <Option value="supervisor">Supervisor</Option>
+                <Option value="vendedor">Vendedor</Option>
+              </Select>
+            </div>
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button className="ml-auto" color="blue" onClick={registrarUsuario}>
+            CREAR USUARIO
+          </Button>
+        </DialogFooter>
+      </Dialog>
+      {/* MODAL PARA EDITAR UN USUARIO */}
+      <Dialog
+        size="sm"
+        open={openEdit}
+        handler={handleOpenEdit}
+        className="p-4"
+      >
+        <DialogHeader className="relative m-0 block">
+          <Typography variant="h4" color="blue-gray" className="uppercase">
+            Editar usuario
+          </Typography>
+          <Typography className="mt-1 font-normal text-gray-600">
+            Complete el formulario para editar un usuario del sistema.
+          </Typography>
+          <IconButton
+            size="sm"
+            variant="text"
+            className="!absolute right-3.5 top-3.5"
+            onClick={() => setOpenEdit(false)}
+          >
+            <XMarkIcon className="h-4 w-4 stroke-2" />
+          </IconButton>
+        </DialogHeader>
+        <DialogBody className="space-y-4 pb-6">
+          <div className="flex gap-4">
+            <div className="w-full">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 text-left font-medium"
+              >
+                Nombre:
+              </Typography>
+              <Input
+                color="gray"
+                size="lg"
+                placeholder="Ej: Luis"
+                name="name"
+                value={formUser.nombre}
+                className="placeholder:opacity-100 focus:!border-t-gray-900"
+                onChange={(e) =>
+                  setFormUser((prev) => ({ ...prev, nombre: e.target.value }))
+                }
+                containerProps={{
+                  className: "!min-w-full",
+                }}
+                labelProps={{
+                  className: "hidden",
+                }}
+              />
+            </div>
+            <div className="w-full">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 text-left font-medium"
+              >
+                Apellido:
+              </Typography>
+              <Input
+                color="gray"
+                size="lg"
+                placeholder="Ej: Cardozo"
+                name="name"
+                value={formUser.apellido}
+                className="placeholder:opacity-100 focus:!border-t-gray-900"
+                onChange={(e) =>
+                  setFormUser((prev) => ({ ...prev, apellido: e.target.value }))
+                }
+                containerProps={{
+                  className: "!min-w-full",
+                }}
+                labelProps={{
+                  className: "hidden",
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <div className="w-full">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 text-left font-medium"
+              >
+                Estado
+              </Typography>
+              <Select
+                value={formUser.activo}
+                onChange={(value) =>
+                  setFormUser((prev) => ({
+                    ...prev,
+                    activo:
+                      value === "activo"
+                        ? true
+                        : value === "inactivo"
+                        ? false
+                        : prev.activo,
+                  }))
+                }
+              >
+                <Option value="" disabled>
+                  Seleccioná un estado:
+                </Option>
+                <Option value="activo">Activo</Option>
+                <Option value="inactivo">Inactivo</Option>
+              </Select>
+            </div>
+            <div className="w-full">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 text-left font-medium"
+              >
+                Rol
+              </Typography>
+              <Select
+                value={formUser.rol}
+                onChange={(value) =>
+                  setFormUser((prev) => ({ ...prev, rol: value ?? "" }))
+                }
+              >
+                <Option value="" disabled>
+                  Seleccioná un rol
+                </Option>
+                <Option value="admin">Administrador</Option>
+                <Option value="supervisor">Supervisor</Option>
+                <Option value="vendedor">Vendedor</Option>
+              </Select>
+            </div>
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button className="ml-auto" color="blue" onClick={guardarEdicionUser}>
+            GUARDAR CAMBIOS
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </div>
+  );
+};
+
+export default ConfiguracionesDashboard;

@@ -3,13 +3,13 @@ import { apiFetch, auth } from "../helpers/auth";
 
 
 
-export const register = async ({nombre, email, password, rol, activo}) => {
+export const register = async ({nombre, email, password, rol, activo, apellido, telefono, direccion}) => {
     
     try {
         const response = await fetch(`${API_URL}/register`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({nombre, email, password, rol, activo})
+            body: JSON.stringify({nombre, email, password, rol, activo, apellido, telefono, direccion})
         })
 
         const data = await response.json();
@@ -71,7 +71,7 @@ export const updatePasswordUser = async ({password, nuevaPassword}) => {
 
     try {
 
-        const data = await fetch(`${API_URL}/update-password`, {
+        const data = await apiFetch(`${API_URL}/update-password`, {
           method: "PATCH",
           body: JSON.stringify({password, nuevaPassword})  
         });
@@ -82,6 +82,28 @@ export const updatePasswordUser = async ({password, nuevaPassword}) => {
         throw new Error(error.message || 'Error al actualizar la contraseña.');
     }
 
+}
+
+export const obtenerUsers= async({ filters = {} }) => {
+    try {
+        const url = new URL(`${API_URL}/obtener-usuarios`);
+        const sp = url.searchParams;
+
+        for (const [key, val] of Object.entries(filters)) {
+            if (val == null || val === '') continue;
+            if (Array.isArray(val)) {
+                val.forEach(v => sp.append(key, String(v)));
+            } else {
+                sp.set(key, String(val));
+            }
+        }
+
+        const res = apiFetch(url.toString());
+        return res;
+    } catch (error) {
+        console.error(error);
+        throw new Error(error.message || 'Error al obtener los usuarios');
+    }
 }
 
 export const getUserInfo = async () => {
@@ -171,4 +193,33 @@ export const statsUsage = async () => {
     }
 }
 
+export const editUser = async ({id, nombre, rol, apellido, activo}) => {
+
+    try {
+        
+        const data = await apiFetch(`${API_URL}/edit-user/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({nombre, apellido, rol, activo})
+        })
+
+        return data;
+    } catch (error) {
+        console.error(error);
+        throw new Error(error.msg);
+    }
+}
+
+export const eliminarUser = async (id) => {
+
+    try {    
+        const data = await apiFetch(`${API_URL}/delete-user/${id}`, {
+            method: 'DELETE'
+        })
+
+        return data;
+    } catch (error) {
+        console.error(error);
+        throw new Error(error.msg);
+    }
+}
 

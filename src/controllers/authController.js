@@ -1,5 +1,6 @@
 import { login } from "../services/authServices";
 
+const ROLES_ADMIN = ['admin', 'supervisor', 'vendedor'];
 
 export const loginController = async ({email, password, toast, setUser, navigate}) => {
 
@@ -8,8 +9,10 @@ export const loginController = async ({email, password, toast, setUser, navigate
         setUser(data.usuario);
         localStorage.setItem('usuario', JSON.stringify(data.usuario));
         localStorage.setItem('token', data.token);
+        const rol = (data.usuario.rol || "").toLowerCase().trim();
+        
 
-        if (data.usuario.rol === 'admin') {
+        if (ROLES_ADMIN.includes(rol)) {
             navigate("/admin/productos")
         } else if (data.usuario.rol === 'cliente') {
             navigate("/perfil")

@@ -239,8 +239,8 @@ export const Estadisticas = () => {
                 Categoría
               </Typography>
               <Select
-                value={categoriaFiltro} // nunca undefined
-                onChange={(v) => setCategoriaFiltro(v ?? "")} // blindaje
+                value={categoriaFiltro} 
+                onChange={(v) => setCategoriaFiltro(v ?? "")}
                 selected={() => {
                   // <- ignoramos 'element'
                   if (categoriaFiltro === "") return "Todas las categorías";

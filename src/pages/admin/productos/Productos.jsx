@@ -1,14 +1,22 @@
-"use client"
-import { editProduct, obtenerProductosCompletos, deleteProductLogic, activarProductLogic, eliminarProductoServices } from "../../../services/productServices";
-import { useProductos } from "../../../context/ProductsContext";
-import { useCategorias } from "../../../context/CategoriasContext";
-import { useSubcategorias } from "../../../context/SubcategoriasContext";
+"use client";
+import {
+  editProduct,
+  fetchProductos,
+  deleteProductLogic,
+  activarProductLogic,
+  eliminarProductoServices,
+} from "../../../services/productServices";
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { getAllCategories } from "../../../services/categorieService";
 import { getSubcategories } from "../../../services/subcategorieService";
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react";
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
-import { formatearPesos, formatearMiles, precioToNumber } from "../../../helpers/formatearPesos";
-import { useNotificacion } from "../../../hooks/useNotificacion"; 
+import {
+  formatearPesos,
+  formatearMiles,
+  precioToNumber,
+} from "../../../helpers/formatearPesos";
+import { useNotificacion } from "../../../hooks/useNotificacion";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import {
@@ -35,8 +43,8 @@ import {
   Select,
   Textarea,
   Option,
-  CardFooter
-} from "@material-tailwind/react"
+  CardFooter,
+} from "@material-tailwind/react";
 import {
   Search,
   Package,
@@ -58,21 +66,23 @@ import {
   User,
   CheckCircle,
   Power,
-  PowerOff
-} from "lucide-react"
-import { XMarkIcon } from "@heroicons/react/24/outline"
+  PowerOff,
+} from "lucide-react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useProductos, useProductoStats } from "../../../hooks/useProductos";
+import { useProductosMutation } from "../../../hooks/useProductosMutation";
 
 // Componente principal
 const Productos = () => {
-  const [activeTab, setActiveTab] = useState("todos")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [copias, setCopias] = useState("")
-  const [products, setProducts] = useState([]);
+  const [activeTab, setActiveTab] = useState("todos");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [copias, setCopias] = useState("");
   const [categorias, setCategorias] = useState([]);
   const [subcategorias, setSubCategorias] = useState([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
-  const [subcategoriaSeleccionada, setSubCategoriaSeleccionada] = useState(null);
+  const [subcategoriaSeleccionada, setSubCategoriaSeleccionada] =
+    useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [openEtiqueta, setOpenEtiqueta] = useState(false);
@@ -83,279 +93,268 @@ const Productos = () => {
     marca: "",
     descripcion: "",
     subcategoria: "",
-    precio_costo: '',
-    descripcion_corta: ''
-  })
+    precio_costo: "",
+    descripcion_corta: "",
+  });
+  const productsPerPage = 25;
 
   // Notificaciones
- const { componenteAlerta, mostrarNotificacion } = useNotificacion();
- const MySwal = withReactContent(Swal);
-  //Context
-    const { recargarProductos, setRecargarProductos } = useProductos();
-    const { categoriasContext } = useCategorias();
-    const { subcategoriasContext } = useSubcategorias();
+  const { componenteAlerta, mostrarNotificacion } = useNotificacion();
+  const MySwal = withReactContent(Swal);
+
+  // Mutation
+  const {
+    activarProducto,
+    editarProducto,
+    eliminarProducto,
+    desactivarProducto,
+  } = useProductosMutation();
+
+  // Filtros para traer los datos del backend
+  const debouncedSearch = useDebouncedValue(searchTerm, 500);
+  const limit = productsPerPage;
+  const offset = (currentPage - 1) * productsPerPage;
+  const filtros = useMemo(() => {
+    const f = { limit, offset, search: debouncedSearch, include: "ventas" };
+    if (activeTab === "activos") f.estado = 1;
+    if (activeTab === "inactivos") f.estado = 0;
+    if (activeTab === "sin-stock") f.stockBajo = 0;
+    return f;
+  }, [limit, offset, debouncedSearch, activeTab]);
 
   // Obtener productos
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const productos = await obtenerProductosCompletos()
-        // console.log("Productos obtenidos:", productos)
-        setProducts(productos)
-      } catch (error) {
-        console.error(error)
-      }
-    }
-    fetchProducts()
-  }, [recargarProductos])
+  const { data, isLoading, error, refetch, isFetching } = useProductos(filtros);
+  const products = data?.rows ?? [];
+  // console.log(data);
 
   // Obtener categorias y subcategorias
   useEffect(() => {
-  const fetchDatos = async () => {
-    try {
-      const categoriasData = await getAllCategories();
-      const subcategoriasData = await getSubcategories();
+    const fetchDatos = async () => {
+      try {
+        const categoriasData = await getAllCategories();
+        const subcategoriasData = await getSubcategories();
 
-      setCategorias(categoriasData);
-      setSubCategorias(subcategoriasData);
+        setCategorias(categoriasData);
+        setSubCategorias(subcategoriasData);
 
-      if (selectedProduct) {
-        const subcategoriaActual = subcategoriasData.find(
-          sub => sub.id === selectedProduct.subcategoria_id
-        );
+        if (selectedProduct) {
+          const subcategoriaActual = subcategoriasData.find(
+            (sub) => sub.id === selectedProduct.subcategoria_id
+          );
 
-        if (subcategoriaActual) {  
-          setSubCategoriaSeleccionada(subcategoriaActual.id);
-          setCategoriaSeleccionada(subcategoriaActual.categoria_id);
+          if (subcategoriaActual) {
+            setSubCategoriaSeleccionada(subcategoriaActual.id);
+            setCategoriaSeleccionada(subcategoriaActual.categoria_id);
+          }
         }
+      } catch (error) {
+        console.error(error);
+        mostrarNotificacion("error", error.message);
       }
-    } catch (error) {
-      console.error(error);
-      mostrarNotificacion('error', error.message);
-    }
-  };
+    };
 
-  fetchDatos();
-}, [selectedProduct, categoriasContext, subcategoriasContext]);
+    fetchDatos();
+  }, [selectedProduct]);
 
-  
   // Resetear página cuando cambien filtros
   useEffect(() => {
-    setCurrentPage(1)
-  }, [activeTab, searchTerm])
-
+    setCurrentPage(1);
+  }, [activeTab, searchTerm]);
 
   // Estadísticas
-  const totalProductos = products.length
-  const productosActivos = products.filter((p) => p.estado === 1).length
-  const productosSinStock = products.filter((p) => p.stock_cantidad === 0).length
-  const productosBajoStock = products.filter((p) => p.stock_cantidad > 0 && p.stock_cantidad < 10).length
-
-  // Filtrar productos según la pestaña activa
-  const filteredProducts = products
-    .filter((producto) => {
-
-      if (activeTab === "todos") return true
-      if (activeTab === "activos") return producto.estado === 1
-      if (activeTab === "sin-stock") return producto.stock_cantidad === 0
-      if (activeTab === "bajo-stock") return producto.stock_cantidad > 0 && producto.stock_cantidad < 10
-      return true
-    })
-    .filter(
-      (producto) =>
-        producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        producto.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (producto.categoria_nombre && producto.categoria_nombre.toLowerCase().includes(searchTerm.toLowerCase())),
-    )
-
-  // console.log("Productos filtrados:", filteredProducts.length, "Tab activo:", activeTab)
+  const { data: stats } = useProductoStats();
+  const totalProductos = stats.total;
+  const productosActivos = stats.activos;
+  const productosSinStock = stats.sin_stock;
+  const productosBajoStock = stats.bajo_stock;
 
   // Paginación
-  const productsPerPage = 10
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
-  const currentProducts = filteredProducts.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage)
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const start = total === 0 ? 0 : (currentPage - 1) * limit + 1;
+  const end = Math.min(currentPage * limit, total);
+  const showEmpty = !isLoading && total === 0;
 
+  // Estilos CSS
   const obtenerEstadoProducto = (producto) => {
-    if (producto.estado === 0) return "Inactivo"
-    if (producto.stock_cantidad === 0) return "Sin stock"
-    if (producto.stock_cantidad < 10) return "Bajo stock"
-    return "Activo"
-  }
+    if (producto.estado === 0) return "Inactivo";
+    if (producto.stock_cantidad === 0) return "Sin stock";
+    if (producto.stock_cantidad < 10) return "Bajo stock";
+    return "Activo";
+  };
 
   const getChipColor = (estado) => {
     switch (estado) {
       case "Activo":
-        return "green"
+        return "green";
       case "Sin stock":
-        return "red"
+        return "red";
       case "Bajo stock":
-        return "amber"
+        return "amber";
       case "Inactivo":
-        return "gray"
+        return "gray";
       default:
-        return "blue-gray"
+        return "blue-gray";
     }
-  }
+  };
 
   const handleViewProduct = (producto) => {
-    setSelectedProduct(producto)
-    setOpenModal(true)
-  }
+    setSelectedProduct(producto);
+    setOpenModal(true);
+  };
 
-  const handleOpenLabel = (producto) => {
-    setSelectedProduct(producto)
-    setOpenEtiqueta(true);
-  }
   const handleCloseLabel = () => {
     setOpenEtiqueta(false);
     setSelectedProduct(null);
-  }
+  };
 
   const handleCloseModal = () => {
-    setOpenModal(false)
-    setSelectedProduct(null)
-  }
+    setOpenModal(false);
+    setSelectedProduct(null);
+  };
 
   const handleCloseModalEdit = () => {
     setOpenEdit(false);
     setSelectedProduct(null);
-  }
+  };
 
   const handleChange = (e) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     let nuevoValor = value;
     if (["precio", "precio_costo"].includes(name)) {
-    nuevoValor = value === '' ? '' : value;
-  }
+      nuevoValor = value === "" ? "" : value;
+    }
     setFormularioEditar((prev) => ({
       ...prev,
       [name]: nuevoValor,
-    }))
-  }
+    }));
+  };
 
   const handleSelectChange = (name, value) => {
-  const nuevoValor = ["subcategoria"].includes(name) ? Number(value) : value;
+    const nuevoValor = ["subcategoria"].includes(name) ? Number(value) : value;
 
-  setFormularioEditar((prev) => ({
-    ...prev,
-    [name]: nuevoValor,
-  }));
+    setFormularioEditar((prev) => ({
+      ...prev,
+      [name]: nuevoValor,
+    }));
   };
 
   const validarFormulario = () => {
     if (!formularioEditar.nombre.trim()) {
-      mostrarNotificacion("error", "El nombre es obligatorio.")
-      return false
+      mostrarNotificacion("error", "El nombre es obligatorio.");
+      return false;
     }
     if (!formularioEditar.precio) {
-      mostrarNotificacion("error", "El precio es obligatorio.")
-      return false
+      mostrarNotificacion("error", "El precio es obligatorio.");
+      return false;
     }
-    if (typeof formularioEditar.subcategoria !== "number" || isNaN(formularioEditar.subcategoria)) {
-      mostrarNotificacion("error", "Debes seleccionar una subcategoria.")
-      return false
-    }
-
-    if (!formularioEditar.precio_costo) {
-      mostrarNotificacion('error', 'El costo unitario es obligatorio.');
+    if (
+      typeof formularioEditar.subcategoria !== "number" ||
+      isNaN(formularioEditar.subcategoria)
+    ) {
+      mostrarNotificacion("error", "Debes seleccionar una subcategoria.");
       return false;
     }
 
-    return true
-  }
+    if (!formularioEditar.precio_costo) {
+      mostrarNotificacion("error", "El costo unitario es obligatorio.");
+      return false;
+    }
+
+    return true;
+  };
 
   const comenzarEdicion = (producto) => {
-  setFormularioEditar({
-    nombre: producto.nombre,
-    precio: Number(producto.precio),
-    marca: producto.marca,
-    descripcion: producto.descripcion,
-    subcategoria: Number(producto.subcategoria_id),
-    descripcion_corta: producto.descripcion_corta,
-    precio_costo: producto.precio_costo
-  });
-  setOpenEdit(true);
-  setSelectedProduct(producto);
-};
+    setFormularioEditar({
+      nombre: producto.nombre,
+      precio: Number(producto.precio),
+      marca: producto.marca,
+      descripcion: producto.descripcion,
+      subcategoria: Number(producto.subcategoria_id),
+      descripcion_corta: producto.descripcion_corta,
+      precio_costo: producto.precio_costo,
+    });
+    setOpenEdit(true);
+    setSelectedProduct(producto);
+  };
 
   const guardarEdicion = async () => {
-
     try {
       if (!validarFormulario()) return;
-      const productoActualizado = await editProduct({
+      const payload = {
         id: Number(selectedProduct.id),
         ...formularioEditar,
         precio: precioToNumber(formularioEditar.precio),
         subcategoria_id: formularioEditar.subcategoria,
-        precio_costo: precioToNumber(formularioEditar.precio_costo)
-      });
-      setRecargarProductos((prev) => prev + 1);
+        precio_costo: precioToNumber(formularioEditar.precio_costo),
+      };
+
+      await editarProducto.mutateAsync(payload);
       mostrarNotificacion("success", "Producto actualizado con éxito");
       handleCloseModalEdit();
       setFormularioEditar({
-      nombre: "",
-      precio: "",
-      marca: "",
-      descripcion: "",
-      subcategoria: "",
-    })
-      
+        nombre: "",
+        precio: "",
+        marca: "",
+        descripcion: "",
+        subcategoria: "",
+      });
     } catch (error) {
-      console.error(error)
+      console.error(error);
+      mostrarNotificacion(error.message);
     }
-  }
-  const editarDesdeModal = () => {
-  comenzarEdicion(selectedProduct);
-  setOpenModal(false);
   };
-  
+  const editarDesdeModal = () => {
+    comenzarEdicion(selectedProduct);
+    setOpenModal(false);
+  };
+
   const deleteLogico = async (producto) => {
     try {
       if (producto.estado === 0) return;
       const id = Number(producto.id);
-      const borrado = await deleteProductLogic(id);
-      mostrarNotificacion('success', 'Producto deshabilitado correctamente')
-      setRecargarProductos((prev) => prev + 1);
+      const borrado = await desactivarProducto.mutateAsync(id);
+      mostrarNotificacion("success", "Producto deshabilitado correctamente");
     } catch (error) {
       console.error(error);
+      mostrarNotificacion('error', error.message || 'Error al desactivar el producto')
     }
-  }
+  };
   const activadoLogico = async (producto) => {
     try {
       if (producto.estado === 1) return;
       const id = Number(producto.id);
-      const activado = await activarProductLogic(id);
-      mostrarNotificacion('success', 'Producto habilitado correctamente')
-      setRecargarProductos((prev) => prev + 1);
+      const activado = await activarProducto.mutateAsync(id);
+      mostrarNotificacion("success", "Producto habilitado correctamente");
     } catch (error) {
       console.error(error);
+      mostrarNotificacion("error", "Error al activar el producto");
     }
-  }
+  };
 
   const handleDelete = (producto) => {
-  MySwal.fire({
-    title: "¿Estás seguro?",
-    text: "No podrás revertir esta acción",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
-    confirmButtonText: "Sí, eliminar",
-    cancelButtonText: "Cancelar",
-  }).then(async (result) => { 
-    if (!result.isConfirmed) return;
+    MySwal.fire({
+      title: "¿Estás seguro?",
+      text: "No podrás revertir esta acción",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (!result.isConfirmed) return;
 
-    try {
-      const id = Number(producto?.id);
-      await eliminarProductoServices(id);  
-      mostrarNotificacion("success", "Producto eliminado correctamente.");
-      setRecargarProductos?.((v) => v + 1);
-    } catch (error) {
-      console.error(error);
-      mostrarNotificacion("error", error.message || "No se pudo eliminar");
-    }
-  });
-};
+      try {
+        const id = Number(producto?.id);
+        await eliminarProducto.mutateAsync(id);
+        mostrarNotificacion("success", "Producto eliminado correctamente.");
+      } catch (error) {
+        console.error(error);
+        mostrarNotificacion("error", error.message || "No se pudo eliminar");
+      }
+    });
+  };
 
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
@@ -363,10 +362,20 @@ const Productos = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-semibold uppercase tracking-tight">Gestión de Productos</h1>
-            <p className="text-gray-600 mt-1">Controlá tus productos activos, precios y stock desde un solo lugar.</p>
+            <h1 className="text-3xl font-semibold uppercase tracking-tight">
+              Gestión de Productos
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Controlá tus productos activos, precios y stock desde un solo
+              lugar.
+            </p>
           </div>
-          <Button variant="gradient" color="deep-orange" className="flex items-center gap-2" size="md">
+          <Button
+            variant="gradient"
+            color="deep-orange"
+            className="flex items-center gap-2"
+            size="md"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -393,10 +402,18 @@ const Productos = () => {
           <CardBody className="p-4">
             <div className="flex justify-between">
               <div>
-                <Typography variant="small" color="blue-gray" className="font-medium mb-1">
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-medium mb-1"
+                >
                   Total Productos
                 </Typography>
-                <Typography variant="h3" color="blue-gray" className="font-bold">
+                <Typography
+                  variant="h3"
+                  color="blue-gray"
+                  className="font-bold"
+                >
                   {totalProductos}
                 </Typography>
               </div>
@@ -418,10 +435,18 @@ const Productos = () => {
           <CardBody className="p-4">
             <div className="flex justify-between">
               <div>
-                <Typography variant="small" color="blue-gray" className="font-medium mb-1">
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-medium mb-1"
+                >
                   Productos Activos
                 </Typography>
-                <Typography variant="h3" color="blue-gray" className="font-bold">
+                <Typography
+                  variant="h3"
+                  color="blue-gray"
+                  className="font-bold"
+                >
                   {productosActivos}
                 </Typography>
               </div>
@@ -431,11 +456,25 @@ const Productos = () => {
             </div>
             <div className="mt-3">
               <div className="flex justify-between mb-1">
-                <Typography variant="small" color="blue-gray" className="font-medium">
-                  {totalProductos > 0 ? Math.round((productosActivos / totalProductos) * 100) : 0}% del total
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-medium"
+                >
+                  {totalProductos > 0
+                    ? Math.round((productosActivos / totalProductos) * 100)
+                    : 0}
+                  % del total
                 </Typography>
               </div>
-              <Progress value={totalProductos > 0 ? (productosActivos / totalProductos) * 100 : 0} color="green" />
+              <Progress
+                value={
+                  totalProductos > 0
+                    ? (productosActivos / totalProductos) * 100
+                    : 0
+                }
+                color="green"
+              />
             </div>
           </CardBody>
         </Card>
@@ -445,10 +484,18 @@ const Productos = () => {
           <CardBody className="p-4">
             <div className="flex justify-between">
               <div>
-                <Typography variant="small" color="blue-gray" className="font-medium mb-1">
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-medium mb-1"
+                >
                   Sin Stock
                 </Typography>
-                <Typography variant="h3" color="blue-gray" className="font-bold">
+                <Typography
+                  variant="h3"
+                  color="blue-gray"
+                  className="font-bold"
+                >
                   {productosSinStock}
                 </Typography>
               </div>
@@ -458,11 +505,25 @@ const Productos = () => {
             </div>
             <div className="mt-3">
               <div className="flex justify-between mb-1">
-                <Typography variant="small" color="blue-gray" className="font-medium">
-                  {totalProductos > 0 ? Math.round((productosSinStock / totalProductos) * 100) : 0}% del total
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-medium"
+                >
+                  {totalProductos > 0
+                    ? Math.round((productosSinStock / totalProductos) * 100)
+                    : 0}
+                  % del total
                 </Typography>
               </div>
-              <Progress value={totalProductos > 0 ? (productosSinStock / totalProductos) * 100 : 0} color="red" />
+              <Progress
+                value={
+                  totalProductos > 0
+                    ? (productosSinStock / totalProductos) * 100
+                    : 0
+                }
+                color="red"
+              />
             </div>
           </CardBody>
         </Card>
@@ -472,10 +533,18 @@ const Productos = () => {
           <CardBody className="p-4">
             <div className="flex justify-between">
               <div>
-                <Typography variant="small" color="blue-gray" className="font-medium mb-1">
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-medium mb-1"
+                >
                   Bajo Stock
                 </Typography>
-                <Typography variant="h3" color="blue-gray" className="font-bold">
+                <Typography
+                  variant="h3"
+                  color="blue-gray"
+                  className="font-bold"
+                >
                   {productosBajoStock}
                 </Typography>
               </div>
@@ -485,11 +554,25 @@ const Productos = () => {
             </div>
             <div className="mt-3">
               <div className="flex justify-between mb-1">
-                <Typography variant="small" color="blue-gray" className="font-medium">
-                  {totalProductos > 0 ? Math.round((productosBajoStock / totalProductos) * 100) : 0}% del total
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-medium"
+                >
+                  {totalProductos > 0
+                    ? Math.round((productosBajoStock / totalProductos) * 100)
+                    : 0}
+                  % del total
                 </Typography>
               </div>
-              <Progress value={totalProductos > 0 ? (productosBajoStock / totalProductos) * 100 : 0} color="amber" />
+              <Progress
+                value={
+                  totalProductos > 0
+                    ? (productosBajoStock / totalProductos) * 100
+                    : 0
+                }
+                color="amber"
+              />
             </div>
           </CardBody>
         </Card>
@@ -505,22 +588,24 @@ const Productos = () => {
                 icon={<Search className="h-5 w-5" />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.currentTarget.value = '';
-                  }
-                }}
-                autoFocus
               />
             </div>
             <div className="flex gap-2">
-              <Button variant="outlined" color="blue-gray" className="flex items-center gap-2 normal-case">
+              <Button
+                variant="outlined"
+                color="blue-gray"
+                className="flex items-center gap-2 normal-case"
+              >
                 <Filter className="h-4 w-4" />
                 Filtros
               </Button>
               <Menu placement="bottom-end">
                 <MenuHandler>
-                  <Button variant="outlined" color="blue-gray" className="flex items-center gap-2 normal-case">
+                  <Button
+                    variant="outlined"
+                    color="blue-gray"
+                    className="flex items-center gap-2 normal-case"
+                  >
                     Ordenar por
                   </Button>
                 </MenuHandler>
@@ -545,19 +630,47 @@ const Productos = () => {
 
       {/* Tabs y Tabla de Productos */}
       <Card className="shadow-sm border border-gray-200">
-        <Tabs value={activeTab} onChange={(value) => setActiveTab(value)}>
+        <Tabs value={activeTab}>
           <TabsHeader className="p-2">
-            <Tab value="todos" className="text-sm font-medium">
+            <Tab
+              value="todos"
+              className="text-sm font-medium"
+              onClick={() => {
+                setActiveTab("todos");
+                setCurrentPage(1);
+              }}
+            >
               Todos ({totalProductos})
             </Tab>
-            <Tab value="activos" className="text-sm font-medium">
+            <Tab
+              value="activos"
+              className="text-sm font-medium"
+              onClick={() => {
+                setActiveTab("activos");
+                setCurrentPage(1);
+              }}
+            >
               Activos ({productosActivos})
             </Tab>
-            <Tab value="sin-stock" className="text-sm font-medium">
+            <Tab
+              value="sin-stock"
+              className="text-sm font-medium"
+              onClick={() => {
+                setActiveTab("sin-stock");
+                setCurrentPage(1);
+              }}
+            >
               Sin Stock ({productosSinStock})
             </Tab>
-            <Tab value="bajo-stock" className="text-sm font-medium">
-              Bajo Stock ({productosBajoStock})
+            <Tab
+              value="inactivos"
+              className="text-sm font-medium"
+              onClick={() => {
+                setActiveTab("inactivos");
+                setCurrentPage(1);
+              }}
+            >
+              Inactivos ({productosBajoStock})
             </Tab>
           </TabsHeader>
 
@@ -568,49 +681,81 @@ const Productos = () => {
                 <thead>
                   <tr>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
-                      <Typography variant="small" color="blue-gray" className="font-medium leading-none">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-medium leading-none"
+                      >
                         Producto
                       </Typography>
                     </th>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
-                      <Typography variant="small" color="blue-gray" className="font-medium leading-none">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-medium leading-none"
+                      >
                         Categoría
                       </Typography>
                     </th>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
-                      <Typography variant="small" color="blue-gray" className="font-medium leading-none">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-medium leading-none"
+                      >
                         Precio venta
                       </Typography>
                     </th>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
-                      <Typography variant="small" color="blue-gray" className="font-medium leading-none">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-medium leading-none"
+                      >
                         Costo
                       </Typography>
                     </th>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
-                      <Typography variant="small" color="blue-gray" className="font-medium text-center leading-none">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-medium text-center leading-none"
+                      >
                         Stock
                       </Typography>
                     </th>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
-                      <Typography variant="small" color="blue-gray" className="font-medium text-center leading-none">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-medium text-center leading-none"
+                      >
                         Estado
                       </Typography>
                     </th>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
-                      <Typography variant="small" color="blue-gray" className="font-medium leading-none text-center">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-medium leading-none text-center"
+                      >
                         Ventas
                       </Typography>
                     </th>
                     <th className="border-b border-gray-200 bg-gray-50 p-4">
-                      <Typography variant="small" color="blue-gray" className="font-medium leading-none ml-9">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-medium leading-none ml-9"
+                      >
                         Acciones
                       </Typography>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {currentProducts.map((producto, index) => (
+                  {products.map((producto, index) => (
                     <tr key={producto.id} className="hover:bg-gray-50">
                       <td className="p-4 border-b border-gray-200">
                         <div className="flex items-center gap-3">
@@ -624,10 +769,18 @@ const Productos = () => {
 
                           {/* Contenedor para nombre + barcode */}
                           <div className="flex flex-col">
-                            <Typography variant="small" color="blue-gray" className="font-medium">
+                            <Typography
+                              variant="small"
+                              color="blue-gray"
+                              className="font-medium"
+                            >
                               {producto.nombre}
                             </Typography>
-                            <Typography variant="small" color="blue-gray" className="text-xs">
+                            <Typography
+                              variant="small"
+                              color="blue-gray"
+                              className="text-xs"
+                            >
                               Barcode: {producto.barcode}
                             </Typography>
                           </div>
@@ -639,18 +792,26 @@ const Productos = () => {
                         </Typography>
                       </td>
                       <td className="p-4 border-b border-gray-200">
-                        <Typography variant="small" color="blue-gray" className="font-medium">
+                        <Typography
+                          variant="small"
+                          color="blue-gray"
+                          className="font-medium"
+                        >
                           ${formatearPesos(producto.precio)}
                         </Typography>
                       </td>
                       <td className="p-4 border-b border-gray-200">
-                        <Typography variant="small" color="blue-gray" className="font-medium">
+                        <Typography
+                          variant="small"
+                          color="blue-gray"
+                          className="font-medium"
+                        >
                           ${formatearPesos(producto.precio_costo)}
                         </Typography>
                       </td>
                       <td className="p-4 border-b border-gray-200 text-center">
                         <Typography variant="small" color="blue-gray">
-                          {producto.stock_cantidad}
+                          {producto.cantidad}
                         </Typography>
                       </td>
                       <td className="p-4 border-b border-gray-200 text-center">
@@ -680,25 +841,46 @@ const Productos = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </IconButton>
-                          <IconButton variant="text" color="blue" size="sm" onClick={() => comenzarEdicion(producto)}>
+                          <IconButton
+                            variant="text"
+                            color="blue"
+                            size="sm"
+                            onClick={() => comenzarEdicion(producto)}
+                          >
                             <Edit className="h-4 w-4" />
                           </IconButton>
                           {/* <IconButton variant="text" color="black" size="sm" onClick={() => handleOpenLabel(producto)}>
                             <Printer className="h-4 w-4" />
                           </IconButton> */}
                           {producto.estado === 0 ? (
-                            <IconButton variant="text" color="green" size="sm" onClick={() => activadoLogico(producto)}>
-                              <Power className="h-4 w-4"/>
+                            <IconButton
+                              variant="text"
+                              color="green"
+                              size="sm"
+                              onClick={() => activadoLogico(producto)}
+                              disabled={activarProducto.isPending}
+                            >
+                              <Power className="h-4 w-4" />
                             </IconButton>
                           ) : (
-                            <IconButton variant="text" color="red" size="sm" onClick={() => deleteLogico(producto)}>
-                            <PowerOff className="h-4 w-4" />
+                            <IconButton
+                              variant="text"
+                              color="red"
+                              size="sm"
+                              onClick={() => deleteLogico(producto)}
+                              disabled={desactivarProducto.isPending}
+                            >
+                              <PowerOff className="h-4 w-4" />
                             </IconButton>
                           )}
-                          <IconButton variant="text" color="red" size="sm" onClick={() => handleDelete(producto)}>
-                            <Trash2 className="h-4 w-4"/>
+                          <IconButton
+                            variant="text"
+                            color="red"
+                            size="sm"
+                            onClick={() => handleDelete(producto)}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </IconButton>
-                          
                         </div>
                       </td>
                     </tr>
@@ -708,20 +890,22 @@ const Productos = () => {
             </div>
 
             {/* Paginación */}
-            {filteredProducts.length > 0 ? (
+            {!showEmpty ? (
               <div className="flex items-center justify-between p-4 border-t border-gray-200">
-                <Typography variant="small" color="blue-gray" className="font-normal">
-                  Mostrando {(currentPage - 1) * productsPerPage + 1} a{" "}
-                  {Math.min(currentPage * productsPerPage, filteredProducts.length)} de {filteredProducts.length}{" "}
-                  productos
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-normal"
+                >
+                  Mostrando {start} a {end} de {total} productos
                 </Typography>
                 <div className="flex gap-2">
                   <IconButton
                     variant="outlined"
                     color="blue-gray"
                     size="sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1 || isLoading}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </IconButton>
@@ -730,7 +914,9 @@ const Productos = () => {
                     color="blue-gray"
                     size="sm"
                     disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(currentPage + 1)}
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
                   >
                     <ChevronRight className="h-4 w-4" />
                   </IconButton>
@@ -763,36 +949,44 @@ const Productos = () => {
               Cantidad de copias
             </Typography>
             <Input
-            type="number"
-            value={copias}
-            onChange={(e) => setCopias(e.target.valueAsNumber)}
+              type="number"
+              value={copias}
+              onChange={(e) => setCopias(e.target.valueAsNumber)}
             />
           </CardBody>
           <CardFooter className="pt-0">
             <div className="flex justify-center items-center gap-2">
+              <Button variant="gradient" color="red" onClick={handleCloseLabel}>
+                Cancelar
+              </Button>
               <Button
-              variant="gradient"
-              color="red"
-              onClick={handleCloseLabel}
-            >
-              Cancelar
-            </Button>
-            <Button variant="gradient" onClick={()=>handlePrint(selectedProduct?.id, copias)}>
-              Imprimir etiqueta
-            </Button>
+                variant="gradient"
+                onClick={() => handlePrint(selectedProduct?.id, copias)}
+              >
+                Imprimir etiqueta
+              </Button>
             </div>
           </CardFooter>
         </Card>
       </Dialog>
 
       {/* Modal de Detalles del Producto */}
-      <Dialog open={openModal} handler={handleCloseModal} size="lg" className="bg-transparent shadow-none">
+      <Dialog
+        open={openModal}
+        handler={handleCloseModal}
+        size="lg"
+        className="bg-transparent shadow-none"
+      >
         <Card className="mx-auto w-full max-w-4xl">
           <DialogHeader className="flex items-center justify-between p-6 border-b border-gray-200">
             <Typography variant="h4" color="blue-gray" className="uppercase">
               Detalles del Producto
             </Typography>
-            <IconButton variant="text" color="blue-gray" onClick={handleCloseModal}>
+            <IconButton
+              variant="text"
+              color="blue-gray"
+              onClick={handleCloseModal}
+            >
               <X className="h-5 w-5" />
             </IconButton>
           </DialogHeader>
@@ -804,7 +998,10 @@ const Productos = () => {
                 <div className="space-y-4">
                   <div className="aspect-square w-full max-w-md mx-auto">
                     <img
-                      src={mostrarImagen(selectedProduct.imagen_url) || "/placeholder.svg"}
+                      src={
+                        mostrarImagen(selectedProduct.imagen_url) ||
+                        "/placeholder.svg"
+                      }
                       alt={selectedProduct.nombre}
                       className="w-full h-full object-cover rounded-lg border border-gray-200"
                     />
@@ -812,7 +1009,9 @@ const Productos = () => {
                   <div className="flex justify-center">
                     <Chip
                       value={obtenerEstadoProducto(selectedProduct)}
-                      color={getChipColor(obtenerEstadoProducto(selectedProduct))}
+                      color={getChipColor(
+                        obtenerEstadoProducto(selectedProduct)
+                      )}
                       size="lg"
                       variant="ghost"
                       className="rounded-full"
@@ -826,8 +1025,13 @@ const Productos = () => {
                     <Typography variant="h3" color="blue-gray" className="mb-2">
                       {selectedProduct.nombre}
                     </Typography>
-                    <Typography variant="paragraph" color="gray" className="text-lg">
-                      {selectedProduct.descripcion || "Sin descripción disponible"}
+                    <Typography
+                      variant="paragraph"
+                      color="gray"
+                      className="text-lg"
+                    >
+                      {selectedProduct.descripcion ||
+                        "Sin descripción disponible"}
                     </Typography>
                   </div>
 
@@ -835,7 +1039,11 @@ const Productos = () => {
                     <Card className="p-4 bg-gray-50">
                       <div className="flex items-center gap-2 mb-2">
                         <DollarSign className="h-5 w-5 text-green-500" />
-                        <Typography variant="small" color="blue-gray" className="font-medium">
+                        <Typography
+                          variant="small"
+                          color="blue-gray"
+                          className="font-medium"
+                        >
                           Precio
                         </Typography>
                       </div>
@@ -847,7 +1055,11 @@ const Productos = () => {
                     <Card className="p-4 bg-gray-50">
                       <div className="flex items-center gap-2 mb-2">
                         <Package className="h-5 w-5 text-blue-500" />
-                        <Typography variant="small" color="blue-gray" className="font-medium">
+                        <Typography
+                          variant="small"
+                          color="blue-gray"
+                          className="font-medium"
+                        >
                           Stock
                         </Typography>
                       </div>
@@ -859,7 +1071,11 @@ const Productos = () => {
                     <Card className="p-4 bg-gray-50">
                       <div className="flex items-center gap-2 mb-2">
                         <Tag className="h-5 w-5 text-purple-500" />
-                        <Typography variant="small" color="blue-gray" className="font-medium">
+                        <Typography
+                          variant="small"
+                          color="blue-gray"
+                          className="font-medium"
+                        >
                           Categoría
                         </Typography>
                       </div>
@@ -871,7 +1087,11 @@ const Productos = () => {
                     <Card className="p-4 bg-gray-50">
                       <div className="flex items-center gap-2 mb-2">
                         <TrendingUp className="h-5 w-5 text-orange-500" />
-                        <Typography variant="small" color="blue-gray" className="font-medium">
+                        <Typography
+                          variant="small"
+                          color="blue-gray"
+                          className="font-medium"
+                        >
                           Ventas
                         </Typography>
                       </div>
@@ -888,7 +1108,9 @@ const Productos = () => {
                       <Typography variant="small" color="gray">
                         <strong>Fecha de creación:</strong>{" "}
                         {selectedProduct.fecha_creacion
-                          ? new Date(selectedProduct.fecha_creacion).toLocaleDateString()
+                          ? new Date(
+                              selectedProduct.fecha_creacion
+                            ).toLocaleDateString()
                           : "No disponible"}
                       </Typography>
                     </div>
@@ -904,7 +1126,8 @@ const Productos = () => {
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-gray-500" />
                         <Typography variant="small" color="gray">
-                          <strong>Código de barras:</strong> {selectedProduct.barcode}
+                          <strong>Código de barras:</strong>{" "}
+                          {selectedProduct.barcode}
                         </Typography>
                       </div>
                     )}
@@ -915,10 +1138,19 @@ const Productos = () => {
           </DialogBody>
 
           <DialogFooter className="flex gap-2 p-6 border-t border-gray-200">
-            <Button variant="outlined" color="blue-gray" onClick={handleCloseModal}>
+            <Button
+              variant="outlined"
+              color="blue-gray"
+              onClick={handleCloseModal}
+            >
               Cerrar
             </Button>
-            <Button variant="filled" color="blue" className="flex items-center gap-2" onClick={editarDesdeModal}>
+            <Button
+              variant="filled"
+              color="blue"
+              className="flex items-center gap-2"
+              onClick={editarDesdeModal}
+            >
               <Edit className="h-4 w-4" />
               Editar Producto
             </Button>
@@ -927,7 +1159,12 @@ const Productos = () => {
       </Dialog>
 
       {/* Modal para editar el producto */}
-       <Dialog size="xl" open={openEdit} handler={handleCloseModalEdit} className="max-h-[90vh] w-full max-w-4xl p-4">
+      <Dialog
+        size="xl"
+        open={openEdit}
+        handler={handleCloseModalEdit}
+        className="max-h-[90vh] w-full max-w-4xl p-4"
+      >
         {/* HEADER */}
         <DialogHeader className="relative m-0 block">
           <Typography variant="h4" color="blue-gray" className="uppercase">
@@ -936,7 +1173,12 @@ const Productos = () => {
           <Typography className="mt-1 font-normal text-gray-600">
             Modificá los datos necesarios y guardá los cambios.
           </Typography>
-          <IconButton size="sm" variant="text" className="!absolute right-3.5 top-3.5" onClick={handleCloseModalEdit}>
+          <IconButton
+            size="sm"
+            variant="text"
+            className="!absolute right-3.5 top-3.5"
+            onClick={handleCloseModalEdit}
+          >
             <XMarkIcon className="h-4 w-4 stroke-2" />
           </IconButton>
         </DialogHeader>
@@ -946,15 +1188,28 @@ const Productos = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* NOMBRE */}
             <div>
-              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 font-medium"
+              >
                 Nombre <span className="text-red-500">*</span>
               </Typography>
-              <Input name="nombre" value={formularioEditar.nombre} onChange={handleChange} placeholder="ej. Iphone 16" />
+              <Input
+                name="nombre"
+                value={formularioEditar.nombre}
+                onChange={handleChange}
+                placeholder="ej. Iphone 16"
+              />
             </div>
 
             {/* MARCA */}
             <div>
-              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 font-medium"
+              >
                 Marca
               </Typography>
               <Input
@@ -967,7 +1222,11 @@ const Productos = () => {
 
             {/* PRECIO COSTO */}
             <div>
-              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 font-medium"
+              >
                 Costo unitario <span className="text-red-500">*</span>
               </Typography>
               <Input
@@ -979,7 +1238,11 @@ const Productos = () => {
             </div>
             {/* PRECIO */}
             <div>
-              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 font-medium"
+              >
                 Precio de venta <span className="text-red-500">*</span>
               </Typography>
               <Input
@@ -991,30 +1254,37 @@ const Productos = () => {
             </div>
             {/* CATEGORIA */}
             <div>
-              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 font-medium"
+              >
                 Categoría <span className="text-red-500">*</span>
               </Typography>
               {categorias.length > 0 && (
-              <Select
-                value={categoriaSeleccionada || ""}
-                onChange={(val) => {
-                  setCategoriaSeleccionada(val);
-                  setSubCategoriaSeleccionada(null);
-                }}
-              >
-                {categorias.map((cat) => (
-                  <Option key={cat.id} value={cat.id}>
-                    {cat.nombre}
-                  </Option>
-                ))}
-              </Select>
-            )}
+                <Select
+                  value={categoriaSeleccionada || ""}
+                  onChange={(val) => {
+                    setCategoriaSeleccionada(val);
+                    setSubCategoriaSeleccionada(null);
+                  }}
+                >
+                  {categorias.map((cat) => (
+                    <Option key={cat.id} value={cat.id}>
+                      {cat.nombre}
+                    </Option>
+                  ))}
+                </Select>
+              )}
             </div>
-
 
             {/* SUBCATEGORIAS */}
             <div>
-              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 font-medium"
+              >
                 Subcategoría <span className="text-red-500">*</span>
               </Typography>
               {subcategorias.length > 0 && categoriaSeleccionada && (
@@ -1022,12 +1292,15 @@ const Productos = () => {
                   key={categoriaSeleccionada}
                   value={subcategoriaSeleccionada || ""}
                   onChange={(val) => {
-                    setSubCategoriaSeleccionada(val)
-                    handleSelectChange('subcategoria', val)
+                    setSubCategoriaSeleccionada(val);
+                    handleSelectChange("subcategoria", val);
                   }}
                 >
                   {subcategorias
-                    .filter((sub) => sub.categoria_id === parseInt(categoriaSeleccionada))
+                    .filter(
+                      (sub) =>
+                        sub.categoria_id === parseInt(categoriaSeleccionada)
+                    )
                     .map((sub) => (
                       <Option key={sub.id} value={sub.id}>
                         {sub.nombre}
@@ -1037,8 +1310,12 @@ const Productos = () => {
               )}
             </div>
             {/* DESCRIPCION CORTA (OCUPA DOS COLUMNAS) */}
-              <div className="md:col-span-1">
-              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+            <div className="md:col-span-1">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 font-medium"
+              >
                 Descripción corta (opcional)
               </Typography>
               <Textarea
@@ -1052,7 +1329,11 @@ const Productos = () => {
             </div>
             {/* NOTAS (OCUPA DOS COLUMNAS) */}
             <div className="md:col-span-1">
-              <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="mb-2 font-medium"
+              >
                 Descripción (opcional)
               </Typography>
               <Textarea
@@ -1072,15 +1353,14 @@ const Productos = () => {
             Guardar Cambios
           </Button>
         </DialogFooter>
-      </Dialog>     
-      
+      </Dialog>
+
       {/* ALERTAS  */}
       {componenteAlerta}
-      
     </div>
-  )
-}
+  );
+};
 
 // Exportaciones
-export { Productos }
-export default Productos
+export { Productos };
+export default Productos;

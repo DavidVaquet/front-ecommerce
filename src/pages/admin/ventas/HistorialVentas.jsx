@@ -532,7 +532,7 @@ export const HistorialVentas = () => {
                                     Subtotal:
                                   </Typography>
                                   <Typography variant="small" color="blue-gray" className="font-medium">
-                                    ${venta.subtotal.toFixed(2)}
+                                    ${venta.subtotal}
                                   </Typography>
                                 </div>
                                 {venta.descuento > 0 && (
@@ -541,7 +541,7 @@ export const HistorialVentas = () => {
                                       Descuento:
                                     </Typography>
                                     <Typography variant="small" color="red" className="font-medium">
-                                      -${venta.descuento.toFixed(2)}
+                                      -${venta.descuento}
                                     </Typography>
                                   </div>
                                 )}
@@ -550,7 +550,7 @@ export const HistorialVentas = () => {
                                     Impuestos:
                                   </Typography>
                                   <Typography variant="small" color="blue-gray" className="font-medium">
-                                    ${venta.impuestos.toFixed(2)}
+                                    ${venta.impuestos}
                                   </Typography>
                                 </div>
                                 <hr className="border-gray-300" />

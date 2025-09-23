@@ -1,13 +1,13 @@
 import { apiFetch } from "../helpers/auth";
 const API_URL = `${import.meta.env.VITE_API_URL}/ventas`;
 
-export const registrarVentaService = async ({canal, medio_pago, total, productos, cliente_id, descuento, subtotal, impuestos}) => {
+export const registrarVentaService = async ({canal, medio_pago, productos, cliente_id, descuento, impuestos, currency}) => {
 
     try {
     
         const data = await apiFetch(`${API_URL}/registrar-venta`, {
             method: 'POST',
-            body: JSON.stringify({canal, medio_pago, total, productos, cliente_id, descuento, subtotal, impuestos})
+            body: JSON.stringify({canal, medio_pago, productos, cliente_id, descuento, impuestos, currency})
         });
 
 

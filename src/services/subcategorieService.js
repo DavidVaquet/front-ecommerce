@@ -18,11 +18,13 @@ export const addSubcategoryService = async ({nombre, descripcion, activo, catego
 
 };
 
-export const getSubcategories = async () => {
+export const getSubcategories = async ({ activo } = {}) => {
     
 
     try {
-        const data = await apiFetch(`${API_URL}/getSubcategories`);
+        const url = new URL(`${API_URL}/getSubcategories`);
+        if (activo != null) url.searchParams.set('activo', activo);
+        const data = await apiFetch(`${url}`);
 
         return data;
 

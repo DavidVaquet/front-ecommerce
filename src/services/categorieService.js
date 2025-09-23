@@ -3,10 +3,12 @@ const API_URL = `${import.meta.env.VITE_API_URL}/categories`;
 
 
 
-export const getAllCategories = async () => {
+export const getAllCategories = async ({ activo } = {}) => {
 
     try {
-        const data = await apiFetch(`${API_URL}/getCategories`);
+        const url = new URL(`${API_URL}/getCategories`);
+        if (activo != null && activo != undefined) url.searchParams.set('activo', activo);
+        const data = await apiFetch(`${url}`);
 
         return data;
 
@@ -20,7 +22,7 @@ export const getAllCategories = async () => {
 export const createCategoryService = async ({nombre, descripcion, activo}) => {
 
     try {
-        const data = await fetch(`${API_URL}/createCategory`, {
+        const data = await apiFetch(`${API_URL}/createCategory`, {
             method: "POST",
             body: JSON.stringify({nombre, descripcion, activo})
         });

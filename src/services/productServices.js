@@ -4,7 +4,7 @@ import { buildQueryString } from "../helpers/buildQueryString";
 
 export const addProduct = async ({
     nombre, descripcion, precio, imagen_url, subcategoria_id, marca, estado, destacado, imagenUrls, descripcion_corta,
-    cantidad, cantidad_minima, precio_costo}) => {
+    cantidad, cantidad_minima, precio_costo, currency}) => {
 
     
     try {
@@ -21,6 +21,7 @@ export const addProduct = async ({
         formData.append('cantidad', cantidad);
         formData.append('cantidad_minima', cantidad_minima);
         formData.append('precio_costo', parseFloat(precio_costo));
+        formData.append('currency', currency);
 
         if (imagen_url){
             formData.append('image', imagen_url.file);
@@ -63,17 +64,56 @@ export const getProducts = async (filtros = {}) => {
     }
 }
 
-export const obtenerProductosCompletos = async () => {
+export const fetchProductos = async ({
+  limit, 
+  offset, 
+  publicado, 
+  estado, 
+  stockBajo, 
+  categoria_id, 
+  subcategoria_id,
+  search,
+  include,
+  orderBy,
+  orderDir,
+  stockCantidadMin
+} = {}) => {
 
     try {
+        const url = new URL(`${API_URL}/get-products-completes`);
+        if (limit > 0) url.searchParams.set('limit', limit);
+        if (offset != null) url.searchParams.set('offset', offset);
+        if (publicado != null) url.searchParams.set('publicado', publicado);
+        if (estado != null) url.searchParams.set('estado', estado);
+        if (stockBajo != null) url.searchParams.set('stockBajo', stockBajo);
+        if (categoria_id != null) url.searchParams.set('categoria_id', categoria_id);
+        if (subcategoria_id != null) url.searchParams.set('subcategoria_id', subcategoria_id);
+        if (search != null) url.searchParams.set('search', search);
+        if (include != null) url.searchParams.set('include', include);
+        if (orderBy != null) url.searchParams.set('orderBy', orderBy);
+        if (orderDir != null) url.searchParams.set('orderDir', orderDir);
+        if (stockCantidadMin != null) url.searchParams.set('stockCantidadMin', stockCantidadMin);
 
-         const data = await apiFetch(`${API_URL}/get-products-completes`);
+         const data = await apiFetch(`${url}`);
 
          return data;
 
     } catch (error) {
         console.error(error);
         throw new Error(error.message);
+    }
+}
+
+export const fetchProductStats = async ({ lowStockMin } = {}) => {
+    try {
+        const url = new URL(`${API_URL}/get-stats-products`);
+        if (lowStockMin != null) url.searchParams.set('lowStockMin', lowStockMin);
+
+        const res = await apiFetch(`${url}`);
+        return res;
+    } catch (error) {
+        console.error(error);
+        throw error;
     }
 }
 
@@ -120,17 +160,6 @@ export const activarProductLogic = async (id) => {
     }
 }
 
-export const productosCantidadMinima = async () => {
-    try {
-
-        const data = await apiFetch(`${API_URL}/get-products-cantidadMinima`);
-        
-        return data;
-
-    } catch (error) {
-        console.error(error);
-    }
-}
 export const publicarProductosServices = async (ids, publicado) => {
     try {
 

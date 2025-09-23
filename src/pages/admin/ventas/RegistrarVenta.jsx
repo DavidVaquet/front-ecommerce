@@ -43,10 +43,12 @@ import {
   Zap,
   BarChart3,
 } from "lucide-react"
-import { useProductos } from "../../../context/ProductsContext";
 import { useVentas } from "../../../context/VentasContext";
 import { useClientes } from "../../../context/ClientesContext";
 import { estadisticasVentasServices } from "../../../services/estadisticasServices";
+import { useNotificacion } from "../../../hooks/useNotificacion";
+import { useProductos } from "../../../hooks/useProductos";
+import { useMemo } from "react";
 
 
 export const RegistrarVenta = () => {
@@ -54,23 +56,24 @@ export const RegistrarVenta = () => {
   const [busquedaProducto, setBusquedaProducto] = useState("");
   const [clienteSeleccionado, setClienteSeleccionado] = useState("");
   const [metodoPago, setMetodoPago] = useState("");
-  const [descuentoGeneral, setDescuentoGeneral] = useState(0);
-  const [impuesto, setImpuesto] = useState(0) 
+  const [descuentoGeneral, setDescuentoGeneral] = useState("");
+  const [impuesto, setImpuesto] = useState("") 
   const [activeTab, setActiveTab] = useState("todos");
-  const [mostrarAlerta, setMostrarAlerta] = useState(false);
-  const [tipoAlerta, setTipoAlerta] = useState("success");
-  const [mensajeAlerta, setMensajeAlerta] = useState("");
   const [clientes, setClientes] = useState([]);
-  const [productos, setProductos] = useState([]);
   const [estadisticas, setEstadisticas] = useState([]);
   const [canal, setCanal] = useState('local');
+  const [currency, setCurrency] = useState('ARS');
 
+  // ALERTAS
+  const { componenteAlerta, mostrarNotificacion } = useNotificacion();
 
-  // CONTEXT
-  const { recargarProductos, setRecargarProductos } = useProductos();
-  const { setVentasContext } = useVentas();
-  const { clientesContext } = useClientes();
-
+  // TRAER DATOS DESDE REACT QUERY
+  const filtroProducto = useMemo(() => ({
+    estado: 1
+  }), [])
+  const { data } = useProductos(filtroProducto);
+  const productos = data?.rows || [];
+  // console.log(productos);
   useEffect(() => {
     const fetchClientes = async () => {
       try {
@@ -82,19 +85,8 @@ export const RegistrarVenta = () => {
     }
     fetchClientes();
   
-  }, [clientesContext]);
+  }, []);
 
-  useEffect(() => {
-    const fetchProductos = async () => {
-      try {
-        const response = await getProducts();
-        setProductos(response.products);
-      } catch (error) {
-        console.error(error)
-      }
-    }
-    fetchProductos()
-  }, [recargarProductos])
 
   useEffect(() => {
     const fetchEstadisticas = async () => {
@@ -155,12 +147,6 @@ export const RegistrarVenta = () => {
     mostrarNotificacion("success", "Producto eliminado")
   }
 
-  const mostrarNotificacion = (tipo, mensaje) => {
-    setTipoAlerta(tipo)
-    setMensajeAlerta(mensaje)
-    setMostrarAlerta(true)
-    setTimeout(() => setMostrarAlerta(false), 3000)
-  }
 
   const calcularSubtotal = () => {
     return productosVenta.reduce((total, producto) => {
@@ -220,14 +206,14 @@ export const RegistrarVenta = () => {
         cliente_id: Number(clienteSeleccionado),
         productos: productosVenta.map((p) => ({
           product_id: p.id,
-          cantidad: p.cantidadSeleccionada,
+          cantidad: Number(p.cantidadSeleccionada),
           precio: Number(p.precio),
-          descuento: Number(p.descuento || 0)
+          descuento: Number(p.descuento || 0),
+          precio_costo: Number(p.precio_costo)
         })),
-        total: Number(calcularTotal()),
-        subtotal: Number(calcularSubtotal()),
-        descuento: Number(calcularDescuentoGeneral()),
-        impuestos: Number(calcularImpuestos())
+        descuento: descuentoGeneral,
+        impuestos: impuesto,
+        currency
 
       })
 
@@ -236,15 +222,13 @@ export const RegistrarVenta = () => {
         setRecargarProductos((prev) => prev + 1);
         mostrarNotificacion("success", "¡Venta procesada exitosamente!")
         setTimeout(() => {
-          setProductosVenta([])
-          setClienteSeleccionado("")
-          setMetodoPago("")
-          setDescuentoGeneral(0)
+          limpiarVenta();
         }, 1000)
 
       }
     } catch (error) {
       console.error(error);
+      mostrarNotificacion('error', error.message || 'Error al realizar la venta.');
     }
   }
 
@@ -252,8 +236,8 @@ export const RegistrarVenta = () => {
         setProductosVenta([])
         setClienteSeleccionado("")
         setMetodoPago("")
-        setDescuentoGeneral(0)
-        setImpuesto(0)
+        setDescuentoGeneral("")
+        setImpuesto("")
   }
 
   const handleScanOrSearch = async (value) => {
@@ -313,17 +297,7 @@ export const RegistrarVenta = () => {
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
       {/* Alerta flotante */}
-      {mostrarAlerta && (
-        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">
-          <Alert
-            color={tipoAlerta === "success" ? "green" : "red"}
-            icon={tipoAlerta === "success" ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-            className="shadow-lg"
-          >
-            {mensajeAlerta}
-          </Alert>
-        </div>
-      )}
+      { componenteAlerta }
 
       {/* Título y Botón */}
       <div className="flex w-full flex-col mb-8">

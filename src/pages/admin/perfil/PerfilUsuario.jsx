@@ -104,7 +104,7 @@ const PerfilUsuario = () => {
   useEffect(() => {
     const fetchEstadisticas = async () => {
       const statss = await statsUsage();
-      console.log(statss);
+      // console.log(statss);
       setStats(statss);
       
     }
