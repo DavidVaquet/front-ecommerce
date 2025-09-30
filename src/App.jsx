@@ -18,6 +18,7 @@ import PerfilUsuario from './pages/admin/perfil/PerfilUsuario';
 import ConfiguracionesDashboard from './pages/admin/configuraciones/ConfiguracionesDashboard';
 import MovimientosStock from './pages/admin/stock/MovimientosStock';
 import RegistrarMovimientoStock from './pages/admin/stock/RegistrarMovimientoStock';
+import { RestablecerContrasena } from './pages/auth/RecoveryPassword';
 
 function App() {
   
@@ -40,6 +41,8 @@ function App() {
 
       {/* Rutas publicas */}
       <Route path='/login' element={<Login/>}/>
+      <Route path='/restablecer-password/:token' element={<RestablecerContrasena/>}/>
+      <Route path='/restablecer-password' element={<RestablecerContrasena/>}/>
       {/* Ecommerce */}
       <Route path='/' element={<TiendaLayout/>}>
 

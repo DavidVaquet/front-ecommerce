@@ -84,7 +84,7 @@ export const updatePasswordUser = async ({password, nuevaPassword}) => {
 
 }
 
-export const obtenerUsers= async({ filters = {} }) => {
+export const obtenerUsers = async ({ filters = {} }) => {
     try {
         const url = new URL(`${API_URL}/obtener-usuarios`);
         const sp = url.searchParams;
@@ -98,7 +98,7 @@ export const obtenerUsers= async({ filters = {} }) => {
             }
         }
 
-        const res = apiFetch(url.toString());
+        const res = await apiFetch(url.toString());
         return res;
     } catch (error) {
         console.error(error);
@@ -223,3 +223,30 @@ export const eliminarUser = async (id) => {
     }
 }
 
+export const forgotPassword = async (email) => {
+    try {
+        const res = await apiFetch(`${API_URL}/forgot-password`, {
+            method: 'POST',
+            body: JSON.stringify({email})
+        });
+
+        return res;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+}
+
+export const recoveryPassword = async({ password, token }) => {
+    try {
+        const res = await apiFetch(`${API_URL}/reset-password-recovery`, {
+            method: 'POST',
+            body: JSON.stringify({ password, token})
+        });
+
+        return res;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+}

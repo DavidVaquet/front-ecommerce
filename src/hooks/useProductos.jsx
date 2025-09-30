@@ -1,5 +1,5 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { fetchProductos, fetchProductStats } from "../services/productServices";
+import { useQuery } from "@tanstack/react-query";
+import { fetchProductos, fetchProductStats, getProductoPorId } from "../services/productServices";
 
 // EXPORTAR QUERYKEY    
 export const qkProductosStats = (f = {}) => ['productos', 'stats', f];
@@ -9,7 +9,7 @@ export const useProductos = (filtros) => {
     return useQuery({
         queryKey: ['productos', filtros],
         queryFn: () => fetchProductos(filtros),
-        placeholderData: keepPreviousData,
+        placeholderData: (prev) => prev,
         staleTime: 30_000,
         refetchOnWindowFocus: false
     })
@@ -39,3 +39,13 @@ export const useProductoStats = (filtros = {}, { enabled = true } = {}) => {
     },
   });
 };
+
+export const useProductoId = (id) => {
+  return useQuery({
+    queryKey: ['productos', id],
+    queryFn: () => getProductoPorId(id),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false
+  })
+}

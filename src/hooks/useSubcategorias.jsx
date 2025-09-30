@@ -6,6 +6,7 @@ export const useSubcategorias = (filtros) => {
         queryKey: ['subcategorias', filtros],
         queryFn: () => getSubcategories(filtros),
         staleTime: Infinity,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        placeholderData: (prev) => prev
     })
 };

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { Bell, AlertTriangle } from "lucide-react";
 import {
@@ -12,6 +12,8 @@ import {
 import { useProductos } from "../hooks/useProductos";
 
 export const Header = () => {
+  // USESTATES
+  const [open, setOpen] = useState(false);
   // NAVIGATE
   const navigate = useNavigate();
   // OBTENER PRODUCTOS CON CANTIDAD MINIMA PARA LA NOTIFICACION
@@ -21,6 +23,12 @@ export const Header = () => {
   const { data } = useProductos(filtros);
   const total = data?.total ?? 0;
   const productosBajoStock = data?.rows ?? [];
+  
+  const handleRedirect = (p) => {
+    const searchValue = p.barcode || p.nombre;
+    navigate(`/admin/productos?search=${searchValue}`)
+    setOpen(false);
+  }
   return (
     <div className="flex w-full h-[80px] bg-white items-center justify-between p-8">
       <div>
@@ -30,7 +38,7 @@ export const Header = () => {
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">
-          <Menu>
+          <Menu open={open} handler={setOpen}>
             <MenuHandler>
               <IconButton variant="text" className="relative">
                 <Bell className="h-5 w-5 text-orange-900" />
@@ -53,7 +61,7 @@ export const Header = () => {
                 <>
                   {productosBajoStock.map((producto) => (
                     <MenuItem
-                      onClick={() => navigate("/admin/productos")}
+                      onClick={() => handleRedirect(producto)}
                       className="bg-gray-100 hover:bg-red-50 rounded-lg p-3 transition-all duration-200 cursor-pointer"
                     >
                       <div className="flex items-start gap-3">

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   formatearPesos,
   formatearPesosRedondeo,
 } from "../../../helpers/formatearPesos.js";
+import { useNotificacion } from "../../../hooks/useNotificacion.jsx";
 import {
   Button,
   Card,
@@ -46,65 +47,94 @@ import {
   AlertCircle,
   Settings,
   ShoppingCart,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { estadisticasServices } from "../../../services/estadisticasServices.js";
-import { getAllCategories } from "../../../services/categorieService.js";
+import { useCategorias } from "../../../hooks/useCategorias.jsx";
+import { useEstadisticasDashboard } from "../../../hooks/useEstadisticas.jsx";
+import { useNavigate } from "react-router";
 
 export const Estadisticas = () => {
   const [activeTab, setActiveTab] = useState("resumen");
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState("30");
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const [cargando, setCargando] = useState(false);
-  const [mostrarAlerta, setMostrarAlerta] = useState(false);
-  const [mensajeAlerta, setMensajeAlerta] = useState("");
-  const [estadisticas, setEstadisticas] = useState([]);
-  const [categorias, setCategorias] = useState([]);
+  const [currentPageTop, setCurrentPageTop] = useState(1);
+  const [currentPageCriticos, setCurrentPageCriticos] = useState(1);
+  const estadisticasPerPage = 25;
+  const topRefCriticos = useRef(null);
+  const topRefProductosTop = useRef(null);
 
+  // FILTROS PARA PAGINACION
+  const topLimit = estadisticasPerPage;
+  const topOffset = (currentPageTop - 1) * topLimit;
+  const criticosLimit = estadisticasPerPage;
+  const criticosOffset = (currentPageCriticos - 1) * criticosLimit;
+
+  // TRAER ESTADISTICAS DESDE REACT QUERY
+  const {
+    data,
+    isLoading,    
+    isFetching,
+    refetch,      
+  } = useEstadisticasDashboard(periodoSeleccionado, categoriaFiltro, topLimit, topOffset, criticosLimit, criticosOffset);
+  // console.log(data);
+  
   const {
     metricas_principales = {},
-    productos_top = [],
-    productos_criticos = [],
     ventas_por_categoria = [],
-  } = estadisticas ?? {};
+    productos_top: {
+      items: topItems = [],
+      total: topTotal = 0,
+      has_more: topHasMore = false,
+  } = {},
+  productos_criticos: {
+    items: critItems = [],
+    total: critTotal = 0,
+    has_more: critHasMore = false,
+  } = {},
+} = data || {};
 
-  useEffect(() => {
-    const fetchEstadisticas = async () => {
-      try {
-        const periodoMap = { 7: "7d", 30: "30d", 90: "90d", 365: "365d" };
-        const payload = {
-          periodo: periodoMap[periodoSeleccionado] ?? "30d",
-          categoryId: categoriaFiltro !== "" ? Number(categoriaFiltro) : "",
-        };
 
-        const est = await estadisticasServices(payload);
+  // PAGINACION PRODUCTOS CRITICOS
 
-        setEstadisticas({
-          metricas_principales: est?.metricas_principales,
-          productos_top: Array.isArray(est?.productos_top)
-            ? est.productos_top
-            : [],
-          productos_criticos: Array.isArray(est?.productos_criticos)
-            ? est.productos_criticos
-            : [],
-          ventas_por_categoria: Array.isArray(est?.ventas_por_categoria)
-            ? est.ventas_por_categoria
-            : [],
-        });
-      } catch (error) {
-        console.error(error);
+  const total = critTotal ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / criticosLimit));
+  const start = total === 0 ? 0 : (currentPageCriticos - 1) * criticosLimit + 1;
+  const end = Math.min(currentPageCriticos * criticosLimit, total);
+  const showEmpty = !isLoading && total === 0;
+
+  // PAGINACION PRODUCTOS TOP
+  const totalTop = topTotal ?? 0;
+  const totalPagesTop = Math.max(1, Math.ceil(topTotal / topLimit));
+  const startTop = topTotal === 0 ? 0 : (currentPageTop - 1) * topLimit + 1;
+  const endTop = Math.min(currentPageTop * topLimit, totalTop);
+  const showEmptyTop = !isLoading && totalTop === 0;
+
+  // PAGINACION TOP REF AMBOS PRODUCTOS
+  function goToPage(newPage, setCurrentPage, topRef, totalPages) {
+  const safePage = Math.max(1, Math.min(newPage, totalPages));
+  setCurrentPage(safePage);
+
+  requestAnimationFrame(() => {
+    if (topRef?.current) {
+      let parent = topRef.current.parentElement;
+      while (parent) {
+        const overflowY = getComputedStyle(parent).overflowY;
+        if (overflowY === "auto" || overflowY === "scroll") {
+          parent.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        parent = parent.parentElement;
       }
-    };
+      const y = topRef.current.getBoundingClientRect().top + window.scrollY - 16;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  });
+}
 
-    fetchEstadisticas();
-  }, [periodoSeleccionado, categoriaFiltro]);
-
-  useEffect(() => {
-    const fetchCategorias = async () => {
-      const cat = await getAllCategories();
-      setCategorias(cat);
-    };
-    fetchCategorias();
-  }, []);
+  // TRAER CATEGORIAS DESDE REACT QUERY
+  const { data: categorys } = useCategorias();
+  const categorias = categorys ?? [];
 
   // Simular carga de datos
   useEffect(() => {
@@ -113,19 +143,10 @@ export const Estadisticas = () => {
     return () => clearTimeout(timer);
   }, [periodoSeleccionado, categoriaFiltro]);
 
-  const mostrarNotificacion = (mensaje) => {
-    setMensajeAlerta(mensaje);
-    setMostrarAlerta(true);
-    setTimeout(() => setMostrarAlerta(false), 3000);
-  };
+  // ALERTA HOOK
+  const {mostrarNotificacion, componenteAlerta } = useNotificacion();
 
-  const exportarReporte = (tipo) => {
-    setCargando(true);
-    setTimeout(() => {
-      setCargando(false);
-      mostrarNotificacion(`Reporte ${tipo} exportado exitosamente`);
-    }, 2000);
-  };
+  const navigate = useNavigate();
 
   const getEstadoColor = (estado) => {
     switch (estado) {
@@ -140,16 +161,14 @@ export const Estadisticas = () => {
     }
   };
 
+  const handleReabastecer = (p) => {
+    navigate(`/admin/stock/registrar-movimiento-stock?productoId=${p.id}&tipo=entrada`)
+  }
+
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
       {/* Alerta flotante */}
-      {mostrarAlerta && (
-        <div className="fixed top-4 right-4 z-50">
-          <Alert color="green" className="shadow-lg">
-            {mensajeAlerta}
-          </Alert>
-        </div>
-      )}
+      {componenteAlerta}
 
       {/* Header */}
       <div className="flex w-full flex-col mb-8">
@@ -163,47 +182,37 @@ export const Estadisticas = () => {
             </p>
           </div>
           <div className="flex gap-3">
-            <Menu>
-              <MenuHandler>
+            
                 <Button
                   variant="outlined"
                   color="blue-gray"
                   className="flex uppercase items-center gap-2"
+                  onClick={() => navigate('/admin/reportes')}
                 >
                   <Download className="h-4 w-4" />
-                  Exportar
+                  VER REPORTES
                 </Button>
-              </MenuHandler>
-              <MenuList>
-                <MenuItem
-                  onClick={() => exportarReporte("PDF")}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Exportar PDF
-                </MenuItem>
-                <MenuItem
-                  onClick={() => exportarReporte("Excel")}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Exportar Excel
-                </MenuItem>
-              </MenuList>
-            </Menu>
+              
             <Button
-              color="blue"
-              className="flex items-center gap-2 uppercase"
-              onClick={() => mostrarNotificacion("Datos actualizados")}
-              disabled={cargando}
-            >
-              {cargando ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              Actualizar
-            </Button>
+            color="blue"
+            className="flex items-center gap-2 uppercase"
+            onClick={async () => {
+              try {
+                await refetch({ throwOnError: true });
+                mostrarNotificacion('success', 'Datos actualizados');
+              } catch (e) {
+                mostrarNotificacion("error", e?.message ?? "No se pudo actualizar");
+              }
+            }}
+            disabled={isFetching} 
+          >
+            {isFetching ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Actualizar datos
+          </Button>
           </div>
         </div>
       </div>
@@ -211,7 +220,7 @@ export const Estadisticas = () => {
       {/* Filtros */}
       <Card className="mb-6 shadow-sm">
         <CardBody className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Typography
                 variant="small"
@@ -258,7 +267,7 @@ export const Estadisticas = () => {
                 ))}
               </Select>
             </div>
-            <div>
+            {/* <div>
               <Typography
                 variant="small"
                 color="blue-gray"
@@ -272,7 +281,7 @@ export const Estadisticas = () => {
                 <Option value="rotacion">Rotación</Option>
                 <Option value="rentabilidad">Rentabilidad</Option>
               </Select>
-            </div>
+            </div> */}
             <div className="flex items-end">
               <Button
                 color="blue-gray"
@@ -289,6 +298,8 @@ export const Estadisticas = () => {
       {/* Métricas Principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card className="shadow-sm">
+                  <span ref={topRefCriticos}></span>
+                  <span ref={topRefProductosTop}></span>
           <CardBody className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -691,7 +702,7 @@ export const Estadisticas = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {productos_top.map((producto, index) => (
+                        {topItems.map((producto, index) => (
                           <tr key={producto.id} className="hover:bg-gray-50">
                             <td className="p-4 border-b border-gray-200">
                               <div className="flex items-center gap-3">
@@ -734,7 +745,7 @@ export const Estadisticas = () => {
                                   color="blue-gray"
                                   className="font-bold"
                                 >
-                                  ${formatearPesosRedondeo(producto.ventas_mes)}
+                                  ${formatearPesosRedondeo(producto?.ventas_mes)}
                                 </Typography>
                                 <TrendingUp className="h-4 w-4 text-green-500" />
                               </div>
@@ -746,7 +757,7 @@ export const Estadisticas = () => {
                                   color="blue-gray"
                                   className="font-bold"
                                 >
-                                  {Number(producto.unidades_vendidas)}
+                                  {producto.unidades_vendidas}
                                 </Typography>
                                 <TrendingUp className="h-4 w-4 text-green-500" />
                               </div>
@@ -754,7 +765,7 @@ export const Estadisticas = () => {
                             <td className="p-4 border-b border-gray-200">
                               <div className="flex ml-3 items-center">
                                 <Typography variant="small" color="blue-gray">
-                                  {producto.stock_actual}
+                                  {Number(producto.stock_actual)}
                                 </Typography>
                               </div>
                             </td>
@@ -764,7 +775,7 @@ export const Estadisticas = () => {
                                 color="blue-gray"
                                 className="font-medium"
                               >
-                                ${producto.valor_stock.toLocaleString()}
+                                ${formatearPesosRedondeo(producto.valor_stock)}
                               </Typography>
                             </td>
                             {/* <td className="p-4 border-b border-gray-200">
@@ -783,7 +794,49 @@ export const Estadisticas = () => {
                           </tr>
                         ))}
                       </tbody>
+                      
                     </table>
+                    {!showEmptyTop ? (
+              <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-normal"
+                >
+                  Mostrando {startTop} a {endTop} de {totalTop} productos
+                </Typography>
+                <div className="flex gap-2">
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPageTop === 1 || isLoading}
+                    onClick={() => goToPage(currentPageTop - 1, setCurrentPageTop, topRefProductosTop, totalPagesTop)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPageTop === totalPagesTop}
+                    onClick={() => goToPage(currentPageTop + 1, setCurrentPageTop, topRefProductosTop, totalPagesTop)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </IconButton>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8">
+                <Package className="h-12 w-12 text-gray-400 mb-3" />
+                <Typography variant="h6" color="blue-gray">
+                  No se encontraron productos Top
+                </Typography>
+                <Typography variant="small" color="gray" className="mt-1">
+                  Intenta con otra búsqueda o agrega nuevos productos.
+                </Typography>
+              </div>
+            )}
                   </div>
                 </CardBody>
               </Card>
@@ -878,13 +931,13 @@ export const Estadisticas = () => {
                         Productos que Requieren Atención
                       </Typography>
                       <Typography variant="small" color="gray">
-                        {productos_criticos.length} productos necesitan
+                        {critTotal} productos necesitan
                         reabastecimiento
                       </Typography>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    {productos_criticos.map((producto) => (
+                    {critItems.map((producto) => (
                       <Card key={producto.id} className="shadow-sm border">
                         <CardBody className="p-4">
                           <div className="flex items-center justify-between">
@@ -957,14 +1010,17 @@ export const Estadisticas = () => {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <IconButton
+                              {/* <IconButton
                                 variant="outlined"
                                 color="blue"
                                 size="sm"
                               >
                                 <Eye className="h-4 w-4" />
-                              </IconButton>
-                              <Button color="deep-orange" size="sm">
+                              </IconButton> */}
+                              <Button 
+                              color="deep-orange" 
+                              size="sm"
+                              onClick={() => handleReabastecer(producto)}>
                                 Reabastecer
                               </Button>
                             </div>
@@ -973,6 +1029,47 @@ export const Estadisticas = () => {
                       </Card>
                     ))}
                   </div>
+                  {!showEmpty ? (
+              <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-normal"
+                >
+                  Mostrando {start} a {end} de {total} productos
+                </Typography>
+                <div className="flex gap-2">
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPageCriticos === 1 || isLoading}
+                    onClick={() => goToPage(currentPageCriticos - 1, setCurrentPageCriticos, topRefCriticos, totalPages)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPageCriticos === totalPages}
+                    onClick={() => goToPage(currentPageCriticos + 1, setCurrentPageCriticos, topRefCriticos, totalPages)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </IconButton>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8">
+                <Package className="h-12 w-12 text-gray-400 mb-3" />
+                <Typography variant="h6" color="blue-gray">
+                  No se encontraron productos criticos
+                </Typography>
+                <Typography variant="small" color="gray" className="mt-1">
+                  Intenta con otra búsqueda o agrega nuevos productos.
+                </Typography>
+              </div>
+            )}
                 </CardBody>
               </Card>
             </TabPanel>

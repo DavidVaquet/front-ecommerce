@@ -81,7 +81,7 @@ export const Login = () => {
                     </div>
                     </form>
                     <div className='flex flex-col items-center gap-4'>
-                    <span className='text-black font-semibold hover:text-gris font-worksans'><Link to='/recuperar-contraseña'>¿Olvidaste tu contraseña?</Link></span>
+                    <span className='text-black font-semibold hover:text-gris font-worksans'><Link to='/restablecer-password'>¿Olvidaste tu contraseña?</Link></span>
                     </div>
 
             </div>

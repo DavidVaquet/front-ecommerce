@@ -1,8 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { addCategoryController } from "../../../controllers/categorieController";
-import { addProductController } from "../../../controllers/productController";
-import { addSubcategoryController } from "../../../controllers/subcategoriesController";
-import { getSubcategoriesController } from "../../../controllers/subcategoriesController";
 import { formatearMiles, precioToNumber } from "../../../helpers/formatearPesos";
 import { useProductosMutation } from "../../../hooks/useProductosMutation";
 import { toast } from "react-hot-toast";
@@ -71,7 +67,7 @@ export const SubirProducto = () => {
   // SUBCATEGORIAS
   const filtroSubcategoria = useMemo(() => ({
     activo: 'true'
-  }));
+  }), []);
   const { data: dataSubcategoria } = useSubcategorias(filtroSubcategoria);
   const subcategorias = dataSubcategoria || [];
 
@@ -161,7 +157,7 @@ export const SubirProducto = () => {
       activo: estadoCategoria === "true",
     };
 
-      const cate = crearCategoria.mutateAsync(payload)
+      const cate = await crearCategoria.mutateAsync(payload)
 
       if (cate) {
         resetFieldsCategorys();
@@ -214,7 +210,7 @@ export const SubirProducto = () => {
         return;
       }
 
-      if (!nombre) {
+      if (!nombre || !nombre.trim()) {
         toast.error("El nombre es obligatorio.");
         return;
       }
@@ -257,7 +253,7 @@ export const SubirProducto = () => {
         resetFields,
       };
 
-      const producto = crearProducto.mutateAsync(productData);
+      const producto = await crearProducto.mutateAsync(productData);
       toast.success('Producto creado correctamente');
       resetFields();
     } catch (error) {

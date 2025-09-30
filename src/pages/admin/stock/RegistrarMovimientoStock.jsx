@@ -1,5 +1,6 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, } from "react"
+import { useSearchParams } from 'react-router'
 import {
   Plus,
   Save,
@@ -27,15 +28,34 @@ import {
   Chip,
   Alert,
 } from "@material-tailwind/react"
-import { getProducts } from "../../../services/productServices"
 import { registrarMovStockServices, stockMovements } from "../../../services/stockServices";
 import { useNotificacion } from "../../../hooks/useNotificacion"
 import { formatearEntero } from "../../../helpers/numeros";
 import { formatearFechaHora } from "../../../helpers/formatoFecha"
+import { useProductoId, useProductos } from "../../../hooks/useProductos"
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
+import { isBarcodeLike } from "../../../utils/barcode";
+import { getProductoPorBarcode } from "../../../services/productServices";
+import { useMovimientoStock } from "../../../hooks/useMovimientosStock";
+import { useStockMutation } from "../../../hooks/useStockMutation";
 
 const RegistrarMovimientoStock = () => {
+  
+  const [searchParams] = useSearchParams();
+  const productoIdParam = searchParams.get("productoId");
+  const tipoParam = searchParams.get("tipo");
+
+  const productoId = useMemo(() => {
+    const n = Number(productoIdParam);
+    return Number.isSafeInteger(n) && n > 0 ? n : null;
+  }, [productoIdParam]);
+
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+  const [busquedaProducto, setBusquedaProducto] = useState("");
+  const [mostrarBusqueda, setMostrarBusqueda] = useState(false);
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
-    tipo: "",
+    tipo: tipoParam ?? "",
     producto: "",
     cantidad: "",
     motivo: "",
@@ -45,51 +65,47 @@ const RegistrarMovimientoStock = () => {
     precio: "",
     stock_objetivo: ""
   })
-
-  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
-  const [busquedaProducto, setBusquedaProducto] = useState("");
-  const [mostrarBusqueda, setMostrarBusqueda] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [productos, setProductos] = useState([]);
-  const [productosLimite, setProductosLimite] = useState([]);
-  const [movRecientes, setMovRecientes] = useState([]);
-
-
-  // CONTEXT
-    
   
-
-  // Fetch para traer los productos
-  useEffect(() => {
-    const fetchProductos = async () => {
-      const product = await getProducts();
-      const productLim = await getProducts({limite: 5, stockBajo: 10});
-      setProductosLimite(productLim.products);
-      // console.log(productLim);
-      setProductos(product.products);
-    }
-    fetchProductos();
-  }, [recargarProductos])
-
-  // Fetch para traer los movimientos recientes
-  useEffect(() => {
-    const fetchMovimientosRecientes = async () => {
-      const movs = await stockMovements({limite:3});
-      // console.log(movs);
-      setMovRecientes(movs);
-    }
-    fetchMovimientosRecientes();
-  }, [])
-  
-
   // ALERTA HOOK
   const { mostrarNotificacion, componenteAlerta } = useNotificacion();
 
-  const productosFiltrados = productos.filter(
-    (producto) =>
-      producto.nombre.toLowerCase().includes(busquedaProducto.toLowerCase()) ||
-      String(producto.barcode || '').toLowerCase().includes(busquedaProducto.toLowerCase()),
-  )
+  // STOCK MOVEMENT MUTATION
+  const { crearMovimientoStock } = useStockMutation();
+    
+  // TRAER LOS PRODUCTOS DESDE REACT QUERY
+  const searchDebounced = useDebouncedValue(busquedaProducto, 500);
+  const filtros = useMemo(() => ({
+    search: searchDebounced
+  }), [searchDebounced])
+  const { data, refetch } = useProductos(filtros);
+  const productos = data?.rows ?? [];
+  // TRAER PRODUCTOS LIMITE Y BAJO STOCK
+  const filtrosLimite = useMemo(() => ({
+    limit: 5,
+    stockBajo: 10
+    
+  }), [])
+  const { data: productosLim } = useProductos(filtrosLimite);
+  const productosLimite = productosLim?.rows ?? [];
+
+
+  // TRAER LOS MOVIMIENTOS RECIENTES DESDE REACT QUERY
+  const filtroMov = useMemo(() => ({
+    limite: 3
+  }), []);
+  const { data: mov } = useMovimientoStock(filtroMov);
+  const movRecientes = mov?.items ?? [];
+
+  // TRAER PRODUCTO ID DESDE REACT QUERY
+  const { data: productoIndividual } = useProductoId(productoId ?? null);
+
+  // SELECCIONAR PRODUCTO QUE VIENE DESDE QUERY STRING
+  useEffect(() => {
+    if (productoIndividual) {
+      seleccionarProducto(productoIndividual);
+    }
+  }, [productoIndividual])
+
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -110,7 +126,8 @@ const RegistrarMovimientoStock = () => {
     setFormData((prev) => ({
       ...prev,
       producto: producto.id,
-      precio: producto.precio
+      precio: producto.precio,
+      costo: producto.precio_costo ?? '',
     }))
     setMostrarBusqueda(false)
     setBusquedaProducto("")
@@ -198,14 +215,13 @@ const RegistrarMovimientoStock = () => {
         
         const payload = toServerPayload();
 
-        const nuevoMovimientoStock = await registrarMovStockServices(payload);
+        const nuevoMovimientoStock = await crearMovimientoStock.mutateAsync(payload);
 
         if (nuevoMovimientoStock){
 
-          setRecargarProductos((prev) => prev + 1);
-          // setRecargarStock((prev) => prev + 1);
+          
           mostrarNotificacion('success', 'Movimiento registrado.');
-          // Resetear formulario
+          
           setFormData({
             tipo: "",
             producto: "",
@@ -271,7 +287,39 @@ const RegistrarMovimientoStock = () => {
   const disabled = formData.tipo === 'ajuste' ? !formData.tipo || !productoSeleccionado || !formData.stock_objetivo : !formData.tipo || !productoSeleccionado || !formData.cantidad;
   
   const tipoSeleccionado = tiposMovimiento.find((t) => t.codigo === formData.tipo)
-  const stockResultante = calcularStockResultante()
+  const stockResultante = calcularStockResultante();
+
+  const handleScanOrSearch = async () => {
+    const input = (busquedaProducto || '').trim();
+    if (!input) return;
+  
+    if (isBarcodeLike(input)) {
+      try {
+        const producto = await getProductoPorBarcode(input);
+        if (producto) {
+          seleccionarProducto(producto);
+          mostrarNotificacion("success", `Agregado por código: ${input}`);
+          setBusquedaProducto(""); 
+          return;
+        }
+        mostrarNotificacion("error", "Código no encontrado. Probá buscar por nombre.");
+      } catch (e) {
+        console.error(e);
+        mostrarNotificacion("error", "Error al buscar por código de barras");
+      }
+      return;
+    }
+  
+    const { data: fresh } = await refetch();
+    const first = fresh?.rows?.[0];
+    if (first) {
+      seleccionarProducto(first);
+      mostrarNotificacion("success", `Agregado: ${first.nombre}`);
+      setBusquedaProducto("");
+    } else {
+      mostrarNotificacion("error", "No se encontraron productos con ese nombre");
+    }
+  };
   
   return (
     
@@ -363,13 +411,20 @@ const RegistrarMovimientoStock = () => {
                               setBusquedaProducto(e.target.value)
                               setMostrarBusqueda(e.target.value.length > 0)
                             }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleScanOrSearch();
+                              }
+                            }}
                             icon={<Search className="w-4 h-4" />}
+                            autoFocus
                           />
 
                           {mostrarBusqueda && busquedaProducto && (
                             <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                              {productosFiltrados.length > 0 ? (
-                                productosFiltrados.map((producto) => (
+                              {productos.length > 0 ? (
+                                productos.map((producto) => (
                                   <div
                                     key={producto.id}
                                     onClick={() => seleccionarProducto(producto)}

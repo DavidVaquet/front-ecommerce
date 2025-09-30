@@ -203,3 +203,14 @@ export async function getProductoPorBarcode(code) {
         throw new Error(error.message);
     }
 }
+
+export const getProductoPorId = async (id) => {
+    try {
+        const res = await apiFetch(`${API_URL}/get-product/${id}`);
+
+        return res;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+}

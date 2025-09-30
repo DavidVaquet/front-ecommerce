@@ -31,14 +31,19 @@ export const crearClienteServices = async (formData) => {
         }
      }
 
-export const clientesEstado = async ({activo}) => {
+export const clientesEstado = async ({activo, limite, offset, search, origen}) => {
 
     try {
 
         const url = new URL(`${API_URL}/obtener-clientes`);
         const qActivo = toQueryBool(activo);
         if (qActivo !== undefined) url.searchParams.set('activo', qActivo); 
-        
+        if (limite > 0) url.searchParams.set('limite', limite);
+        if (offset != null) url.searchParams.set('offset', offset);
+        if (search != undefined) url.searchParams.set('search', search);
+        if (origen != undefined) url.searchParams.set('origen', origen);
+
+
         const data = await apiFetch(`${url}`);
 
         return data;
@@ -50,15 +55,28 @@ export const clientesEstado = async ({activo}) => {
 }
 
 
-export const clientesConCompras = async () => {
+export const clientesConCompras = async ({ activo,
+  origen,
+  search,
+  limite,
+  offset,
+  tipo_cliente } = {}) => {
     try {
+        const url = new URL(`${API_URL}/obtener-clientes-compras`);
+        if (limite > 0) url.searchParams.set('limite', limite);
+        if (origen != null) url.searchParams.set('origen', origen);
+        if (search != null) url.searchParams.set('search', search);
+        if (offset != null) url.searchParams.set('offset', offset);
+        if (activo != null) url.searchParams.set('activo', activo);
+        if (tipo_cliente != null) url.searchParams.set('tipo_cliente', tipo_cliente);
 
-        const data = await apiFetch(`${API_URL}/obtener-clientes-compras`);
+        const data = await apiFetch(`${url}`);
 
         return data;
 
     } catch (error) {
         console.error(error);
+        throw error;
     }
 }
 export const bajaCliente = async ({ id, email, estado }) => {
@@ -74,6 +92,7 @@ export const bajaCliente = async ({ id, email, estado }) => {
 
     } catch (error) {
         console.error("Error en bajaCliente:", error);
+        throw error;
     }
 };
 export const editarClienteService = async ({
@@ -100,5 +119,21 @@ export const editarClienteService = async ({
         return data;
     } catch (error) {
         console.error("Error en editarClienteService:", error);
+        throw error;
     }
 };
+
+export const clientesEstadisticas = async({ scope }) => {
+
+    try {
+        const url = new URL(`${API_URL}/obtener-estadisticas-clientes`);
+        if (scope != null) url.searchParams.set('scope', scope);
+
+        const res = await apiFetch(url);
+
+        return res;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+}

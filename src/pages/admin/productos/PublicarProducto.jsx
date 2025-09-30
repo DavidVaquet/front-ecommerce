@@ -1,6 +1,5 @@
 "use client"
 import { useEffect, useState } from "react";
-import { publicarProductosServices } from "../../../services/productServices";;
 import { getProducts } from "../../../services/productServices";
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
 import { formatearPesosRedondeo } from "../../../helpers/formatearPesos";

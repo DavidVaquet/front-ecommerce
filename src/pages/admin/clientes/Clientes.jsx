@@ -1,9 +1,8 @@
 "use client"
-import { clientesConCompras } from "../../../services/clienteServices"
 import { useNavigate } from "react-router-dom"
 import { bajaCliente, editarClienteService } from "../../../services/clienteServices"
 import { useNotificacion } from "../../../hooks/useNotificacion.jsx"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { formatearFecha, formatearFechaHora } from "../../../helpers/formatoFecha.js"
 import { provinciasConCiudades } from "../../../helpers/provinciasCiudades.js"
 import {
@@ -58,18 +57,22 @@ import {
   User,
   X,
   CreditCard,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 import { XMarkIcon } from "@heroicons/react/24/outline"
-import { useClientes } from "../../../context/ClientesContext.jsx"
 import { enviarEmailText } from "../../../helpers/enviarEmail.js"
+import { useClienteEstadisticas, useClientesCompras } from "../../../hooks/useClientes.jsx"
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue.jsx"
+import { useClienteMutation } from "../../../hooks/useClientesMutation.jsx"
 
 export const Clientes = () => {
   // Estados
-  const [activeTab, setActiveTab] = useState("todos")
+  const [activeTab, setActiveTab] = useState("todos");
+  const [currentPage, setCurrentPage] = useState(1);
   const [busqueda, setBusqueda] = useState("")
   const [filtroEstado, setFiltroEstado] = useState("")
-  const [filtroTipo, setFiltroTipo] = useState("")
-  const [clientes, setClientes] = useState([])
+  const [filtroTipo, setFiltroTipo] = useState("");
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [openDetalles, setOpenDetalles] = useState(false)
   const [openEditar, setOpenEditar] = useState(false)
@@ -92,8 +95,6 @@ export const Clientes = () => {
     es_vip: false,
   })
 
-  // CONTEXTO
-    const { clientesContext, setClientesContext } = useClientes();
 
   // Notificaciones
   const { componenteAlerta, mostrarNotificacion } = useNotificacion();
@@ -102,19 +103,49 @@ export const Clientes = () => {
   const handleOpenEditar = () => setOpenEditar(!openEditar)
   const handleOpenEmail = () => setOpenEmail(!openEmail)
   const navigate = useNavigate()
+  const clientesPerPage = 25;
 
+
+  // USECLIENTE MUTATION PARA MODIFICAR
+  const { editarCliente, suspenderCliente } = useClienteMutation();
+
+  // TRAER DESDE REACT QUERY LOS CLIENTES
+  const limite = clientesPerPage;
+  const offset = (currentPage - 1) * clientesPerPage;
+  const searchDebounced = useDebouncedValue(busqueda, 500);
+  const filtro = useMemo(() => {
+    const f = {};
+     f.limite = limite;
+     f.offset = offset;
+    if (searchDebounced) f.search = searchDebounced;
+    if (activeTab != 'todos') f.origen = activeTab;
+    if (filtroEstado != '') f.activo = filtroEstado;
+    if (filtroTipo != '') f.tipo_cliente = filtroTipo;
+    return f;
+  }, [limite, offset, searchDebounced, activeTab, filtroEstado, filtroTipo])
+  const { data, isLoading } = useClientesCompras(filtro);
+  const clientes = data?.items ?? [];
+  
+
+  // TRAER DESDE REACT QUERY LAS ESTADISTICAS DE CLIENTES
+  const filtroCategoria = useMemo(() => ({
+    scope: 'gestion'
+  }), [])
+  const { data: dataEst } = useClienteEstadisticas(filtroCategoria);
+  const estadisticasClientes = dataEst ?? [];
+
+  // RESETEAR PÁGINA CUANDO CAMBIEN LOS FILTROS
   useEffect(() => {
-    const fetchClientes = async () => {
-      try {
-        const clientesCompras = await clientesConCompras()
-        // console.log(clientesCompras);
-        setClientes(clientesCompras)
-      } catch (error) {
-        console.error(error)
-      }
-    }
-    fetchClientes()
-  }, [clientesContext])
+    setCurrentPage(1);
+  }, [activeTab, busqueda, filtroTipo, filtroEstado]);
+
+  // PAGINACION
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limite));
+  const start = total === 0 ? 0 : (currentPage - 1) * limite + 1;
+  const end = Math.min(currentPage * limite, total);
+  const showEmpty = !isLoading && total === 0;
+  
 
   const detalleClientes = (cliente) => {
     setClienteSeleccionado(cliente)
@@ -124,20 +155,21 @@ export const Clientes = () => {
   const cambiarEstado = async (cliente) => {
     try {
       const nuevoEstado = !cliente.estado
-      const clienteSuspendido = await bajaCliente({
+      const payload = {
         id: cliente.id,
         email: cliente.email,
         estado: nuevoEstado,
-      })
+      }
+      const client = await suspenderCliente.mutateAsync(payload);
       if (cliente.estado) {
         mostrarNotificacion("success", "Cliente suspendido con éxito")
       } else {
         mostrarNotificacion("success", "Cliente reactivado con éxito")
       }
-      setClientesContext((prev) => prev + 1)
-      return clienteSuspendido
+      return client;
     } catch (error) {
       console.error(error)
+      mostrarNotificacion('error', error.message || 'Error al cambiar el estado del cliente');
     }
   }
 
@@ -207,13 +239,14 @@ export const Clientes = () => {
   const guardarEdicion = async () => {
     try {
       if (!validarFormulario()) return
-      const clienteActualizado = await editarClienteService({
+      const payload = {
         id: clienteSeleccionado.id,
         ...formularioEditar,
-      })
+      }
+
+      const clienteNuevo = await editarCliente.mutateAsync(payload);
       mostrarNotificacion("success", "Cliente actualizado con éxito")
-      handleOpenEditar()
-      setClientesContext((prev) => prev + 1)
+      handleOpenEditar();
       setFormularioEditar({
         nombre: "",
         apellido: "",
@@ -228,7 +261,7 @@ export const Clientes = () => {
       })
     } catch (error) {
       console.error(error)
-      mostrarNotificacion("error", "Error al modificar el cliente")
+      mostrarNotificacion("error", error.message || "Error al modificar el cliente")
     }
   }
 
@@ -277,14 +310,14 @@ export const Clientes = () => {
   }
 
   // Estadísticas
-  const totalUsuarios = clientes.length
-  const usuariosEcommerce = clientes.filter((u) => u.origen === "ecommerce").length
-  const usuariosManuales = clientes.filter((u) => u.origen === "manual").length
-  const usuariosActivos = clientes.filter((u) => u.estado === true).length
-  const usuariosVip = clientes.filter((u) => u.vip === true).length
+  const totalUsuarios = estadisticasClientes.total_usuarios;
+  const usuariosEcommerce = estadisticasClientes.usuarios_ecommerce;
+  const usuariosManuales = estadisticasClientes.usuarios_manuales;
+  const usuariosActivos = estadisticasClientes.usuarios_activos;
+  const usuariosVip = estadisticasClientes.usuarios_vip;
 
-  const totalGastado = clientes.reduce((sum, usuario) => sum + Number.parseFloat(usuario.total_gastado), 0)
-  const promedioGasto = totalGastado / totalUsuarios
+  const totalGastado = estadisticasClientes.total_gastado;
+  const promedioGasto = estadisticasClientes.promedio_gasto;
 
   const getChipColor = (estado) => {
     if (estado === true) return "green"
@@ -299,20 +332,6 @@ export const Clientes = () => {
       return <UserCheck className="h-4 w-4" />
     }
   }
-
-  const usuariosFiltrados = clientes.filter((usuario) => {
-    const coincideBusqueda =
-      usuario.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      usuario.apellido.toLowerCase().includes(busqueda.toLowerCase()) ||
-      usuario.email.toLowerCase().includes(busqueda.toLowerCase()) ||
-      usuario.telefono.includes(busqueda)
-
-    const coincideEstado = filtroEstado === "" || usuario.estado === (filtroEstado === "true")
-    const coincideTipo = !filtroTipo || usuario.tipo_cliente === filtroTipo
-
-    if (activeTab === "todos") return coincideBusqueda && coincideEstado && coincideTipo
-    return coincideBusqueda && coincideEstado && coincideTipo && usuario.origen === activeTab
-  })
 
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
@@ -389,7 +408,7 @@ export const Clientes = () => {
             </div>
             <div className="mt-3 flex items-center gap-1">
               <Typography variant="small" color="green" className="font-medium">
-                {((usuariosActivos / totalUsuarios) * 100).toFixed(1)}% del total
+                {((usuariosActivos / totalUsuarios) * 100)}% del total
               </Typography>
             </div>
           </CardBody>
@@ -427,7 +446,7 @@ export const Clientes = () => {
                   Gasto Promedio
                 </Typography>
                 <Typography variant="h3" color="blue-gray" className="font-bold">
-                  ${promedioGasto.toFixed(2)}
+                  ${promedioGasto}
                 </Typography>
               </div>
               <div className="h-12 w-12 rounded-full bg-deep-orange-50 flex items-center justify-center">
@@ -449,7 +468,8 @@ export const Clientes = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Input
-                label="Buscar usuarios"
+                label="Buscar clientes"
+                placeholder="Busca por nombre, apellido, email, telefono, ciudad"
                 icon={<Search className="h-5 w-5" />}
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
@@ -481,21 +501,21 @@ export const Clientes = () => {
 
       {/* Tabs y Lista de Usuarios */}
       <Card className="shadow-sm border border-gray-200">
-        <Tabs value={activeTab} onChange={(value) => setActiveTab(value)}>
+        <Tabs value={activeTab}>
           <TabsHeader className="p-2">
-            <Tab value="todos">
+            <Tab value="todos" onClick={() => setActiveTab('todos')}>
               <div className="flex flex-row items-center justify-center gap-2">
                 <List className="h-4 w-4" />
                 <span>Todos ({totalUsuarios})</span>
               </div>
             </Tab>
-            <Tab value="ecommerce">
+            <Tab value="online" onClick={() => setActiveTab('online')}>
               <div className="flex flex-row items-center justify-center gap-2">
                 <Globe className="h-4 w-4" />
                 <span>E-commerce ({usuariosEcommerce})</span>
               </div>
             </Tab>
-            <Tab value="manual">
+            <Tab value="manual" onClick={() => setActiveTab('manual')}>
               <div className="flex flex-row items-center justify-center gap-2">
                 <Store className="h-4 w-4" />
                 <span>Manual ({usuariosManuales})</span>
@@ -504,17 +524,6 @@ export const Clientes = () => {
           </TabsHeader>
 
           <div className="p-6">
-            {usuariosFiltrados.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Users className="h-16 w-16 text-gray-300 mb-4" />
-                <Typography variant="h6" color="blue-gray">
-                  No se encontraron usuarios
-                </Typography>
-                <Typography variant="small" color="gray" className="mt-1">
-                  Intenta ajustar los filtros de búsqueda.
-                </Typography>
-              </div>
-            ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-max table-auto text-left">
                   <thead>
@@ -557,7 +566,7 @@ export const Clientes = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {usuariosFiltrados.map((usuario) => (
+                    {clientes.map((usuario) => (
                       <tr key={usuario.id} className="hover:bg-gray-50">
                         <td className="p-4 border-b border-gray-200">
                           <div className="flex items-center gap-3">
@@ -634,7 +643,7 @@ export const Clientes = () => {
                               {usuario.cantidad_compras} compras
                             </Typography>
                             <Typography variant="small" color="gray">
-                              ${Number(usuario.total_gastado).toFixed(2)}
+                              ${Number(usuario.total_gastado)}
                             </Typography>
                           </div>
                         </td>
@@ -690,6 +699,48 @@ export const Clientes = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            {!showEmpty ? (
+              <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-normal"
+                >
+                  Mostrando {start} a {end} de {total} clientes
+                </Typography>
+                <div className="flex gap-2">
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPage === 1 || isLoading}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </IconButton>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8">
+                <User className="h-12 w-12 text-gray-400 mb-3" />
+                <Typography variant="h6" color="blue-gray">
+                  No se encontraron clientes
+                </Typography>
+                <Typography variant="small" color="gray" className="mt-1">
+                  Intenta con otra búsqueda o agrega nuevos clientes.
+                </Typography>
               </div>
             )}
           </div>

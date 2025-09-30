@@ -23,7 +23,7 @@ export const descargarRecibo = async (nombreArchivo) => {
     const token = localStorage.getItem("token");
     if (!token) throw new Error("Token inválido");
 
-    const response = await fetch(`${API_URL}/descargar-recibo/${nombreArchivo}`, {
+    const response = await apiFetch(`${API_URL}/descargar-recibo/${nombreArchivo}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,

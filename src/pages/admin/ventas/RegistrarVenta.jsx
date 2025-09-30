@@ -43,12 +43,14 @@ import {
   Zap,
   BarChart3,
 } from "lucide-react"
-import { useVentas } from "../../../context/VentasContext";
-import { useClientes } from "../../../context/ClientesContext";
 import { estadisticasVentasServices } from "../../../services/estadisticasServices";
 import { useNotificacion } from "../../../hooks/useNotificacion";
 import { useProductos } from "../../../hooks/useProductos";
 import { useMemo } from "react";
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
+import { useClientes } from "../../../hooks/useClientes";
+import { useVentasMutation } from "../../../hooks/useVentasMutation";
+import { useVentasEstadisticas } from "../../../hooks/useVentas";
 
 
 export const RegistrarVenta = () => {
@@ -59,51 +61,39 @@ export const RegistrarVenta = () => {
   const [descuentoGeneral, setDescuentoGeneral] = useState("");
   const [impuesto, setImpuesto] = useState("") 
   const [activeTab, setActiveTab] = useState("todos");
-  const [clientes, setClientes] = useState([]);
-  const [estadisticas, setEstadisticas] = useState([]);
   const [canal, setCanal] = useState('local');
   const [currency, setCurrency] = useState('ARS');
 
+  // NAVEGACION
+  const navigate = useNavigate();
   // ALERTAS
   const { componenteAlerta, mostrarNotificacion } = useNotificacion();
 
   // TRAER DATOS DESDE REACT QUERY
-  const filtroProducto = useMemo(() => ({
-    estado: 1
-  }), [])
-  const { data } = useProductos(filtroProducto);
+  const debouncedSearch = useDebouncedValue(busquedaProducto);
+  const filtroProducto = useMemo(() => {
+    const f = {estado: 1, search: debouncedSearch};
+    return f;
+  }, [debouncedSearch])
+  const { data, refetch } = useProductos(filtroProducto);
   const productos = data?.rows || [];
   // console.log(productos);
-  useEffect(() => {
-    const fetchClientes = async () => {
-      try {
-        const clientesActivos = await clientesEstado({activo: true});
-        setClientes(clientesActivos);
-      } catch (error) {
-        console.error(error);
-      }
-    }
-    fetchClientes();
   
-  }, []);
+  // TRAER CLIENTES DESDE REACT QUERY
+  const filtroCliente = useMemo(() => ({
+    activo: 'true'
+  }), []);
+  const { data: dataCliente } = useClientes(filtroCliente);
+  const clientes = dataCliente?.items ?? [];
 
+  // VENTAS MUTATION
+  const { crearVenta } = useVentasMutation();
 
-  useEffect(() => {
-    const fetchEstadisticas = async () => {
-      try {
-        const response = await estadisticasVentasServices();
-        // console.log(response);
-        setEstadisticas(response);
-      } catch (error) {
-        console.error(error)
-      }
-    }
-    fetchEstadisticas()
-  }, [])
+  // OBTENER ESTADISTICAS DE VENTAS DESDE REACT QUERY
+  const { data: ventasEstadisticas } = useVentasEstadisticas();
+  const estadisticas = ventasEstadisticas ?? [];
   
-  
-  const navigate = useNavigate();
-  // Estadísticas del día
+  // ESTADISTICAS DEL DÍA
   const ventasHoy = estadisticas.ventasHoy;
   const totalVentasHoy = estadisticas?.totalVentasHoy;
   const productosVendidos = estadisticas.productosVendidos;
@@ -169,19 +159,9 @@ export const RegistrarVenta = () => {
     return calcularSubtotal() - calcularDescuentoGeneral() + calcularImpuestos()
   }
 
-  const productosFiltrados = productos.filter((producto) => {
-    const coincideBusqueda = producto.nombre.toLowerCase().includes(busquedaProducto.toLowerCase())
-    const tieneStock = producto.cantidad > 0
 
-    if (activeTab === "todos") return coincideBusqueda && tieneStock
-    if (activeTab === "populares") return coincideBusqueda && tieneStock && producto.popular
-    if (activeTab === "ofertas") return coincideBusqueda && tieneStock && producto.descuento > 0
-    if (activeTab === "bajo-stock") return coincideBusqueda && tieneStock && producto.cantidad <= 10
-
-    return coincideBusqueda && tieneStock && producto.categoria_nombre.toLowerCase() === activeTab
-  })
-
-  const clienteActual = clientes.find((cli) => cli.id.toString() === clienteSeleccionado);
+  const clienteActual = useMemo(() => clientes.find(cli => String(cli.id) === String(clienteSeleccionado)),
+  [clientes, clienteSeleccionado]);
 
   const handleCreateVenta = async() => {
 
@@ -198,9 +178,19 @@ export const RegistrarVenta = () => {
       return
     }
 
+    const insuf = productosVenta.find(p => {
+    const stock = Number(p.cantidad ?? p.stock_cantidad ?? 0);
+    const cant = Number(p.cantidadSeleccionada ?? 0);
+    return stock <= 0 || cant > stock;
+  });
+    if (insuf) {
+      mostrarNotificacion('error', `Stock insuficiente para ${insuf.nombre}`);
+      return;
+    }
+
     try {
       
-      const venta = await registrarVentaService({
+      const payload = {
         canal,
         medio_pago: metodoPago,
         cliente_id: Number(clienteSeleccionado),
@@ -215,11 +205,11 @@ export const RegistrarVenta = () => {
         impuestos: impuesto,
         currency
 
-      })
+      };
+
+      const venta = await crearVenta.mutateAsync(payload);
 
       if (venta) {
-        setVentasContext((prev) => prev + 1);
-        setRecargarProductos((prev) => prev + 1);
         mostrarNotificacion("success", "¡Venta procesada exitosamente!")
         setTimeout(() => {
           limpiarVenta();
@@ -240,38 +230,37 @@ export const RegistrarVenta = () => {
         setImpuesto("")
   }
 
-  const handleScanOrSearch = async (value) => {
-  const input = (value || '').trim();
-  if (!input) return;
+   const handleScanOrSearch = async () => {
+   const input = (busquedaProducto || '').trim();
+   if (!input) return;
 
-  if (isBarcodeLike(input)) {
-    try {
-      const producto = await getProductoPorBarcode(input);
-      if (producto) {
+   if (isBarcodeLike(input)) {
+     try {
+       const producto = await getProductoPorBarcode(input);
+       if (producto && producto.cantidad > 0) {
         agregarProducto(producto);
-        mostrarNotificacion("success", `Agregado por código: ${input}`);
-        setBusquedaProducto(""); 
-        return;
-      }
-      mostrarNotificacion("error", "Código no encontrado. Probá buscar por nombre.");
-    } catch (e) {
-      console.error(e);
-      mostrarNotificacion("error", "Error al buscar por código de barras");
-    }
-    return;
-  }
+         mostrarNotificacion("success", `Agregado por código: ${input}`);
+         setBusquedaProducto(""); 
+         return;
+       }
+       mostrarNotificacion("error", "Código no encontrado. Probá buscar por nombre.");
+     } catch (e) {
+       console.error(e);
+       mostrarNotificacion("error", "Producto no encontrado. Probá buscar por nombre.");
+     }
+     return;
+   }
 
-  const primerMatch = productos.find(p => 
-    p.nombre?.toLowerCase().includes(input.toLowerCase()) && p.cantidad > 0
-  );
-  if (primerMatch) {
-    agregarProducto(primerMatch);
-    mostrarNotificacion("success", `Agregado: ${primerMatch.nombre}`);
-    setBusquedaProducto("");
-  } else {
-    mostrarNotificacion("error", "No se encontraron productos con ese nombre");
-  }
-};
+   const { data: fresh } = await refetch();
+   const first = fresh?.rows?.[0];
+   if (first) {
+     agregarProducto(first);
+     mostrarNotificacion("success", `Agregado: ${first.nombre}`);
+     setBusquedaProducto("");
+   } else {
+     mostrarNotificacion("error", "No se encontraron productos con ese nombre");
+   }
+ };
 
   // Atajos de teclado
   useEffect(() => {
@@ -329,6 +318,7 @@ export const RegistrarVenta = () => {
               className="flex items-center gap-2 uppercase shadow-md"
               size="lg"
               onClick={handleCreateVenta}
+              disabled= {crearVenta.isPending}
             >
               <Calculator className="h-5 w-5" />
               Procesar Venta
@@ -563,19 +553,19 @@ export const RegistrarVenta = () => {
                   value={busquedaProducto}
                   onChange={(e) => setBusquedaProducto(e.target.value)}
                   className="!border-gray-300"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleScanOrSearch(busquedaProducto);
-                    }
-                  }}
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter') {
+                       e.preventDefault();
+                       handleScanOrSearch();
+                     }
+                   }}
                   autoFocus
                   />
 
                 {/* Dropdown de productos mejorado */}
-                {busquedaProducto && productosFiltrados.length > 0 && (
+                {busquedaProducto && (
                   <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-10 mt-1 max-h-80 overflow-y-auto">
-                    {productosFiltrados.slice(0, 8).map((producto) => {
+                    {productos.map((producto) => {
                       const ruta = producto.imagen_url ? producto.imagen_url.replace(/\\/g, '/') : 'uploads/default.jpg';
                       const imagenPrincipal = `http://localhost:5002/${ruta}`;
                       
@@ -812,12 +802,12 @@ export const RegistrarVenta = () => {
                   <Button
                     color="deep-orange"
                     className="w-full flex items-center justify-center gap-2"
-                    disabled={productosVenta.length === 0}
+                    disabled={productosVenta.length === 0 || crearVenta.isPending}
                     onClick={handleCreateVenta}
                     size="lg"
                     >
                     <Calculator className="h-5 w-5" />
-                    Procesar Venta
+                    {crearVenta.isPending ? 'Procesando...' : 'Crear venta'}
                   </Button>
                   <Button
                   variant="outlined"

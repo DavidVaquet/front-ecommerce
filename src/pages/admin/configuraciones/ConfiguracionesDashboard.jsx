@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import {
   Card,
   CardBody,
@@ -55,6 +55,8 @@ import {
   Eye,
   EyeOff,
   Trash2,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import {
   getSettingsCompany,
@@ -69,6 +71,8 @@ import {
   eliminarUser,
 } from "../../../services/authServices";
 import { useNotificacion } from "../../../hooks/useNotificacion";
+import { useUserSystem } from "../../../hooks/useUsuariosSistema";
+import { useUserSystemMutation } from "../../../hooks/useUserSystemMutation";
 
 const ConfiguracionesDashboard = () => {
   const [activeTab, setActiveTab] = useState("general");
@@ -89,23 +93,55 @@ const ConfiguracionesDashboard = () => {
     rol: "",
     activo: "",
   });
-  const [usuarios, setUsuarios] = useState([]);
+  
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [triggerUsuarios, setTriggerUsuarios] = useState(0);
-  const [filters, setFilters] = useState({ excludeRole: "cliente" });
   const fileRef = useRef(null);
   const MySwal = withReactContent(Swal);
+  const limitUser = 5;
+  const limite = limitUser;
+  const offset = (currentPage - 1) * limite;
+  const topRef = useRef(null);
 
-  const fetchUsuarios = useCallback(async () => {
-    const user = await obtenerUsers({ filters });
-    setUsuarios(user.users);
-  }, []);
 
-  // console.log(usuarios);
+  // TRAER USUARIOS DESDE REACT QUERY
+  const { data, isFetching, isLoading, isError, refetch} = useUserSystem({
+    excludeRole: 'cliente',
+    limite,
+    offset
+  });
+  const usuarios = data?.users?.items ?? [];
 
-  useEffect(() => {
-    fetchUsuarios();
-  }, [fetchUsuarios, setTriggerUsuarios]);
+  // MUTATION DE USUARIOS DEL SISTEMA
+  const { registerUsuario, eliminarUsuario, editarUsuario } = useUserSystemMutation(); 
+
+  // PAGINACION USUARIOS
+  const total = data?.users?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limite));
+  const start = total === 0 ? 0 : (currentPage - 1) * limite + 1;
+  const end = Math.min(currentPage * limite, total);
+  const showEmpty = !isLoading && total === 0;
+  function goToPage(newPage, setCurrentPage, topRef, totalPages) {
+    const safePage = Math.max(1, Math.min(newPage, totalPages));
+    setCurrentPage(safePage);
+
+    requestAnimationFrame(() => {
+      if (topRef?.current) {
+        let parent = topRef.current.parentElement;
+        while (parent) {
+          const overflowY = getComputedStyle(parent).overflowY;
+          if (overflowY === "auto" || overflowY === "scroll") {
+            parent.scrollTo({ top: 0, behavior: "smooth" });
+          }
+          parent = parent.parentElement;
+        }
+        const y = topRef.current.getBoundingClientRect().top + window.scrollY - 16;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+    });
+  }
+
 
   const { componenteAlerta, mostrarNotificacion } = useNotificacion();
 
@@ -157,7 +193,7 @@ const ConfiguracionesDashboard = () => {
 
   // PREVIEW PARA VER LA IMAGEN
   const [preview, setPreview] = useState(configGeneral.logo_url || "");
-  console.log(preview);
+  // console.log(preview);
   // PICK DE LA IMAGEN Y ONCHANGE
   const onPick = () => fileRef.current?.click();
 
@@ -262,7 +298,7 @@ const ConfiguracionesDashboard = () => {
     return true;
   };
   const validarFormularioUserEdit = () => {
-    const nombre = formUser.nombre.trim();
+    const nombre = formUser.nombre.trim() ?? '';
     if (!nombre) {
       mostrarNotificacion("error", "Debes ingresar un nombre");
       return false;
@@ -273,7 +309,7 @@ const ConfiguracionesDashboard = () => {
       return false;
     }
 
-    const apellido = formUser.apellido.trim();
+    const apellido = formUser.apellido.trim() ?? '';
     if (!apellido) {
       mostrarNotificacion("error", "Debes ingresar un apellido");
       return false;
@@ -308,18 +344,16 @@ const ConfiguracionesDashboard = () => {
   const registrarUsuario = async () => {
     try {
       if (!validarFormularioUser()) return false;
-      const usuario = await register(user);
-      // console.log(user);
+      const usuario = await registerUsuario.mutateAsync(user);
 
-      if (usuario) {
+      if (usuario?.ok) {
         mostrarNotificacion("success", "Usuario registrado con éxito");
         setOpen((v) => !v);
         resetFields();
-        setTriggerUsuarios((prev) => prev + 1);
       }
     } catch (error) {
       console.error(error);
-      mostrarNotificacion("error", "Hubo un problema al crear el usuario");
+      mostrarNotificacion("error", error.message || "Ocurrió un error al crear el usuario");
     }
   };
 
@@ -340,45 +374,43 @@ const ConfiguracionesDashboard = () => {
     if (!usuario) return;
     setUsuarioSeleccionado(usuario);
     setFormUser({
-      nombre: usuario.nombre,
-      apellido: usuario.apellido,
-      rol: usuario.rol,
+      nombre: usuario?.nombre,
+      apellido: usuario?.apellido,
+      rol: usuario?.rol,
       activo:
-        usuario.activo == null ? "" : usuario.activo ? "activo" : "inactivo",
+        usuario?.activo == null ? "" : usuario.activo ? "activo" : "inactivo",
     });
     setOpenEdit(true);
   };
 
   const guardarEdicionUser = async () => {
     try {
-      if (!validarFormularioUserEdit) return;
-      const resp = await editUser({
+      if (!validarFormularioUserEdit()) return;
+      const payload = {
         id: usuarioSeleccionado.id,
         nombre: formUser.nombre,
         apellido: formUser.apellido,
         rol: formUser.rol,
         activo: formUser.activo,
-      });
-      const usuarioEdit = resp.usuarioEditado;
-      mostrarNotificacion("success", "Usuario modificado éxitosamente");
-      resetFieldUserEdit();
-      setUsuarioSeleccionado(null);
-      setUsuarios((prev) =>
-        prev.map((u) =>
-          u.id === usuarioEdit.id ? { ...u, ...usuarioEdit } : u
-        )
-      );
-      setOpenEdit(false);
+      };
+      const usuarioEdit = await editarUsuario.mutateAsync(payload);
+      if (usuarioEdit?.ok) {
+        mostrarNotificacion("success", "Usuario modificado éxitosamente");
+        resetFieldUserEdit();
+        setUsuarioSeleccionado(null)
+        setOpenEdit(false);
+
+      }
     } catch (error) {
       console.error(error);
       mostrarNotificacion(
         "error",
-        error.msg || "Ocurrió un error al modificar el usuario"
+        error.message || "Ocurrió un error al modificar el usuario"
       );
     }
   };
 
-  const handleDelete = (usuario) => {
+  const handleDelete = async (usuario) => {
     MySwal.fire({
       title: "¿Estás seguro?",
       text: "No podrás revertir esta acción",
@@ -393,8 +425,11 @@ const ConfiguracionesDashboard = () => {
 
       try {
         const id = Number(usuario?.id);
-        await eliminarUser(id);
-        mostrarNotificacion("success", "Usuario eliminado correctamente.");
+        await eliminarUsuario.mutateAsync(id);
+        if (eliminarUsuario?.ok) {
+          mostrarNotificacion("success", "Usuario eliminado correctamente.");
+
+        }
       } catch (error) {
         console.error(error);
         mostrarNotificacion("error", error.message || "No se pudo eliminar");
@@ -1305,6 +1340,7 @@ const ConfiguracionesDashboard = () => {
 
               {/* Pestaña Usuarios */}
               <TabPanel value="usuarios" className="p-0">
+                <span ref={topRef}></span>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Gestión de Usuarios */}
                   <Card className="shadow-sm">
@@ -1379,6 +1415,48 @@ const ConfiguracionesDashboard = () => {
                               </div>
                             </div>
                           ))}
+                          
+                          {!showEmpty ? (
+                        <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="font-normal"
+                          >
+                            Mostrando {start} a {end} de {total} usuarios del sistema
+                          </Typography>
+                          <div className="flex gap-2">
+                            <IconButton
+                              variant="outlined"
+                              color="blue-gray"
+                              size="sm"
+                              disabled={currentPage === 1 || isLoading}
+                              onClick={() => goToPage(currentPage - 1, setCurrentPage, topRef, totalPages)}
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </IconButton>
+                            <IconButton
+                              variant="outlined"
+                              color="blue-gray"
+                              size="sm"
+                              disabled={currentPage === totalPages}
+                              onClick={() => goToPage(currentPage + 1, setCurrentPage, topRef, totalPages)}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </IconButton>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center p-8">
+                          <Users className="h-12 w-12 text-gray-400 mb-3" />
+                          <Typography variant="h6" color="blue-gray">
+                            No se encontraron usuarios
+                          </Typography>
+                          <Typography variant="small" color="gray" className="mt-1">
+                            Intenta agregando nuevos usuarios con rol diferente a 'cliente'.
+                          </Typography>
+                        </div>
+                      )}
                         </div>
                       </div>
                     </CardBody>
@@ -2433,22 +2511,15 @@ const ConfiguracionesDashboard = () => {
                 Estado
               </Typography>
               <Select
-                value={formUser.activo}
+                value={formUser.activo ?? ""}
                 onChange={(value) =>
                   setFormUser((prev) => ({
                     ...prev,
-                    activo:
-                      value === "activo"
-                        ? true
-                        : value === "inactivo"
-                        ? false
-                        : prev.activo,
+                    activo: value,
                   }))
                 }
               >
-                <Option value="" disabled>
-                  Seleccioná un estado:
-                </Option>
+                <Option value="" disabled>Seleccioná un estado:</Option>
                 <Option value="activo">Activo</Option>
                 <Option value="inactivo">Inactivo</Option>
               </Select>

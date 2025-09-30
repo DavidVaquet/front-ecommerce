@@ -1,16 +1,8 @@
 "use client";
-import {
-  editProduct,
-  fetchProductos,
-  deleteProductLogic,
-  activarProductLogic,
-  eliminarProductoServices,
-} from "../../../services/productServices";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
-import { getAllCategories } from "../../../services/categorieService";
-import { getSubcategories } from "../../../services/subcategorieService";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
+import { useSearchParams, useNavigate } from "react-router";
 import {
   formatearPesos,
   formatearMiles,
@@ -71,18 +63,22 @@ import {
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useProductos, useProductoStats } from "../../../hooks/useProductos";
 import { useProductosMutation } from "../../../hooks/useProductosMutation";
+import { useCategorias } from "../../../hooks/useCategorias";
+import { useSubcategorias } from "../../../hooks/useSubcategorias";
 
 // Componente principal
 const Productos = () => {
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') ?? '';
+  const topRef = useRef(null);
+
+  
   const [activeTab, setActiveTab] = useState("todos");
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [copias, setCopias] = useState("");
-  const [categorias, setCategorias] = useState([]);
-  const [subcategorias, setSubCategorias] = useState([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
-  const [subcategoriaSeleccionada, setSubCategoriaSeleccionada] =
-    useState(null);
+  const [subcategoriaSeleccionada, setSubCategoriaSeleccionada] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [openEtiqueta, setOpenEtiqueta] = useState(false);
@@ -97,12 +93,17 @@ const Productos = () => {
     descripcion_corta: "",
   });
   const productsPerPage = 25;
-
-  // Notificaciones
+  useEffect(() => {
+  setSearchTerm(initialSearch);
+  setCurrentPage(1);
+}, [initialSearch]);
+  
+  // NOTIFICACIONES
   const { componenteAlerta, mostrarNotificacion } = useNotificacion();
   const MySwal = withReactContent(Swal);
+  const navigate = useNavigate();
 
-  // Mutation
+  // MUTATION
   const {
     activarProducto,
     editarProducto,
@@ -128,17 +129,18 @@ const Productos = () => {
   // console.log(data);
 
   // Obtener categorias y subcategorias
-  useEffect(() => {
-    const fetchDatos = async () => {
-      try {
-        const categoriasData = await getAllCategories();
-        const subcategoriasData = await getSubcategories();
+  const { data: categoriasData } = useCategorias();
+  const categorias = categoriasData ?? [];
+  const { data: subcategoriasData } = useSubcategorias();
+  const subcategorias = subcategoriasData ?? [];
 
-        setCategorias(categoriasData);
-        setSubCategorias(subcategoriasData);
+
+  useEffect(() => {
+    const fetchDatos = () => {
+      try {
 
         if (selectedProduct) {
-          const subcategoriaActual = subcategoriasData.find(
+          const subcategoriaActual = subcategorias.find(
             (sub) => sub.id === selectedProduct.subcategoria_id
           );
 
@@ -154,19 +156,19 @@ const Productos = () => {
     };
 
     fetchDatos();
-  }, [selectedProduct]);
+  }, [selectedProduct, subcategorias]);
 
   // Resetear página cuando cambien filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, searchTerm]);
+  }, [activeTab, debouncedSearch]);
 
   // Estadísticas
   const { data: stats } = useProductoStats();
-  const totalProductos = stats.total;
-  const productosActivos = stats.activos;
-  const productosSinStock = stats.sin_stock;
-  const productosBajoStock = stats.bajo_stock;
+  const totalProductos = stats?.total ?? 0;
+  const productosActivos = stats?.activos ?? 0;
+  const productosSinStock = stats?.sin_stock ?? 0;
+  const productosBajoStock = stats?.bajo_stock ?? 0;
 
   // Paginación
   const total = data?.total ?? 0;
@@ -174,6 +176,26 @@ const Productos = () => {
   const start = total === 0 ? 0 : (currentPage - 1) * limit + 1;
   const end = Math.min(currentPage * limit, total);
   const showEmpty = !isLoading && total === 0;
+
+  function goToPage(newPage, setCurrentPage, topRef, totalPages) {
+  const safePage = Math.max(1, Math.min(newPage, totalPages));
+  setCurrentPage(safePage);
+
+  requestAnimationFrame(() => {
+    if (topRef?.current) {
+      let parent = topRef.current.parentElement;
+      while (parent) {
+        const overflowY = getComputedStyle(parent).overflowY;
+        if (overflowY === "auto" || overflowY === "scroll") {
+          parent.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        parent = parent.parentElement;
+      }
+      const y = topRef.current.getBoundingClientRect().top + window.scrollY - 16;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  });
+}
 
   // Estilos CSS
   const obtenerEstadoProducto = (producto) => {
@@ -375,6 +397,7 @@ const Productos = () => {
             color="deep-orange"
             className="flex items-center gap-2"
             size="md"
+            onClick={() => navigate('/admin/productos/nuevo')}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -580,12 +603,15 @@ const Productos = () => {
 
       {/* Filtros y Búsqueda */}
       <Card className="mb-8 shadow-sm border border-gray-200">
+        <span ref={topRef}></span>
         <CardBody className="p-4">
           <div className="flex flex-col md:flex-row justify-between gap-4">
-            <div className="w-full md:w-72">
+            <div className="w-full md:w-96">
               <Input
                 label="Buscar productos"
+                placeholder="Ingresa el nombre del producto o código de barra"
                 icon={<Search className="h-5 w-5" />}
+                autoFocus
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -905,7 +931,7 @@ const Productos = () => {
                     color="blue-gray"
                     size="sm"
                     disabled={currentPage === 1 || isLoading}
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    onClick={() => goToPage(currentPage - 1, setCurrentPage, topRef, totalPages)}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </IconButton>
@@ -914,9 +940,7 @@ const Productos = () => {
                     color="blue-gray"
                     size="sm"
                     disabled={currentPage === totalPages}
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
+                    onClick={() => goToPage(currentPage + 1, setCurrentPage, topRef, totalPages)}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </IconButton>

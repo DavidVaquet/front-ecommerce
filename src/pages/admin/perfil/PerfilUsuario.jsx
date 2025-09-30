@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { logout } from "../../../helpers/logout";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
@@ -19,6 +19,7 @@ import {
   Chip,
   Progress,
   Alert,
+  Spinner
 } from "@material-tailwind/react";
 import {
   User,
@@ -45,82 +46,72 @@ import {
   XCircle,
 } from "lucide-react";
 import {
-  getUserInfo,
-  editUserInfo,
   updatePasswordUser,
-  getSessions,
-  closeSession,
-  recentActivity,
-  statsUsage,
 } from "../../../services/authServices";
 import { fechaHora, formatearFechaHora } from "../../../helpers/formatoFecha";
 import { useNotificacion } from "../../../hooks/useNotificacion";
+import { usePerfilRecentActivity, usePerfilSessions, usePerfilStatsUsage, usePerfilUserInfo } from "../../../hooks/usePerfil";
+import { usePerfilMutation } from "../../../hooks/usePerfilMutations";
 const PerfilUsuario = () => {
   const [activeTab, setActiveTab] = useState("perfil");
   const [editMode, setEditMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [userData, setUserData] = useState([]);
-  const [sessions, setSessions] = useState([]);
-  const [actividadReciente, setActividadReciente] = useState([]);
-  const [stats, setStats] = useState([]);
   const [password, setPassword] = useState("");
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [confirmarPassword, setConfirmarPassword] = useState("");
+  const [userData, setUserData] = useState({
+  nombre: '',
+  apellido: '',
+  telefono: '',
+  direccion: ''
+});
 
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
 
-  // Fetch para traer los usuarios
-  useEffect(() => {
-    const fetchUser = async () => {
-      const user = await getUserInfo();
-      // console.log(user);
-      setUserData(user);
-    };
-    fetchUser();
-  }, []);
+  // Fetch para traer los usuarios desde react query
+  const {data: userInfo} =  usePerfilUserInfo();
+  const user = userInfo ?? [];
+  console.log(user);
+  // Fetch para traer las sessiones desde react query
+  const {data: session} =  usePerfilSessions();
+  const sessions = session?.sessions ?? [];
+  // Fetch para traer la actividad reciente del usuario desde react query
+  const filtrosActivity = useMemo(() => ({
+    limite: 5
+  }), []);
+  const {data: userActivity} =  usePerfilRecentActivity(filtrosActivity);
+  const actividadReciente = userActivity ?? [];
+  // Fetch para traer stats del usuario desde react query
+  const {data: userStats} =  usePerfilStatsUsage();
+  const stats = userStats ?? [];
 
-  // Fetch para traer las sesiones
-  useEffect(() => {
-    const fetchSessiones = async () => {
-      const session = await getSessions();
-      // console.log(session);
-      setSessions(session.sessions);
-    }
-    fetchSessiones();
-  }, [])
+  // MUTATION
+  const {editUser, cerrarSession} = usePerfilMutation();
 
-  // Fetch para traer las actividades recientes
+  // EFECT
   useEffect(() => {
-    const fetchActividad = async () => {
-      const actividad = await recentActivity({limite: 5});
-      // console.log(actividad);
-      setActividadReciente(actividad);
-    }
-    fetchActividad();
-  }, [])
-  useEffect(() => {
-    const fetchEstadisticas = async () => {
-      const statss = await statsUsage();
-      // console.log(statss);
-      setStats(statss);
-      
-    }
-    fetchEstadisticas();
-  }, [])
-  
+  if (userInfo) {
+    setUserData({
+      nombre: userInfo?.nombre ?? '',
+      apellido: userInfo?.apellido ?? '',
+      telefono: userInfo?.telefono ?? '',
+      direccion: userInfo?.direccion ?? '',
+      email: userInfo?.email ?? '',
+    });
+  }
+}, [userInfo]);
 
   // ALERTA HOOK
   const { componenteAlerta, mostrarNotificacion } = useNotificacion();
 
   const handleCloseSession = async (id) => {
     try {
-      const close = await closeSession(id);
+      const close = await cerrarSession.mutateAsync(id);
       if (close) {
         mostrarNotificacion('success', 'Sesión cerrada correctamente.');
-        setSessions(prev => prev.filter(s => s.id !== id));
         logout(navigate, setUser);
       }
     } catch (error) {
@@ -213,26 +204,28 @@ const PerfilUsuario = () => {
   const handleSaveProfile = async () => {
     try {
       if (!validarFormulario()) return;
-      const nuevoUser = await editUserInfo({
+      const payload = {
         nombre: userData.nombre,
         apellido: userData.apellido,
         telefono: userData.telefono,
         direccion: userData.direccion,
-      });
+      };
+
+      const nuevoUser = await editUser.mutateAsync(payload);
+      
       if (nuevoUser) {
-        setUserData((prev) => ({ ...prev, ...nuevoUser }));
         mostrarNotificacion("success", "Datos actualizados correctamente.");
         setEditMode(false);
-      } else {
-        mostrarNotificacion("error", "No se pudo actualizar el perfil.");
-      }
+      } 
+
     } catch (error) {
       console.error(error);
+      mostrarNotificacion('error', error.message || 'Error al actualizar el perfil.');
     }
   };
 
   const handleSavePassword = async () => {
-    if (!validarPassword) return;
+    if (!validarPassword()) return;
 
     try {
       const pass = await updatePasswordUser({ password, nuevaPassword });
@@ -247,12 +240,12 @@ const PerfilUsuario = () => {
     }
   };
 
-  const handleNotificationChange = (key) => {
-    setNotificaciones((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
+  // const handleNotificationChange = (key) => {
+  //   setNotificaciones((prev) => ({
+  //     ...prev,
+  //     [key]: !prev[key],
+  //   }));
+  // };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -296,20 +289,24 @@ const PerfilUsuario = () => {
                             Información Personal
                           </Typography>
                           <Button
-                            size="sm"
-                            variant={editMode ? "filled" : "outlined"}
-                            onClick={() =>
-                              editMode ? handleSaveProfile() : setEditMode(true)
-                            }
-                            className="flex items-center gap-2"
-                          >
-                            {editMode ? (
-                              <Save size={16} />
-                            ) : (
+                          size="sm"
+                          variant={editMode ? "filled" : "outlined"}
+                          disabled={editMode && editUser.isPending}        // 👈 clave
+                          onClick={editMode ? handleSaveProfile : () => setEditMode(true)}
+                          className="flex items-center gap-2"
+                        >
+                          {editMode ? (
+                            <>
+                              {editUser.isPending ? <Spinner className="h-4 w-4" /> : <Save size={16} />}
+                              {editUser.isPending ? "Guardando..." : "Guardar"}
+                            </>
+                          ) : (
+                            <>
                               <Edit3 size={16} />
-                            )}
-                            {editMode ? "Guardar" : "Editar"}
-                          </Button>
+                              Editar
+                            </>
+                          )}
+                        </Button>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -322,7 +319,7 @@ const PerfilUsuario = () => {
                               Nombre
                             </Typography>
                             <Input
-                              value={userData.nombre}
+                              value={userData?.nombre}
                               onChange={(e) =>
                                 setUserData({
                                   ...userData,
@@ -345,7 +342,7 @@ const PerfilUsuario = () => {
                               Apellido
                             </Typography>
                             <Input
-                              value={userData.apellido}
+                              value={userData?.apellido}
                               onChange={(e) =>
                                 setUserData({
                                   ...userData,
@@ -368,7 +365,7 @@ const PerfilUsuario = () => {
                               Email
                             </Typography>
                             <Input
-                              value={userData.email}
+                              value={userData?.email}
                               disabled={!editMode}
                               color="gray"
                               readOnly
@@ -386,7 +383,7 @@ const PerfilUsuario = () => {
                               Teléfono
                             </Typography>
                             <Input
-                              value={userData.telefono}
+                              value={userData?.telefono}
                               onChange={(e) =>
                                 setUserData({
                                   ...userData,
@@ -409,7 +406,7 @@ const PerfilUsuario = () => {
                               Dirección
                             </Typography>
                             <Input
-                              value={userData.direccion}
+                              value={userData?.direccion}
                               color="gray"
                               onChange={(e) =>
                                 setUserData({
@@ -504,7 +501,7 @@ const PerfilUsuario = () => {
                               color="blue-gray"
                               className="text-sm font-medium"
                             >
-                              {formatearFechaHora(userData.fecha_creacion)}
+                              {formatearFechaHora(userData?.fecha_creacion)}
                             </Typography>
                           </div>
                           <div className="flex justify-between">
@@ -515,7 +512,7 @@ const PerfilUsuario = () => {
                               color="blue-gray"
                               className="text-sm font-medium"
                             >
-                              {fechaHora(userData.ultimo_ingreso)}
+                              {fechaHora(userData?.ultimo_ingreso)}
                             </Typography>
                           </div>
                         </div>
@@ -841,7 +838,12 @@ const PerfilUsuario = () => {
                               {index === 0 && (
                                 <Chip value="Actual" color="green" size="sm" />
                               )}
-                              <Button size="sm" color="red" variant="outlined" onClick={() => handleCloseSession(sesion.id)}>
+                              <Button
+                               size="sm"
+                               color="red" 
+                               variant="outlined" 
+                               onClick={() => handleCloseSession(sesion.id)}
+                               disabled= {cerrarSession.isPending}>
                                 Cerrar
                               </Button>
                             </div>

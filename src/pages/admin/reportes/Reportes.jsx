@@ -1,7 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react";
-import { crearReporte, descargarReportes, obtenerReportes } from "../../../services/reportesServices";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   Card,
@@ -47,8 +46,10 @@ import {
   ChevronRight
 } from "lucide-react"
 
-import { getAllCategories } from "../../../services/categorieService";
 import { useNotificacion } from "../../../hooks/useNotificacion";
+import { UseReportes } from "../../../hooks/useReportes";
+import { useCategorias } from "../../../hooks/useCategorias";
+import { useReportesMutation } from "../../../hooks/useReportesMutation";
 
 // Datos de ejemplo para los reportes
 const TIPOS_REPORTES = [
@@ -144,6 +145,8 @@ const REPORTES_PROGRAMADOS = [
   },
 ]
 
+const REQUIERE_FECHAS = new Set(['ventas', 'movimientos', 'rentabilidad', 'clientes']);
+
 export const Reportes = () => {
   const [activeTab, setActiveTab] = useState("generar")
   const [reporteSeleccionado, setReporteSeleccionado] = useState("")
@@ -152,51 +155,74 @@ export const Reportes = () => {
   const [periodoFin, setPeriodoFin] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
-  const [categoria, setCategoria] = useState([]);
-  const [historial, setHistorial] = useState([]);
   const [generandoReporte, setGenerandoReporte] = useState(false)
   const [enviarPorEmail, setEnviarPorEmail] = useState(false)
   const [emailDestino, setEmailDestino] = useState("")
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false);
   const {componenteAlerta, mostrarNotificacion} = useNotificacion();
-  const [recargarHistorial, setRecargarHistorial] = useState(0);
+  const historialPerPage = 25;
+  const limite = historialPerPage;
+  const offset = (currentPage - 1) * limite;
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      const cat = await getAllCategories();
-      // console.log(cat);
-      setCategoria(cat);
+  const topRef = useRef(null);
+
+  // MUTATION REACT QUERY
+  const { nuevoReporte, bajarReporte, borrarReporte } = useReportesMutation();
+
+  // TRAER CATEGORIAS DESDE REACT QUERY
+  const { data: cate } = useCategorias();
+  const categoria = cate ?? [];
+  // TRAER HISTORIAL DE REPORTES DESDE REACT QUERY
+  const {data, refetch, isLoading } = UseReportes(limite, offset);
+  const historial = data?.reportes?.items ?? [];
+  // console.log(historial);
+
+  // PAGINACION
+  const total = data?.reportes?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limite));
+  const start = total === 0 ? 0 : (currentPage - 1) * limite + 1;
+  const end = Math.min(currentPage * limite, total);
+  const showEmpty = !isLoading && total === 0; 
+  function goToPage(newPage, setCurrentPage, topRef, totalPages) {
+  const safePage = Math.max(1, Math.min(newPage, totalPages));
+  setCurrentPage(safePage);
+
+  requestAnimationFrame(() => {
+    if (topRef?.current) {
+      let parent = topRef.current.parentElement;
+      while (parent) {
+        const overflowY = getComputedStyle(parent).overflowY;
+        if (overflowY === "auto" || overflowY === "scroll") {
+          parent.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        parent = parent.parentElement;
+      }
+      const y = topRef.current.getBoundingClientRect().top + window.scrollY - 16;
+      window.scrollTo({ top: y, behavior: "smooth" });
     }
-    fetchCategories(); 
-  }, [])
-
-  const fetchHistorial = useCallback( async () => {
-    const hist = await obtenerReportes();
-    setHistorial(hist.reportes);
-  }, []);
-
-  useEffect(() => {
-     fetchHistorial();
-  }, [fetchHistorial, recargarHistorial])
-  
+  });
+}
 
   const generarReporte = async () => {
     if (!reporteSeleccionado) {
       mostrarNotificacion("error", "Por favor selecciona un tipo de reporte")
       return
     }
-    if (!periodoFin || !periodoInicio) {
-      mostrarNotificacion('error', 'Debes seleccionar una fecha');
+    const necesitaFechas = REQUIERE_FECHAS.has(reporteSeleccionado);
+  if (necesitaFechas) {
+    if (!periodoInicio || !periodoFin) {
+      mostrarNotificacion("error", "Debes seleccionar un rango de fechas");
       return;
     }
+  }
+
     if (new Date(periodoFin) < new Date(periodoInicio)) {
       mostrarNotificacion('error', 'El período final debe ser mayor al inicial');
       return;
     }
-
     setGenerandoReporte(true);
     try {
-      const report = await crearReporte({
+      const payload = {
         type: reporteSeleccionado,
         format: formatoSeleccionado,
         date_from: periodoInicio,
@@ -205,7 +231,9 @@ export const Reportes = () => {
           categoria_id: categoriaFiltro === '' ? null : parseInt(categoriaFiltro)
         },
         email_to: emailDestino === '' ? null : emailDestino
-      });
+      };
+
+      const report = await nuevoReporte.mutateAsync(payload);
 
       if (report?.ok === false) {
         throw new Error('No se pudo generar el reporte');
@@ -216,7 +244,6 @@ export const Reportes = () => {
       setPeriodoInicio("");
       setPeriodoFin("");
       mostrarNotificacion('success', 'Reporte generado exitosamente');
-      setRecargarHistorial((prev) => prev + 1);
     } catch (error) {
       console.error(error);
       mostrarNotificacion('error', 'Error generando el reporte');
@@ -230,7 +257,7 @@ export const Reportes = () => {
 
     
     try {
-      const descarga = await descargarReportes(reporte.id);
+      const descarga = await bajarReporte.mutateAsync(reporte.id);
       if (descarga) {
         mostrarNotificacion("success", `Descargando ${reporte.nombre}`)
         return true;
@@ -241,8 +268,19 @@ export const Reportes = () => {
     }
   }
 
-  const eliminarReporte = (id) => {
-    mostrarNotificacion("success", "Reporte eliminado del historial")
+  const eliminarReporte = async (id) => {
+    try {
+      console.log(id);
+      const reporteBorrado = await borrarReporte.mutateAsync(id);
+
+      if (reporteBorrado?.ok) {
+        
+        mostrarNotificacion("success", "Reporte eliminado del historial")
+      }
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion('error', error.message || 'Error al eliminar el reporte.');
+    }
   }
 
   const toggleReporteProgramado = (id) => {
@@ -293,12 +331,12 @@ export const Reportes = () => {
     }
   }
 
-   const productsPerPage = 25
-  const totalPages = Math.ceil(historial.length / productsPerPage)
-  const currentHistorial = historial.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage)
+   
+ 
 
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
+        <span ref={topRef}></span>
       {/* Alerta flotante */}
       {componenteAlerta}
       {/* Header */}
@@ -619,7 +657,7 @@ export const Reportes = () => {
                         color="blue"
                         className="w-full mt-6 flex items-center justify-center gap-2 uppercase"
                         onClick={generarReporte}
-                        disabled={!reporteSeleccionado || generandoReporte}
+                        disabled={!reporteSeleccionado || generandoReporte || nuevoReporte.isPending}
                       >
                         {generandoReporte ? (
                           <>
@@ -655,7 +693,10 @@ export const Reportes = () => {
                   color="blue-gray" 
                   size="sm" 
                   className="flex items-center gap-2"
-                  onClick={() => setRecargarHistorial((prev) => prev + 1)}>
+                  onClick={() => {
+                    refetch();
+                    mostrarNotificacion('success', 'Reportes actualizados');
+                  }}>
                     <RefreshCw className="h-4 w-4" />
                     Actualizar
                   </Button>
@@ -701,7 +742,7 @@ export const Reportes = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {currentHistorial.map((reporte) => (
+                        {historial.map((reporte) => (
                           <tr key={reporte.id} className="hover:bg-gray-50">
                             <td className="p-4 border-b border-gray-200">
                               <div className="flex items-center gap-3">
@@ -766,6 +807,7 @@ export const Reportes = () => {
                                   variant="text"
                                   color="red"
                                   size="sm"
+                                  disabled={borrarReporte.isPending}
                                   onClick={() => eliminarReporte(reporte.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -778,12 +820,10 @@ export const Reportes = () => {
                     </table>
                   </div>
                   {/* Paginación */}
-            {historial.length > 0 ? (
+            {!showEmpty ? (
               <div className="flex items-center justify-between p-4 border-t border-gray-200">
                 <Typography variant="small" color="blue-gray" className="font-normal">
-                  Mostrando {(currentPage - 1) * productsPerPage + 1} a{" "}
-                  {Math.min(currentPage * productsPerPage, historial.length)} de {historial.length}{" "}
-                  reportes
+                  Mostrando {start} a {" "} {end} de {total} {" "} reportes
                 </Typography>
                 <div className="flex gap-2">
                   <IconButton
@@ -791,7 +831,7 @@ export const Reportes = () => {
                     color="blue-gray"
                     size="sm"
                     disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(currentPage - 1)}
+                    onClick={() => goToPage(currentPage - 1, setCurrentPage, topRef, totalPages)}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </IconButton>
@@ -800,7 +840,7 @@ export const Reportes = () => {
                     color="blue-gray"
                     size="sm"
                     disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(currentPage + 1)}
+                    onClick={() => goToPage(currentPage + 1, setCurrentPage, topRef, totalPages)}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </IconButton>

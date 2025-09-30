@@ -16,10 +16,14 @@ export const crearReporte = async ({ type, format, date_to, date_from, email_to,
         throw new Error(error.message || 'Error al generar el reporte.');
     }
 };
-export const obtenerReportes = async () => {
+export const obtenerReportes = async ({ limite, offset } = {}) => {
 
     try {
-        const res = await apiFetch(`${API_URL}/get-reports`);
+        const url = new URL(`${API_URL}/get-reports`);
+        if (limite != undefined) url.searchParams.set('limite', limite);
+        if (offset != null && offset != undefined) url.searchParams.set('offset', offset);
+        
+        const res = await apiFetch(`${url}`);
 
         return res;
     } catch (error) {
@@ -76,3 +80,16 @@ export const descargarReportes = async (id) => {
         throw new Error(error.message || 'Error al descargar el reporte.');
     }
 };
+
+export const eliminarReporte = async (id) => {
+    try {
+        const data = await apiFetch(`${API_URL}/delete-report/${id}`, {
+            method: 'DELETE'
+        });
+
+        return data;
+    } catch (error) {
+        console.log(error);
+        throw error;        
+    }
+}

@@ -43,7 +43,7 @@ export const MovementsTypeServices = async () => {
     }
 
 }
-export const stockMovements = async ( {limite, fechaDesde, fechaHasta} = {} ) => {
+export const stockMovements = async ( {limite, fechaDesde, fechaHasta, search, tipo, offset} = {} ) => {
 
     
     try {
@@ -52,6 +52,9 @@ export const stockMovements = async ( {limite, fechaDesde, fechaHasta} = {} ) =>
         if (limite !== undefined) url.searchParams.set('limite', limite);
         if (fechaDesde !== undefined) url.searchParams.set('fechaDesde', fechaDesde);
         if (fechaHasta !== undefined) url.searchParams.set('fechaHasta', fechaHasta);
+        if (search !== null && search != undefined) url.searchParams.set('search', search);
+        if (tipo !== undefined) url.searchParams.set('tipo', tipo);
+        if (offset !== undefined) url.searchParams.set('offset', offset);
         // console.log('[FE url]', url.toString());
 
         const data = await apiFetch(`${ url }`);
@@ -64,7 +67,7 @@ export const stockMovements = async ( {limite, fechaDesde, fechaHasta} = {} ) =>
     }
 
 }
-export const stockMovementEstadisticasToday = async ( {hoy} = {} ) => {
+export const stockMovementEstadisticasToday = async ({hoy} = {}) => {
 
     
     try {

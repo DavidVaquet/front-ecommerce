@@ -66,3 +66,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer base {
+  html {
+    @apply font-sans;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}

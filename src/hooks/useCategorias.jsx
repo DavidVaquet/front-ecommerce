@@ -8,6 +8,7 @@ export const useCategorias = (filtros) => {
         queryKey: ['categorias', filtros],
         queryFn: () => getAllCategories(filtros),
         staleTime: Infinity,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        placeholderData: (prev) => prev
     })
 };

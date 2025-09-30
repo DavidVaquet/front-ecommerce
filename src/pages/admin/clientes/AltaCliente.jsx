@@ -1,8 +1,6 @@
 "use client"
 
-import { useState } from "react";
-import { crearClienteServices } from "../../../services/clienteServices";
-import { useClientes } from "../../../context/ClientesContext";
+import { useMemo, useState } from "react";
 import {
   Button,
   Card,
@@ -32,6 +30,8 @@ import {
   User,
   Building,
 } from "lucide-react"
+import { useClienteMutation } from "../../../hooks/useClientesMutation";
+import { useClienteEstadisticas } from "../../../hooks/useClientes";
 
 export const AltaCliente = () => {
   const [formData, setFormData] = useState({
@@ -49,19 +49,25 @@ export const AltaCliente = () => {
     notas: "",
   })
 
-  // CONTEXTO
-  const { setClientesContext } = useClientes();
-
   // NOTIFICACIONES
   const [mostrarAlerta, setMostrarAlerta] = useState(false)
   const [tipoAlerta, setTipoAlerta] = useState("success")
-  const [mensajeAlerta, setMensajeAlerta] = useState("")
+  const [mensajeAlerta, setMensajeAlerta] = useState("");
 
+  // USECLIENTES MUTATION
+  const { crearCliente } = useClienteMutation();
+
+  // TRAER ESTADISTICAS DESDE REACT QUERY
+  const filtroCategoria = useMemo(() => ({
+    scope: 'alta'
+  }), [])
+  const { data } = useClienteEstadisticas(filtroCategoria)
+  const estadisticasClientes = data ?? [];
   // Estadísticas
-  const totalClientes = 1247
-  const clientesVip = 89
-  const clientesNuevosHoy = 12
-  const clientesActivos = 1156
+  const clientes_hoy = estadisticasClientes.nuevos_hoy;
+  const clientes_hoy_tienda = estadisticasClientes.altas_hoy_manual;
+  const clientes_hoy_online = estadisticasClientes.altas_hoy_online;
+  const clientes_incompletos = estadisticasClientes.incompletos;
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -120,12 +126,12 @@ export const AltaCliente = () => {
     try {
       e.preventDefault();
       if (!validarFormulario()) return
-      await crearClienteServices(formData);
-      mostrarNotificacion("success", "Cliente registrado exitosamente")
-      setClientesContext((prev) => prev + 1);
+      await crearCliente.mutateAsync(formData);
+      mostrarNotificacion("success", "Cliente registrado exitosamente");
       resetFormulario();
     } catch (error) {
-      console.error(error)
+      console.error(error);
+      mostrarNotificacion(error.message || 'Error al crear el cliente');
     }
   }
 
@@ -165,7 +171,7 @@ export const AltaCliente = () => {
               size="md"
             >
               <UserPlus className="h-5 w-5" />
-              Guardar Cliente
+              Reporte de clientes
             </Button>
           </div>
         </div>
@@ -178,10 +184,10 @@ export const AltaCliente = () => {
             <div className="flex justify-between">
               <div>
                 <Typography variant="small" color="blue-gray" className="font-medium mb-1">
-                  Total Clientes
+                  Total Clientes Hoy
                 </Typography>
                 <Typography variant="h3" color="blue-gray" className="font-bold">
-                  {totalClientes.toLocaleString()}
+                  {clientes_hoy}
                 </Typography>
               </div>
               <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center">
@@ -201,10 +207,10 @@ export const AltaCliente = () => {
             <div className="flex justify-between">
               <div>
                 <Typography variant="small" color="blue-gray" className="font-medium mb-1">
-                  Clientes VIP
+                  Nuevos Hoy - Tienda
                 </Typography>
                 <Typography variant="h3" color="blue-gray" className="font-bold">
-                  {clientesVip}
+                  {clientes_hoy_tienda}
                 </Typography>
               </div>
               <div className="h-12 w-12 rounded-full bg-yellow-50 flex items-center justify-center">
@@ -213,7 +219,7 @@ export const AltaCliente = () => {
             </div>
             <div className="mt-3 flex items-center gap-1">
               <Typography variant="small" color="blue" className="font-medium">
-                {((clientesVip / totalClientes) * 100).toFixed(1)}% del total
+                {((clientes_hoy_tienda / clientes_hoy_online) * 100)}% del total
               </Typography>
             </div>
           </CardBody>
@@ -224,10 +230,10 @@ export const AltaCliente = () => {
             <div className="flex justify-between">
               <div>
                 <Typography variant="small" color="blue-gray" className="font-medium mb-1">
-                  Nuevos Hoy
+                  Nuevos Hoy - Online
                 </Typography>
                 <Typography variant="h3" color="blue-gray" className="font-bold">
-                  {clientesNuevosHoy}
+                  {clientes_hoy_online}
                 </Typography>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center">
@@ -248,10 +254,10 @@ export const AltaCliente = () => {
             <div className="flex justify-between">
               <div>
                 <Typography variant="small" color="blue-gray" className="font-medium mb-1">
-                  Clientes Activos
+                  Clientes Incompletos
                 </Typography>
                 <Typography variant="h3" color="blue-gray" className="font-bold">
-                  {clientesActivos.toLocaleString()}
+                  {clientes_incompletos}
                 </Typography>
               </div>
               <div className="h-12 w-12 rounded-full bg-deep-orange-50 flex items-center justify-center">
@@ -260,7 +266,7 @@ export const AltaCliente = () => {
             </div>
             <div className="mt-3 flex items-center gap-1">
               <Typography variant="small" color="deep-orange" className="font-medium">
-                {((clientesActivos / totalClientes) * 100).toFixed(1)}% activos
+                {((clientes_incompletos / (clientes_hoy_tienda  + clientes_hoy_tienda)) * 100).toFixed(1)}% activos
               </Typography>
             </div>
           </CardBody>
@@ -530,7 +536,7 @@ export const AltaCliente = () => {
             Cancelar
           </Button>
           <div className="flex gap-3">
-            <Button color="deep-orange" className="shadow-md" type="submit">
+            <Button color="deep-orange" className="shadow-md" type="submit" disabled={crearCliente.isPending}>
               Guardar Cliente
             </Button>
           </div>

@@ -1,10 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react";
-import { stockMovementEstadisticasToday, stockMovements } from "../../../services/stockServices";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatearFecha, fechaHora } from "../../../helpers/formatoFecha";
 import { formatearEntero } from "../../../helpers/numeros";
-import { useVentas } from "../../../context/VentasContext";
 import { computeRange } from "../../../helpers/rangoFecha";
 import {
   Search,
@@ -20,41 +18,84 @@ import {
   RotateCcw,
   Eye,
   BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  ReceiptText
 } from "lucide-react"
-import { Card, CardBody, Typography, Button, Input, Chip, Select, Option } from "@material-tailwind/react"
+import { Card, CardBody, Typography, Button, Input, Chip, Select, Option, IconButton } from "@material-tailwind/react"
+import { useMovimientoEstadisticas, useMovimientoStock } from "../../../hooks/useMovimientosStock";
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
+import { isBarcodeLike } from "../../../utils/barcode";
+import { getProductoPorBarcode } from "../../../services/productServices";
+import { useNotificacion } from "../../../hooks/useNotificacion";
 
 const MovimientosStock = () => {
   const [filtroTipo, setFiltroTipo] = useState("todos")
   const [filtroFecha, setFiltroFecha] = useState("semana")
   const [busqueda, setBusqueda] = useState("");
-  const [movimientos, setMovimientos] = useState([]);
-  const [estadisticas, setEstadisticas] = useState([]);
-
-  // CONTEXT
-  const { ventasContext } = useVentas();
-  const { recargarProductos } = useProductos();
-
-  useEffect(() => {
-      const { fechaDesde, fechaHasta } = computeRange(filtroFecha);
-      const fetchMovimientos = async () => {
-        const mov = await stockMovements({fechaDesde, fechaHasta});
-        // console.log(mov);
-        setMovimientos(mov); 
-      };
-      fetchMovimientos();
-  }, [filtroFecha, ventasContext, recargarProductos])
-
-  useEffect(() => {
-      const fetchEstadisticas = async () => {
-        const { fechaDesde } = computeRange("hoy");
-        const est = await stockMovementEstadisticasToday({hoy: fechaDesde});
-        console.log(est);
-        setEstadisticas(est); 
-      };
-      fetchEstadisticas();
-  }, [filtroFecha, ventasContext, recargarProductos])
+  const [currentPage, setCurrentPage] = useState(1);
+  const movimientosPerPage = 25;
   
+  // TRAER MOVIMIENTOS DESDE REACT QUERY
+    const searchDebounced = useDebouncedValue(busqueda, 500);
+    const limite = movimientosPerPage;
+    const offset = (currentPage - 1) * limite;
+    const filtros = useMemo(() => {
+      const { fechaDesde, fechaHasta } = computeRange(filtroFecha);
+      const f = {};
+      if (filtroFecha) {
+        f.fechaDesde = fechaDesde;
+        f.fechaHasta = fechaHasta
+      }
+      if (searchDebounced) f.search = searchDebounced
 
+      if (limite) f.limite = limite;
+
+      if (filtroTipo != 'todos') f.tipo = filtroTipo;
+
+      if (offset) f.offset = offset;
+
+      return f;
+    }, [filtroFecha, searchDebounced, filtroTipo, limite, offset])
+    const { data, isLoading } = useMovimientoStock(filtros);
+    const movimientos = data?.items || [];
+
+    const filtrosEstadisticas = useMemo(() => {
+      const { fechaDesde } = computeRange('hoy');
+      const f = { hoy: fechaDesde };
+      return f;
+    }, []);
+    const { data: movEst } = useMovimientoEstadisticas(filtrosEstadisticas);
+    const estadisticas = movEst ?? [];
+  
+  useEffect(() => { setCurrentPage(1); }, [filtroFecha, searchDebounced, filtroTipo]);
+
+  // PAGINACION
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limite));
+  const start = total === 0 ? 0 : (currentPage - 1) * limite + 1;
+  const end = Math.min(currentPage * limite, total);
+  const showEmpty = !isLoading && total === 0;
+  const topRef = useRef(null);
+  function goToPage(newPage, setCurrentPage, topRef, totalPages) {
+  const safePage = Math.max(1, Math.min(newPage, totalPages));
+  setCurrentPage(safePage);
+
+  requestAnimationFrame(() => {
+    if (topRef?.current) {
+      let parent = topRef.current.parentElement;
+      while (parent) {
+        const overflowY = getComputedStyle(parent).overflowY;
+        if (overflowY === "auto" || overflowY === "scroll") {
+          parent.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        parent = parent.parentElement;
+      }
+      const y = topRef.current.getBoundingClientRect().top + window.scrollY - 16;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  });
+}
 
   const getTipoIcon = (tipo) => {
     switch (tipo) {
@@ -89,16 +130,37 @@ const MovimientosStock = () => {
     }).format(amount)
   }
 
-  const movimientosFiltrados = movimientos.filter((mov) => {
-    const matchTipo = filtroTipo === "todos" || mov.tipo === filtroTipo
-    const matchBusqueda =
-      mov.producto_nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      mov.barcode.toLowerCase().includes(busqueda.toLowerCase())
-    return matchTipo && matchBusqueda
-  })
+  // ALERTA HOOK
+  const {componenteAlerta, mostrarNotificacion} = useNotificacion();
 
+  // INPUT DE BUSQUEDA CONTROLADO
+  const handleScanOrSearch = async () => {
+    const input = (searchDebounced || '').trim();
+    if (!input) return;
+  
+    if (isBarcodeLike(input)) {
+      try {
+        const producto = await getProductoPorBarcode(input);
+        if (producto) {
+          setBusqueda(producto.barcode || producto.nombre); 
+          mostrarNotificacion("success", `Producto encontrado: ${producto.nombre}`);
+          return;
+        }
+        mostrarNotificacion("error", "Código no encontrado. Probá buscar por nombre.");
+      } catch (e) {
+        console.error(e);
+        mostrarNotificacion("error", "Error al buscar por código de barras");
+      }
+      return;
+    }
+  };
+
+  
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      {/* COMPONENTE DE LA ALERTA */}
+      {componenteAlerta}
+      <span ref={topRef}></span>
       <div className="max-w-7xl mx-auto space-y-6">
         <Card className="shadow-sm">
           <CardBody className="p-6">
@@ -135,7 +197,7 @@ const MovimientosStock = () => {
                     Movimientos Hoy
                   </Typography>
                   <Typography variant="h4" color="blue-gray">
-                    {estadisticas.total_movimientos}
+                    {Number(estadisticas.total_movimientos)}
                   </Typography>
                 </div>
                 <Package className="w-8 h-8 text-blue-600" />
@@ -151,7 +213,7 @@ const MovimientosStock = () => {
                     Entradas Hoy
                   </Typography>
                   <Typography variant="h4" className="text-green-600">
-                    {estadisticas.entradas_count}
+                    {Number(estadisticas.entradas_count)}
                   </Typography>
                 </div>
                 <ArrowUpCircle className="w-8 h-8 text-green-600" />
@@ -167,7 +229,7 @@ const MovimientosStock = () => {
                     Salidas Hoy
                   </Typography>
                   <Typography variant="h4" className="text-red-600">
-                    {estadisticas.salidas_count}
+                    {Number(estadisticas.salidas_count)}
                   </Typography>
                 </div>
                 <ArrowDownCircle className="w-8 h-8 text-red-600" />
@@ -183,7 +245,7 @@ const MovimientosStock = () => {
                     Ajustes Hoy
                   </Typography>
                   <Typography variant="h4" className="text-blue-600">
-                    {estadisticas.ajustes_count}
+                    {Number(estadisticas.ajustes_count)}
                   </Typography>
                 </div>
                 <RefreshCw className="w-8 h-8 text-blue-600" />
@@ -230,18 +292,26 @@ const MovimientosStock = () => {
               <div className="flex-1">
                 <Input
                   label="Buscar producto o SKU"
+                  placeholder="Ingresa el nombre del producto o código de barra"
                   icon={<Search className="w-4 h-4" />}
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleScanOrSearch();
+                    }
+                  }}
                 />
               </div>
               <div className="flex gap-2">
                 <Select label="Tipo de movimiento" value={filtroTipo} onChange={(value) => setFiltroTipo(value)}>
                   <Option value="todos">Todos los tipos</Option>
-                  <Option value="Entrada">Entradas</Option>
-                  <Option value="Salida">Salidas</Option>
-                  <Option value="Ajuste">Ajustes</Option>
-                  <Option value="Devolucion_cliente">Devoluciones</Option>
+                  <Option value="entrada">Entradas</Option>
+                  <Option value="salida">Salidas</Option>
+                  <Option value="ajuste">Ajustes</Option>
+                  <Option value="devolucion_cliente">Devoluciones</Option>
                 </Select>
                 <Select label="Período" value={filtroFecha} onChange={(value) => setFiltroFecha(value)}>
                   <Option value="hoy">Hoy</Option>
@@ -261,7 +331,7 @@ const MovimientosStock = () => {
                 <FileText className="w-5 h-5" />
                 Historial de Movimientos
                 <Chip
-                  value={`${movimientosFiltrados.length} registros`}
+                  value={`${movimientos.length} registros`}
                   color="blue-gray"
                   variant="ghost"
                   className="ml-2"
@@ -315,7 +385,7 @@ const MovimientosStock = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {movimientosFiltrados.map((mov) => {
+                  {movimientos.map((mov) => {
 
                     const dir = mov.direction;
                     const qty = mov.cantidad_movimiento;
@@ -395,6 +465,50 @@ const MovimientosStock = () => {
                 </tbody>
               </table>
             </div>
+            {/* Paginación */}
+            {!showEmpty ? (
+              <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                <Typography
+                  variant="small"
+                  color="blue-gray"
+                  className="font-normal"
+                >
+                  Mostrando {start} a {end} de {total} movimientos
+                </Typography>
+                <div className="flex gap-2">
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPage === 1 || isLoading}
+                    onClick={() => goToPage(currentPage - 1, setCurrentPage, topRef, totalPages)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
+                    variant="outlined"
+                    color="blue-gray"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() =>
+                      setCurrentPage((p) => goToPage(currentPage + 1, setCurrentPage, topRef, totalPages))
+                    }
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </IconButton>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8">
+                <ReceiptText className="h-12 w-12 text-gray-400 mb-3" />
+                <Typography variant="h6" color="blue-gray">
+                  No se encontraron movimientos
+                </Typography>
+                <Typography variant="small" color="gray" className="mt-1">
+                  Intenta con otra búsqueda o agrega nuevos movimientos.
+                </Typography>
+              </div>
+            )}
           </CardBody>
         </Card>
 
@@ -419,5 +533,6 @@ const MovimientosStock = () => {
     </div>
   )
 }
+
 
 export default MovimientosStock

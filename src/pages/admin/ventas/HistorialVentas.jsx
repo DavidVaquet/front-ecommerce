@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { obtenerVentasConDetallesService } from "../../../services/ventasServices";
 import { formatearPesos, formatearPesosRedondeo } from "../../../helpers/formatearPesos";
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
@@ -49,50 +49,68 @@ import {
   Mail,
   Smartphone,
   Phone,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 import { XMarkIcon } from "@heroicons/react/24/outline"
-import { useVentas } from "../../../context/VentasContext";
 import { descargarRecibo, enviarReciboServices, generarReciboServices } from "../../../services/reciboServices";
+import { useVentas, useVentasTotales } from "../../../hooks/useVentas";
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 
 
 export const HistorialVentas = () => {
-  const [activeTab, setActiveTab] = useState("todas")
+  const [activeTab, setActiveTab] = useState("todos")
   const [busqueda, setBusqueda] = useState("")
   const [fechaInicio, setFechaInicio] = useState("")
   const [fechaFin, setFechaFin] = useState("");
-  const [ventas, setVentas] = useState([]);
   const [open, setOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
-
-  // CONTEXT
-  const { ventasContext } = useVentas();
-
-  useEffect(() => {
-    const fetchVentas = async () =>{
-      try {
-        const ventasDetalles = await obtenerVentasConDetallesService();
-        // console.log(ventasDetalles);
-        setVentas(ventasDetalles);
-      } catch (error) {
-        console.error(error);
-      }
-    }
-    fetchVentas();
-  }, [ventasContext])
+  const topRef = useRef(null);
   
   // NOTIFICACION
   const { mostrarNotificacion, componenteAlerta } = useNotificacion();
+  const ventasPerPage = 25;
+  const limit = ventasPerPage;
+  const offset = (currentPage - 1) * ventasPerPage;
 
-  // Estadísticas
-  const totalVentas = ventas.length
-  const ventasLocal = ventas.filter((v) => v.canal === "local").length
-  const ventasEcommerce = ventas.filter((v) => v.canal === "ecommerce").length
+  // FILTROS DE VENTAS
+  const searchDebounced = useDebouncedValue(busqueda, 500);
+  const filtros = useMemo(() => {
+  const s = searchDebounced?.trim();
+  const f = {};
+  if (s) f.search = s;
+  if (activeTab && activeTab !== 'todos') {
+    f.origen = activeTab;
+  }
+  if (limit) f.limit = limit;
+  if (offset) f.offset = offset;
+  if (fechaInicio && fechaFin) {
+    f.fecha_desde = fechaInicio;
+    f.fecha_fin = fechaFin;
+  } 
+  return f;
+}, [searchDebounced, activeTab, limit, offset, fechaFin, fechaInicio]);
+  // TRAER VENTAS DESDE REACT QUERY 
+  const { data, isLoading } = useVentas(filtros);
+  const ventas = data?.ventas ?? [];
+  // console.log(ventas);
 
-  const totalIngresos = ventas.reduce((sum, venta) => sum + Number(venta.total), 0)
-  const ingresosLocal = ventas.filter((v) => v.canal === "local").reduce((sum, venta) => sum + Number(venta.total), 0)
-  const ingresosEcommerce = ventas.filter((v) => v.canal === "ecommerce").reduce((sum, venta) => sum + Number(venta.total), 0)
+  // TRAER ESTADISTICAS DE TOTALES DESDE REACT QUERY
+  const { data: totalesVentas } = useVentasTotales();
+  const totalVentasEstadisticas = totalesVentas ?? [];
 
-  const promedioVenta = totalIngresos / totalVentas
+  // ESTADISTICAS
+  const totalVentas = totalVentasEstadisticas?.total_ventas;
+  const ventasLocal = totalVentasEstadisticas?.total_ventas_local;
+  const ventasEcommerce = totalVentasEstadisticas?.total_ventas_online;
+
+  const totalIngresos = totalVentasEstadisticas?.ingresos_totales;
+  const ingresosLocal = totalVentasEstadisticas?.ingresos_local;
+  const ingresosEcommerce = totalVentasEstadisticas?.ingresos_online;
+
+  // Resetear página cuando cambien filtros
+  useEffect(() => { setCurrentPage(1); }, [activeTab, searchDebounced, fechaInicio, fechaFin]);
 
   const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleString("es-ES", {
@@ -104,27 +122,32 @@ export const HistorialVentas = () => {
     })
   }
 
-  const ventasFiltradas = ventas.filter((venta) => {
-  const coincideBusqueda =
-    (venta.codigo?.toLowerCase() || "").includes(busqueda.toLowerCase()) ||
-    venta.cliente.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    venta.cliente.email.toLowerCase().includes(busqueda.toLowerCase()) ||
-    venta.usuario.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    venta.productos?.some((prod) =>
-      prod.nombre.toLowerCase().includes(busqueda.toLowerCase())
-    );
+  // PAGINACIÓN
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const start = total === 0 ? 0 : (currentPage - 1) * limit + 1;
+  const end = Math.min(currentPage * limit, total);
+  const showEmpty = !isLoading && total === 0;
+  function goToPage(newPage, setCurrentPage, topRef, totalPages) {
+  const safePage = Math.max(1, Math.min(newPage, totalPages));
+  setCurrentPage(safePage);
 
-  const fechaVenta = new Date(venta.fecha);
-  const desde = fechaInicio ? new Date(fechaInicio + "T00:00:00") : null;
-  const hasta = fechaFin ? new Date(fechaFin + "T23:59:59") : null;
-
-  const coincideFecha =
-    (!desde || fechaVenta >= desde) &&
-    (!hasta || fechaVenta <= hasta);
-
-  if (activeTab === "todas") return coincideBusqueda && coincideFecha;
-  return coincideBusqueda && coincideFecha && venta.canal === activeTab;
-});
+  requestAnimationFrame(() => {
+    if (topRef?.current) {
+      let parent = topRef.current.parentElement;
+      while (parent) {
+        const overflowY = getComputedStyle(parent).overflowY;
+        if (overflowY === "auto" || overflowY === "scroll") {
+          parent.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        parent = parent.parentElement;
+      }
+      const y = topRef.current.getBoundingClientRect().top + window.scrollY - 16;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  });
+}
+  
   
   const handleOpenModal = (venta) => {
     setOpen(true);
@@ -291,15 +314,17 @@ export const HistorialVentas = () => {
             </div>
           </CardBody>
         </Card>
+        <span ref={topRef}></span>
       </div>
 
       {/* Filtros y Búsqueda */}
       <Card className="mb-8 shadow-sm border border-gray-200">
         <CardBody className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Input
                 label="Buscar ventas"
+                placeholder="Código de venta, email del cliente, nombre del cliente o vendedor"
                 icon={<Search className="h-5 w-5" />}
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
@@ -323,31 +348,38 @@ export const HistorialVentas = () => {
                 icon={<Calendar className="h-5 w-5" />}
               />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outlined" color="blue-gray" className="flex items-center gap-2 normal-case flex-1">
-                <Filter className="h-4 w-4" />
-                Más Filtros
-              </Button>
-            </div>
           </div>
         </CardBody>
       </Card>
 
       {/* Tabs y Lista de Ventas */}
       <Card className="shadow-sm border border-gray-200">
-        <Tabs value={activeTab} onChange={(value) => setActiveTab(value)}>
+        <Tabs value={activeTab}>
           <TabsHeader className="p-2">
-            <Tab value="todas" className="text-sm font-medium">
+            <Tab value="todos" className="text-sm font-medium" onClick={() => { setActiveTab('todos'), setCurrentPage(1)}}>
               Todas ({totalVentas})
             </Tab>
-            <Tab value="local" className="text-sm font-medium">
+            <Tab 
+            value="local" 
+            className="text-sm font-medium"
+            onClick={() => {
+            setActiveTab('local')
+            setCurrentPage(1);
+            } 
+              }
+            >
+              
               <div className="flex items-center gap-2">
 
               <Store className="h-4 w-4" />
               Local ({ventasLocal})
               </div>
             </Tab>
-            <Tab value="ecommerce" className="text-sm font-medium">
+            <Tab value="online" className="text-sm font-medium"
+            onClick={() => {
+              setActiveTab('online');
+              setCurrentPage(1);
+            }}>
               <div className="flex items-center gap-2">
 
               <Globe className="h-4 w-4" />
@@ -357,19 +389,9 @@ export const HistorialVentas = () => {
           </TabsHeader>
 
           <div className="p-6">
-            {ventasFiltradas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Receipt className="h-16 w-16 text-gray-300 mb-4" />
-                <Typography variant="h6" color="blue-gray">
-                  No se encontraron ventas
-                </Typography>
-                <Typography variant="small" color="gray" className="mt-1">
-                  Intenta ajustar los filtros o el rango de fechas.
-                </Typography>
-              </div>
-            ) : (
+            
               <div className="space-y-4">
-                {ventasFiltradas.map((venta) => (
+                {ventas.map((venta) => (
                   <Card key={venta.id} className="border border-gray-200 hover:shadow-md transition-shadow">
                     <CardBody className="p-6">
                       <div className="flex flex-col lg:flex-row gap-6">
@@ -576,7 +598,51 @@ export const HistorialVentas = () => {
                   </Card>
                 ))}
               </div>
-            )}
+            
+            {/* Paginación */}
+                        {!showEmpty ? (
+                          <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                            <Typography
+                              variant="small"
+                              color="blue-gray"
+                              className="font-normal"
+                            >
+                              Mostrando {start} a {end} de {total} ventas
+                            </Typography>
+                            <div className="flex gap-2">
+                              <IconButton
+                                variant="outlined"
+                                color="blue-gray"
+                                size="sm"
+                                disabled={currentPage === 1 || isLoading}
+                                onClick={() => goToPage(currentPage - 1, setCurrentPage, topRef, totalPages)}
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </IconButton>
+                              <IconButton
+                                variant="outlined"
+                                color="blue-gray"
+                                size="sm"
+                                disabled={currentPage === totalPages}
+                                onClick={() =>
+                                  setCurrentPage((p) => goToPage(currentPage + 1, setCurrentPage, topRef, totalPages))
+                                }
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </IconButton>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-12">
+                          <Receipt className="h-16 w-16 text-gray-300 mb-4" />
+                          <Typography variant="h6" color="blue-gray">
+                            No se encontraron ventas
+                          </Typography>
+                          <Typography variant="small" color="gray" className="mt-1">
+                            Intenta ajustar los filtros o el rango de fechas.
+                          </Typography>
+                        </div>
+                        )}
           </div>
         </Tabs>
       </Card>

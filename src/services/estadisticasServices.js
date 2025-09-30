@@ -1,7 +1,7 @@
 import { apiFetch } from "../helpers/auth";
 const API_URL = `${import.meta.env.VITE_API_URL}/estadisticas`;
 
-export const estadisticasServices = async ({periodo, categoryId, topLimit, criticosLimit} = {}) => {
+export const estadisticasServices = async ({periodo, categoryId, topLimit, criticosLimit, topOffset, criticosOffset} = {}) => {
 
     try {
 
@@ -10,6 +10,8 @@ export const estadisticasServices = async ({periodo, categoryId, topLimit, criti
         if (categoryId != null) url.searchParams.set('categoryId', categoryId);
         if (topLimit != null) url.searchParams.set('topLimit', topLimit);
         if (criticosLimit != null) url.searchParams.set('criticosLimit', criticosLimit);
+        if (topOffset != null) url.searchParams.set('topOffset', topOffset);
+        if (criticosOffset != null) url.searchParams.set('criticosOffset', criticosOffset);
         // console.log(url);
         const data = await apiFetch(`${url}`);
         

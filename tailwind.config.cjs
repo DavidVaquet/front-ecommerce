@@ -1,5 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 const withMT = require("@material-tailwind/react/utils/withMT");
+const defaultTheme = require('tailwindcss/defaultTheme');
+
 
 module.exports = withMT ({
     darkMode: ["class"],
@@ -56,6 +58,7 @@ module.exports = withMT ({
   			}
   		},
   		fontFamily: {
+			sans: ['Sora', ...defaultTheme.fontFamily.sans],
   			worksans: [
   				'Work Sans',
   				'sans-serif'
