@@ -25,6 +25,7 @@ import { useCategorias } from "../../../hooks/useCategorias";
 import { useCategoriasMutation } from "../../../hooks/useCategoriasMutation";
 import { useSubcategorias } from "../../../hooks/useSubcategorias";
 import { useSubcategoriasMutation } from "../../../hooks/useSubcategoriaMutation";
+import { useNotificacion } from "../../../hooks/useNotificacion";
 
 export const SubirProducto = () => {
   const [nombre, setNombre] = useState("");
@@ -52,6 +53,9 @@ export const SubirProducto = () => {
   const [imagenUrls, setImagenUrls] = useState([]);
   const [open, setOpen] = useState(false);
   const [openSub, setOpenSub] = useState(false);
+
+  // ALERTAS
+  const {componenteAlerta, mostrarNotificacion } = useNotificacion();
 
   // MUTATION
   const { crearProducto } = useProductosMutation();
@@ -141,31 +145,23 @@ export const SubirProducto = () => {
 
   const handleNewCategory = async (e) => {
     e.preventDefault();
-    if (!nombreCategoria.trim() || !nombreCategoria) {
-      toast.error("El nombre de la categoría es obligatorio.");
-      return;
-    }
-    if (estadoCategoria === "") {
-      toast.error("Debes seleccionar un estado.");
-      return;
-    }
 
     try {
       const payload = {
       nombre: nombreCategoria,
       descripcion: descripcionCategoria,
-      activo: estadoCategoria === "true",
+      activo: estadoCategoria
     };
 
       const cate = await crearCategoria.mutateAsync(payload)
 
       if (cate) {
         resetFieldsCategorys();
-        toast.success('Categoría creada correctamente');
+        mostrarNotificacion('success', 'Categoría creada correctamente');
       }
     } catch (error) {
       console.error(error);
-      toast.success(error.message || 'Error al crear la categoría');
+      mostrarNotificacion('error', error.message || 'Error al crear la categoría');
     }
     
     
@@ -176,29 +172,21 @@ export const SubirProducto = () => {
   
   
   try {
-      if (!nombreSubcategoria.trim() || !nombreSubcategoria) {
-        toast.error("El nombre de la categoría es obligatorio.");
-        return;
-      }
-      if (estadoSubCategoria === "") {
-        toast.error("Debes seleccionar un estado.");
-        return;
-        }
       
         const payload = {
           nombre: nombreSubcategoria,
           descripcion: descripcionSubcategoria,
-          activo: estadoSubCategoria === "true",
+          activo: estadoSubCategoria,
           categoria_id: Number(categoriaPadre)
           }
         
         const subcate = crearSubcategoria.mutateAsync(payload);
         if (subcate) {
-          toast.success('Subcategoría creada correctamente');
+          mostrarNotificacion('success', 'Subcategoría creada correctamente');
           resetFieldsSubCategorys();
         }
     } catch (error) {
-        toast.error(error.message || 'Error al crear la subcategoría');
+        mostrarNotificacion('error', error.message || 'Error al crear la subcategoría');
     }
   };
 
@@ -265,6 +253,8 @@ export const SubirProducto = () => {
   return (
     <div className="text-black flex flex-col w-full min-h-screen py-6 px-8 font-worksans overflow-hidden">
       {/* Header */}
+      {/* ALERTA */}
+      {componenteAlerta}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
         <div>
           <h1 className="text-3xl font-semibold uppercase">Agregar Producto</h1>
