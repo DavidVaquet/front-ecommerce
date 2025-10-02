@@ -12,15 +12,15 @@ export const addProduct = async ({
         const formData = new FormData();
         formData.append('nombre', nombre);
         formData.append('descripcion', descripcion);
-        formData.append('precio', parseFloat(precio));
-        formData.append('subcategoria_id', parseInt(subcategoria_id));
+        formData.append('precio', precio);
+        formData.append('subcategoria_id', subcategoria_id);
         formData.append('marca', marca);
-        formData.append('estado', parseInt(estado));
-        formData.append('destacado', parseInt(destacado));
+        formData.append('estado', estado);
+        formData.append('destacado', destacado);
         formData.append('descripcion_corta', descripcion_corta);
         formData.append('cantidad', cantidad);
         formData.append('cantidad_minima', cantidad_minima);
-        formData.append('precio_costo', parseFloat(precio_costo));
+        formData.append('precio_costo', precio_costo);
         formData.append('currency', currency);
 
         if (imagen_url){
