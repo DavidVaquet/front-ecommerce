@@ -205,7 +205,7 @@ export const SubirProducto = () => {
       const productData = {
         nombre,
         descripcion,
-        precio: precioToNumber(precio),
+        precio: parseFloat(precio),
         imagen_url,
         imagenUrls,
         subcategoria_id: subCategory_id,
@@ -215,18 +215,18 @@ export const SubirProducto = () => {
         cantidad: parseInt(cantidad) ?? 0,
         cantidad_minima: parseInt(cantidadMinima) ?? 0,
         descripcion_corta: descripcionCorta,
-        precio_costo: precioToNumber(precioCosto),
+        precio_costo: parseFloat(precioCosto),
         currency,
         toast,
         resetFields,
       };
 
       const producto = await crearProducto.mutateAsync(productData);
-      mostrarNotificacion('error', 'Producto creado correctamente');
+      mostrarNotificacion('success', 'Producto creado correctamente');
       resetFields();
     } catch (error) {
       console.error(error);
-      toast.error(error.message || 'Error al crear el producto');
+      mostrarNotificacion('error', error.message || 'Error al crear el producto');
     }
   };
 
@@ -449,7 +449,7 @@ export const SubirProducto = () => {
                         size="lg"
                         placeholder="0.00"
                         onChange={(e) => setPrecio(e.target.value)}
-                        value={formatearMiles(precio)}
+                        value={precio}
                         className="!border-gray-300 focus:!border-deep-orange-500"
                         icon="$"
                         labelProps={{
