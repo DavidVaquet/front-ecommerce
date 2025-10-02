@@ -261,30 +261,6 @@ const Productos = () => {
     }));
   };
 
-  const validarFormulario = () => {
-    if (!formularioEditar.nombre.trim()) {
-      mostrarNotificacion("error", "El nombre es obligatorio.");
-      return false;
-    }
-    if (!formularioEditar.precio) {
-      mostrarNotificacion("error", "El precio es obligatorio.");
-      return false;
-    }
-    if (
-      typeof formularioEditar.subcategoria !== "number" ||
-      isNaN(formularioEditar.subcategoria)
-    ) {
-      mostrarNotificacion("error", "Debes seleccionar una subcategoria.");
-      return false;
-    }
-
-    if (!formularioEditar.precio_costo) {
-      mostrarNotificacion("error", "El costo unitario es obligatorio.");
-      return false;
-    }
-
-    return true;
-  };
 
   const comenzarEdicion = (producto) => {
     setFormularioEditar({
@@ -302,7 +278,6 @@ const Productos = () => {
 
   const guardarEdicion = async () => {
     try {
-      if (!validarFormulario()) return;
       const payload = {
         id: Number(selectedProduct.id),
         ...formularioEditar,
@@ -325,6 +300,8 @@ const Productos = () => {
       console.error(error);
       mostrarNotificacion(error.message);
     }
+
+    
   };
   const editarDesdeModal = () => {
     comenzarEdicion(selectedProduct);
