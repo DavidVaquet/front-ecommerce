@@ -155,9 +155,10 @@ export const SubirProducto = () => {
 
       const cate = await crearCategoria.mutateAsync(payload)
 
-      if (cate) {
-        resetFieldsCategorys();
+      if (cate?.ok) {
         mostrarNotificacion('success', 'Categoría creada correctamente');
+        resetFieldsCategorys();
+        handleOpen();
       }
     } catch (error) {
       console.error(error);
@@ -194,28 +195,7 @@ export const SubirProducto = () => {
     e.preventDefault();
     try {
       if (images.length === 0) {
-        toast.error("Debes subir al menos una imagen.");
-        return;
-      }
-
-      if (!nombre || !nombre.trim()) {
-        toast.error("El nombre es obligatorio.");
-        return;
-      }
-      if (!precio) {
-        toast.error("El precio de venta es obligatorio.");
-        return;
-      }
-      if (!precioCosto) {
-        toast.error("El precio de costo es obligatorio.");
-        return;
-      }
-      if (!subCategory_id) {
-        toast.error("Debes seleccionar una subcategoria.");
-        return;
-      }
-      if (!currency) {
-        toast.error('Debes seleccionar una moneda');
+        mostrarNotificacion('error', "Debes subir al menos una imagen.");
         return;
       }
 
@@ -242,7 +222,7 @@ export const SubirProducto = () => {
       };
 
       const producto = await crearProducto.mutateAsync(productData);
-      toast.success('Producto creado correctamente');
+      mostrarNotificacion('error', 'Producto creado correctamente');
       resetFields();
     } catch (error) {
       console.error(error);
@@ -899,7 +879,7 @@ export const SubirProducto = () => {
             </div>
           </DialogBody>
           <DialogFooter>
-            <Button className="ml-auto" type="submit" onClick={handleOpen}>
+            <Button className="ml-auto" type="submit">
               Añadir categoria
             </Button>
           </DialogFooter>
