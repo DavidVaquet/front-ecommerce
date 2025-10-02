@@ -152,7 +152,7 @@ const ConfiguracionesDashboard = () => {
     const fetchCompany = async () => {
       try {
         const comp = await getSettingsCompany();
-        console.log(comp);
+        // console.log(comp);
         setConfigGeneral(comp);
         setConfigInventario({
         stockMinimo: comp.default_min_stock ?? 0,

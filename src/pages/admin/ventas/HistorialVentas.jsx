@@ -171,8 +171,8 @@ export const HistorialVentas = () => {
   };  
 
   const handleDescargarRecibo = async (venta) => {
-  const nombreArchivo = `recibo-${venta.codigo}.pdf`;
-  await descargarRecibo(nombreArchivo);
+  const codigo = venta.codigo;
+  await descargarRecibo(codigo);
 };
 
   const enviarRecibo = async (venta) => {

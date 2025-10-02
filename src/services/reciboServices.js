@@ -18,12 +18,12 @@ export const generarReciboServices = async (venta) => {
 
 }
 
-export const descargarRecibo = async (nombreArchivo) => {
+export const descargarRecibo = async (codigo) => {
   try {
     const token = localStorage.getItem("token");
     if (!token) throw new Error("Token inválido");
 
-    const response = await apiFetch(`${API_URL}/descargar-recibo/${nombreArchivo}`, {
+    const response = await fetch(`${API_URL}/by-codigo/${codigo}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -34,6 +34,7 @@ export const descargarRecibo = async (nombreArchivo) => {
       throw new Error("No se pudo descargar el recibo");
     }
 
+    const nombreArchivo = `recibo-${codigo}.pdf`;
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
 
