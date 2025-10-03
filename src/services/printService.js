@@ -7,20 +7,34 @@ class PrintService {
     this.connected = false;
     this.defaultPrinter = null;
     this.qz = null;
+    this.qzReady = false;
   }
 
-  // Inicializar QZ desde el objeto global window
-  initQZ() {
-    if (typeof window !== 'undefined' && window.qz) {
-      this.qz = window.qz;
-      return true;
+  // Esperar a que QZ esté completamente cargado
+  async waitForQZ(timeout = 5000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      if (typeof window !== 'undefined' && 
+          window.qz && 
+          window.qz.websockets && 
+          typeof window.qz.websockets.connect === 'function') {
+        this.qz = window.qz;
+        this.qzReady = true;
+        console.log('✅ QZ Tray cargado correctamente');
+        return true;
+      }
+      
+      // Esperar 100ms antes de volver a intentar
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
-    return false;
+    
+    throw new Error('Timeout: QZ Tray no se cargó en el tiempo esperado');
   }
 
   setSecurity() {
-    if (!this.initQZ()) {
-      throw new Error('QZ Tray no está cargado');
+    if (!this.qz) {
+      throw new Error('QZ Tray no está inicializado');
     }
 
     this.qz.security.setCertificatePromise((resolve) => {
@@ -32,12 +46,11 @@ class PrintService {
     this.qz.security.setSignaturePromise((toSign) => {
       return (resolve, reject) => {
         try {
-          // Usar CryptoJS del CDN
           if (window.CryptoJS) {
             const hash = window.CryptoJS.SHA512(toSign + PRIVATE_KEY);
             resolve(hash.toString());
           } else {
-            // Fallback simple
+            // Fallback: solo devolver el string original
             resolve(toSign);
           }
         } catch (err) {
@@ -51,35 +64,42 @@ class PrintService {
     if (this.connected) return true;
 
     try {
-      if (!this.initQZ()) {
-        throw new Error('QZ Tray no está disponible. Asegúrate de que el script esté cargado.');
+      // Esperar a que QZ esté listo
+      if (!this.qzReady) {
+        console.log('Esperando a que QZ Tray se cargue...');
+        await this.waitForQZ();
       }
 
-      // Verificar que websockets existe
-      if (!this.qz.websockets) {
-        throw new Error('QZ Tray websockets no disponible');
-      }
-
+      // Configurar seguridad
       this.setSecurity();
       
       // Verificar si ya está conectado
-      const isActive = await this.qz.websockets.isActive();
+      let isActive = false;
+      try {
+        isActive = await this.qz.websockets.isActive();
+      } catch (e) {
+        isActive = false;
+      }
       
       if (!isActive) {
-        console.log('Conectando a QZ Tray...');
+        console.log('🔌 Conectando a QZ Tray...');
         await this.qz.websockets.connect();
+        console.log('✅ Conectado a QZ Tray');
+      } else {
+        console.log('✅ Ya estaba conectado a QZ Tray');
       }
       
       this.connected = true;
-      console.log('✅ Conectado a QZ Tray');
-      
       return true;
+      
     } catch (error) {
       console.error('❌ Error conectando a QZ Tray:', error);
       
-      // Mensaje más específico según el error
-      if (error.message.includes('websocket')) {
-        throw new Error('QZ Tray no está ejecutándose. Por favor, inicia la aplicación QZ Tray.');
+      // Mensajes de error más específicos
+      if (error.message.includes('Timeout')) {
+        throw new Error('QZ Tray no se cargó. Verifica que los scripts estén en index.html');
+      } else if (error.message.includes('websocket') || error.message.includes('ECONNREFUSED')) {
+        throw new Error('QZ Tray no está ejecutándose. Por favor, inicia la aplicación QZ Tray en tu computadora.');
       } else {
         throw new Error('Error al conectar: ' + error.message);
       }
@@ -95,7 +115,7 @@ class PrintService {
         await this.qz.websockets.disconnect();
       }
       this.connected = false;
-      console.log('Desconectado de QZ Tray');
+      console.log('🔌 Desconectado de QZ Tray');
     } catch (error) {
       console.error('Error al desconectar:', error);
     }
@@ -104,13 +124,14 @@ class PrintService {
   async getPrinters() {
     await this.connect();
     const printers = await this.qz.printers.find();
-    console.log('Impresoras disponibles:', printers);
+    console.log('🖨️ Impresoras disponibles:', printers);
     return printers;
   }
 
   setDefaultPrinter(printerName) {
     this.defaultPrinter = printerName;
     localStorage.setItem('defaultPrinter', printerName);
+    console.log('💾 Impresora guardada:', printerName);
   }
 
   getDefaultPrinter() {
@@ -123,7 +144,7 @@ class PrintService {
 
     const printerName = this.getDefaultPrinter();
     if (!printerName) {
-      throw new Error('No hay impresora configurada');
+      throw new Error('No hay impresora configurada. Ve a Configuración → Impresoras');
     }
 
     const config = this.qz.configs.create(printerName);
@@ -155,7 +176,7 @@ class PrintService {
 
     const printerName = this.getDefaultPrinter();
     if (!printerName) {
-      throw new Error('No hay impresora configurada');
+      throw new Error('No hay impresora configurada. Ve a Configuración → Impresoras');
     }
 
     const config = this.qz.configs.create(printerName);
@@ -165,22 +186,44 @@ class PrintService {
       <head>
         <style>
           body { 
-            font-family: Arial; 
+            font-family: Arial, sans-serif; 
             text-align: center;
-            padding: 10px;
+            padding: 20px;
             width: 4in;
             height: 2in;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
           }
-          .producto { font-size: 16px; font-weight: bold; margin: 10px 0; }
-          .precio { font-size: 14px; margin: 5px 0; }
-          .codigo { font-size: 12px; margin: 5px 0; }
+          .producto { 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin: 10px 0;
+            text-transform: uppercase;
+          }
+          .precio { 
+            font-size: 24px; 
+            font-weight: bold;
+            color: #2563eb;
+            margin: 10px 0; 
+          }
+          .codigo { 
+            font-size: 12px; 
+            color: #666;
+            margin: 5px 0; 
+          }
+          .stock {
+            font-size: 12px;
+            color: #666;
+          }
         </style>
       </head>
       <body>
         <div class="producto">${producto.nombre}</div>
+        <div class="precio">$${producto.precio}</div>
         <div class="codigo">Código: ${producto.codigoBarras}</div>
-        <div class="precio">Precio: $${producto.precio}</div>
-        <div>Stock: ${producto.stock || 0}</div>
+        <div class="stock">Stock: ${producto.stock || 0}</div>
       </body>
       </html>
     `;

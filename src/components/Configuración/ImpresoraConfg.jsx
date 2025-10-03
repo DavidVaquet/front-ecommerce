@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Select, Option, Card, Typography } from '@material-tailwind/react';
-import printServices from '../../services/printServices';
+import printService from '../../services/printService';
 
 export default function ConfiguracionImpresora() {
   const [impresoras, setImpresoras] = useState([]);
@@ -9,7 +9,7 @@ export default function ConfiguracionImpresora() {
   const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
-    const impresoraGuardada = printServices.getDefaultPrinter();
+    const impresoraGuardada = printService.getDefaultPrinter();
     if (impresoraGuardada) {
       setImpresoraSeleccionada(impresoraGuardada);
     }
@@ -18,7 +18,7 @@ export default function ConfiguracionImpresora() {
   const buscarImpresoras = async () => {
     setCargando(true);
     try {
-      const lista = await printServices.getPrinters();
+      const lista = await printService.getPrinters();
       setImpresoras(lista);
       setConectado(true);
     } catch (error) {
@@ -30,7 +30,7 @@ export default function ConfiguracionImpresora() {
 
   const guardarImpresora = () => {
     if (impresoraSeleccionada) {
-      printServices.setDefaultPrinter(impresoraSeleccionada);
+      printService.setDefaultPrinter(impresoraSeleccionada);
       alert('Impresora configurada correctamente');
     }
   };
@@ -45,7 +45,7 @@ export default function ConfiguracionImpresora() {
 
     try {
       // Cambia el método según tu tipo de impresora
-      await printServices.imprimirEtiquetaZebra(productoPrueba);
+      await printService.imprimirEtiquetaZebra(productoPrueba);
       // await printService.imprimirEtiquetaESCPOS(productoPrueba);
       // await printService.imprimirEtiquetaNormal(productoPrueba);
       
