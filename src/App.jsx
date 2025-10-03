@@ -19,6 +19,7 @@ import ConfiguracionesDashboard from './pages/admin/configuraciones/Configuracio
 import MovimientosStock from './pages/admin/stock/MovimientosStock';
 import RegistrarMovimientoStock from './pages/admin/stock/RegistrarMovimientoStock';
 import { RestablecerContrasena } from './pages/auth/RecoveryPassword';
+import ConfiguracionImpresora from './components/Configuración/ImpresoraConfg';
 
 function App() {
   
@@ -65,6 +66,7 @@ function App() {
           <Route path="reportes" element={<Reportes />} />
           <Route path="perfil" element={<PerfilUsuario />} />
           <Route path="settings" element={<ConfiguracionesDashboard />} />
+          <Route path="impresora" element={<ConfiguracionImpresora />} />
 
         </Route>
       </Route>

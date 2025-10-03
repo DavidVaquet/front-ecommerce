@@ -388,7 +388,7 @@ export const Reportes = () => {
                 <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
                   Formato por Defecto
                 </Typography>
-                <Select value="xlsx">
+                <Select>
                   <Option value="xlsx">Excel</Option>
                 </Select>
               </div>
