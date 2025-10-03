@@ -1,6 +1,8 @@
 import { memo, useCallback, useMemo } from "react";
 import { mostrarImagen } from "../../helpers/mostrarImagen";
 import { formatearPesos } from "../../helpers/formatearPesos";
+import { Avatar, Chip, IconButton, Typography } from "@material-tailwind/react";
+import { Eye, Edit, Power, PowerOff, Trash2, TrendingUp } from "lucide-react";
 
 
 const obtenerEstadoProducto = (producto) => {
