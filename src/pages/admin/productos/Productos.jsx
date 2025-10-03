@@ -1,6 +1,6 @@
 "use client";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
 import { useSearchParams, useNavigate } from "react-router";
 import {
@@ -8,6 +8,8 @@ import {
   formatearMiles,
   precioToNumber,
 } from "../../../helpers/formatearPesos";
+import StatsCard from "../../../components/StatsCard";
+import ProductRow from "../../../components/Productos/ProductRow";
 import { useNotificacion } from "../../../hooks/useNotificacion";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -66,7 +68,30 @@ import { useProductosMutation } from "../../../hooks/useProductosMutation";
 import { useCategorias } from "../../../hooks/useCategorias";
 import { useSubcategorias } from "../../../hooks/useSubcategorias";
 
-// Componente principal
+// Estilos CSS
+const obtenerEstadoProducto = (producto) => {
+  if (producto.estado === 0) return "Inactivo";
+  if (producto.stock_cantidad === 0) return "Sin stock";
+  if (producto.stock_cantidad < 10) return "Bajo stock";
+  return "Activo";
+};
+
+const getChipColor = (estado) => {
+  switch (estado) {
+    case "Activo":
+      return "green";
+    case "Sin stock":
+      return "red";
+    case "Bajo stock":
+      return "amber";
+    case "Inactivo":
+      return "gray";
+    default:
+      return "blue-gray";
+  }
+};
+
+
 const Productos = () => {
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') ?? '';
@@ -98,9 +123,9 @@ const Productos = () => {
   setCurrentPage(1);
 }, [initialSearch]);
   
-  // NOTIFICACIONES
-  const { componenteAlerta, mostrarNotificacion } = useNotificacion();
-  const MySwal = withReactContent(Swal);
+// NOTIFICACIONES
+const { componenteAlerta, mostrarNotificacion } = useNotificacion();
+const MySwal = withReactContent(Swal);
   const navigate = useNavigate();
 
   // MUTATION
@@ -165,10 +190,23 @@ const Productos = () => {
 
   // Estadísticas
   const { data: stats } = useProductoStats();
-  const totalProductos = stats?.total ?? 0;
-  const productosActivos = stats?.activos ?? 0;
-  const productosSinStock = stats?.sin_stock ?? 0;
-  const productosBajoStock = stats?.bajo_stock ?? 0;
+  const {
+      totalProductos,
+      productosActivos,
+      productosSinStock,
+      productosBajoStock,
+      productosInactivos
+    } = useMemo(() => ({
+      totalProductos: stats?.total ?? 0,
+      productosActivos: stats?.activos ?? 0,
+      productosSinStock: stats?.sin_stock ?? 0,
+      productosBajoStock: stats?.bajo_stock ?? 0,
+      productosInactivos: stats?.inactivos ?? 0
+    }), [stats]);
+  const porcActivos   = useMemo(() => totalProductos ? Math.round((productosActivos / totalProductos) * 100) : 0, [productosActivos, totalProductos]);
+  const porcSinStock  = useMemo(() => totalProductos ? Math.round((productosSinStock  / totalProductos) * 100) : 0, [productosSinStock, totalProductos]);
+  const porcBajoStock = useMemo(() => totalProductos ? Math.round((productosBajoStock / totalProductos) * 100) : 0, [productosBajoStock, totalProductos]);
+
 
   // Paginación
   const total = data?.total ?? 0;
@@ -197,33 +235,11 @@ const Productos = () => {
   });
 }
 
-  // Estilos CSS
-  const obtenerEstadoProducto = (producto) => {
-    if (producto.estado === 0) return "Inactivo";
-    if (producto.stock_cantidad === 0) return "Sin stock";
-    if (producto.stock_cantidad < 10) return "Bajo stock";
-    return "Activo";
-  };
 
-  const getChipColor = (estado) => {
-    switch (estado) {
-      case "Activo":
-        return "green";
-      case "Sin stock":
-        return "red";
-      case "Bajo stock":
-        return "amber";
-      case "Inactivo":
-        return "gray";
-      default:
-        return "blue-gray";
-    }
-  };
-
-  const handleViewProduct = (producto) => {
+  const handleViewProduct = useCallback((producto) => {
     setSelectedProduct(producto);
     setOpenModal(true);
-  };
+  }, []);
 
   const handleCloseLabel = () => {
     setOpenEtiqueta(false);
@@ -240,7 +256,7 @@ const Productos = () => {
     setSelectedProduct(null);
   };
 
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     let nuevoValor = value;
     if (["precio", "precio_costo"].includes(name)) {
@@ -250,19 +266,19 @@ const Productos = () => {
       ...prev,
       [name]: nuevoValor,
     }));
-  };
+  }, []);
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = useCallback((name, value) => {
     const nuevoValor = ["subcategoria"].includes(name) ? Number(value) : value;
 
     setFormularioEditar((prev) => ({
       ...prev,
       [name]: nuevoValor,
     }));
-  };
+  }, []);
 
 
-  const comenzarEdicion = (producto) => {
+  const comenzarEdicion = useCallback((producto) => {
     setFormularioEditar({
       nombre: producto.nombre,
       precio: Number(producto.precio),
@@ -274,16 +290,16 @@ const Productos = () => {
     });
     setOpenEdit(true);
     setSelectedProduct(producto);
-  };
+  }, []);
 
-  const guardarEdicion = async () => {
+  const guardarEdicion = useCallback(async () => {
     try {
       const payload = {
         id: Number(selectedProduct.id),
         ...formularioEditar,
-        precio: precioToNumber(formularioEditar.precio),
+        precio: parseFloat(formularioEditar.precio),
         subcategoria_id: formularioEditar.subcategoria,
-        precio_costo: precioToNumber(formularioEditar.precio_costo),
+        precio_costo: parseFloat(formularioEditar.precio_costo),
       };
 
       await editarProducto.mutateAsync(payload);
@@ -298,17 +314,18 @@ const Productos = () => {
       });
     } catch (error) {
       console.error(error);
-      mostrarNotificacion(error.message);
+      mostrarNotificacion('error', error.message);
     }
 
-    
-  };
-  const editarDesdeModal = () => {
+
+  }, [editarProducto, formularioEditar, selectedProduct, mostrarNotificacion]);
+
+  const editarDesdeModal = useCallback(() => {
     comenzarEdicion(selectedProduct);
     setOpenModal(false);
-  };
+  }, [selectedProduct, comenzarEdicion]);
 
-  const deleteLogico = async (producto) => {
+  const deleteLogico = useCallback(async (producto) => {
     try {
       if (producto.estado === 0) return;
       const id = Number(producto.id);
@@ -318,8 +335,9 @@ const Productos = () => {
       console.error(error);
       mostrarNotificacion('error', error.message || 'Error al desactivar el producto')
     }
-  };
-  const activadoLogico = async (producto) => {
+  }, [desactivarProducto, mostrarNotificacion]);
+
+  const activadoLogico = useCallback(async (producto) => {
     try {
       if (producto.estado === 1) return;
       const id = Number(producto.id);
@@ -329,9 +347,9 @@ const Productos = () => {
       console.error(error);
       mostrarNotificacion("error", "Error al activar el producto");
     }
-  };
+  }, [activarProducto, mostrarNotificacion]);
 
-  const handleDelete = (producto) => {
+  const handleDelete = useCallback((producto) => {
     MySwal.fire({
       title: "¿Estás seguro?",
       text: "No podrás revertir esta acción",
@@ -353,7 +371,7 @@ const Productos = () => {
         mostrarNotificacion("error", error.message || "No se pudo eliminar");
       }
     });
-  };
+  }, [MySwal, eliminarProducto, mostrarNotificacion]);
 
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
@@ -398,184 +416,37 @@ const Productos = () => {
       {/* Cards informativas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Card Total Productos */}
-        <Card className="shadow-sm border border-gray-200">
-          <CardBody className="p-4">
-            <div className="flex justify-between">
-              <div>
-                <Typography
-                  variant="small"
-                  color="blue-gray"
-                  className="font-medium mb-1"
-                >
-                  Total Productos
-                </Typography>
-                <Typography
-                  variant="h3"
-                  color="blue-gray"
-                  className="font-bold"
-                >
-                  {totalProductos}
-                </Typography>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-deep-orange-50 flex items-center justify-center">
-                <Package className="h-6 w-6 text-deep-orange-500" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1">
-              <ArrowUpRight className="h-4 w-4 text-green-500" />
-              <Typography variant="small" color="green" className="font-medium">
-                +12% este mes
-              </Typography>
-            </div>
-          </CardBody>
-        </Card>
-
+        <StatsCard
+         titulo='Total Productos'
+         valor={totalProductos}
+         icono={<Package className="h-6 w-6 text-deep-orange-500" />} />
         {/* Card Productos Activos */}
-        <Card className="shadow-sm border border-gray-200">
-          <CardBody className="p-4">
-            <div className="flex justify-between">
-              <div>
-                <Typography
-                  variant="small"
-                  color="blue-gray"
-                  className="font-medium mb-1"
-                >
-                  Productos Activos
-                </Typography>
-                <Typography
-                  variant="h3"
-                  color="blue-gray"
-                  className="font-bold"
-                >
-                  {productosActivos}
-                </Typography>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center">
-                <CheckCircle2 className="h-6 w-6 text-green-500" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="flex justify-between mb-1">
-                <Typography
-                  variant="small"
-                  color="blue-gray"
-                  className="font-medium"
-                >
-                  {totalProductos > 0
-                    ? Math.round((productosActivos / totalProductos) * 100)
-                    : 0}
-                  % del total
-                </Typography>
-              </div>
-              <Progress
-                value={
-                  totalProductos > 0
-                    ? (productosActivos / totalProductos) * 100
-                    : 0
-                }
-                color="green"
-              />
-            </div>
-          </CardBody>
-        </Card>
-
+        <StatsCard
+        titulo="Productos Activos"
+        valor={productosActivos}
+        icono={<CheckCircle2 className="h-6 w-6 text-green-500" />}
+        progreso={porcActivos}
+        progresoTexto={`${porcActivos}% del total`}
+        colorProgreso="green"
+        colorTyppography='blue-gray'/>
         {/* Card Sin Stock */}
-        <Card className="shadow-sm border border-gray-200">
-          <CardBody className="p-4">
-            <div className="flex justify-between">
-              <div>
-                <Typography
-                  variant="small"
-                  color="blue-gray"
-                  className="font-medium mb-1"
-                >
-                  Sin Stock
-                </Typography>
-                <Typography
-                  variant="h3"
-                  color="blue-gray"
-                  className="font-bold"
-                >
-                  {productosSinStock}
-                </Typography>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-red-50 flex items-center justify-center">
-                <XCircle className="h-6 w-6 text-red-500" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="flex justify-between mb-1">
-                <Typography
-                  variant="small"
-                  color="blue-gray"
-                  className="font-medium"
-                >
-                  {totalProductos > 0
-                    ? Math.round((productosSinStock / totalProductos) * 100)
-                    : 0}
-                  % del total
-                </Typography>
-              </div>
-              <Progress
-                value={
-                  totalProductos > 0
-                    ? (productosSinStock / totalProductos) * 100
-                    : 0
-                }
-                color="red"
-              />
-            </div>
-          </CardBody>
-        </Card>
-
+        <StatsCard
+        titulo="Sin Stock"
+        valor={productosSinStock}
+        icono={<XCircle className="h-6 w-6 text-red-500" />}
+        progreso={porcSinStock}
+        progresoTexto={`${porcSinStock}% del total`}
+        colorProgreso="red"
+        colorTyppography='blue-gray' />
         {/* Card Bajo Stock */}
-        <Card className="shadow-sm border border-gray-200">
-          <CardBody className="p-4">
-            <div className="flex justify-between">
-              <div>
-                <Typography
-                  variant="small"
-                  color="blue-gray"
-                  className="font-medium mb-1"
-                >
-                  Bajo Stock
-                </Typography>
-                <Typography
-                  variant="h3"
-                  color="blue-gray"
-                  className="font-bold"
-                >
-                  {productosBajoStock}
-                </Typography>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-amber-500" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="flex justify-between mb-1">
-                <Typography
-                  variant="small"
-                  color="blue-gray"
-                  className="font-medium"
-                >
-                  {totalProductos > 0
-                    ? Math.round((productosBajoStock / totalProductos) * 100)
-                    : 0}
-                  % del total
-                </Typography>
-              </div>
-              <Progress
-                value={
-                  totalProductos > 0
-                    ? (productosBajoStock / totalProductos) * 100
-                    : 0
-                }
-                color="amber"
-              />
-            </div>
-          </CardBody>
-        </Card>
+        <StatsCard
+        titulo="Bajo Stock"
+        valor={productosBajoStock}
+        icono={<AlertTriangle className="h-6 w-6 text-amber-500" />}
+        progreso={porcBajoStock}
+        progresoTexto={`${porcBajoStock}% del total`}
+        colorProgreso="amber"
+        colorTyppography='blue-gray'/>
       </div>
 
       {/* Filtros y Búsqueda */}
@@ -673,7 +544,7 @@ const Productos = () => {
                 setCurrentPage(1);
               }}
             >
-              Inactivos ({productosBajoStock})
+              Inactivos ({productosInactivos})
             </Tab>
           </TabsHeader>
 
@@ -758,135 +629,15 @@ const Productos = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((producto, index) => (
-                    <tr key={producto.id} className="hover:bg-gray-50">
-                      <td className="p-4 border-b border-gray-200">
-                        <div className="flex items-center gap-3">
-                          <Avatar
-                            src={mostrarImagen(producto.imagen_url)}
-                            alt={producto.nombre}
-                            size="md"
-                            variant="rounded"
-                            className="border border-gray-200 p-1"
-                          />
-
-                          {/* Contenedor para nombre + barcode */}
-                          <div className="flex flex-col">
-                            <Typography
-                              variant="small"
-                              color="blue-gray"
-                              className="font-medium"
-                            >
-                              {producto.nombre}
-                            </Typography>
-                            <Typography
-                              variant="small"
-                              color="blue-gray"
-                              className="text-xs"
-                            >
-                              Barcode: {producto.barcode}
-                            </Typography>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 border-b border-gray-200">
-                        <Typography variant="small" color="blue-gray">
-                          {producto.categoria_nombre || "Sin categoría"}
-                        </Typography>
-                      </td>
-                      <td className="p-4 border-b border-gray-200">
-                        <Typography
-                          variant="small"
-                          color="blue-gray"
-                          className="font-medium"
-                        >
-                          ${formatearPesos(producto.precio)}
-                        </Typography>
-                      </td>
-                      <td className="p-4 border-b border-gray-200">
-                        <Typography
-                          variant="small"
-                          color="blue-gray"
-                          className="font-medium"
-                        >
-                          ${formatearPesos(producto.precio_costo)}
-                        </Typography>
-                      </td>
-                      <td className="p-4 border-b border-gray-200 text-center">
-                        <Typography variant="small" color="blue-gray">
-                          {producto.cantidad}
-                        </Typography>
-                      </td>
-                      <td className="p-4 border-b border-gray-200 text-center">
-                        <Chip
-                          value={obtenerEstadoProducto(producto)}
-                          color={getChipColor(obtenerEstadoProducto(producto))}
-                          size="sm"
-                          variant="ghost"
-                          className="rounded-full"
-                        />
-                      </td>
-                      <td className="p-4 border-b border-gray-200">
-                        <div className="flex items-center gap-2 justify-center">
-                          <Typography variant="small" color="blue-gray">
-                            {producto.total_vendido || 0}
-                          </Typography>
-                          <TrendingUp className="h-4 w-4 text-green-500" />
-                        </div>
-                      </td>
-                      <td className="p-4 border-b border-gray-200">
-                        <div className="flex gap-2">
-                          <IconButton
-                            variant="text"
-                            color="blue-gray"
-                            size="sm"
-                            onClick={() => handleViewProduct(producto)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </IconButton>
-                          <IconButton
-                            variant="text"
-                            color="blue"
-                            size="sm"
-                            onClick={() => comenzarEdicion(producto)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </IconButton>
-                          {/* <IconButton variant="text" color="black" size="sm" onClick={() => handleOpenLabel(producto)}>
-                            <Printer className="h-4 w-4" />
-                          </IconButton> */}
-                          {producto.estado === 0 ? (
-                            <IconButton
-                              variant="text"
-                              color="green"
-                              size="sm"
-                              onClick={() => activadoLogico(producto)}
-                              disabled={activarProducto.isPending}
-                            >
-                              <Power className="h-4 w-4" />
-                            </IconButton>
-                          ) : (
-                            <IconButton
-                              variant="text"
-                              color="red"
-                              size="sm"
-                              onClick={() => deleteLogico(producto)}
-                              disabled={desactivarProducto.isPending}
-                            >
-                              <PowerOff className="h-4 w-4" />
-                            </IconButton>
-                          )}
-                          <IconButton
-                            variant="text"
-                            color="red"
-                            size="sm"
-                            onClick={() => handleDelete(producto)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </IconButton>
-                        </div>
-                      </td>
-                    </tr>
+                  {products.map((producto) => (
+                    <ProductRow
+                    key={producto.id}
+                    producto={producto}
+                    onView={handleViewProduct}
+                    onEdit={comenzarEdicion}
+                    onActivar={activadoLogico}
+                    onDelete={handleDelete}
+                    onDesactivar={deleteLogico} />
                   ))}
                 </tbody>
               </table>

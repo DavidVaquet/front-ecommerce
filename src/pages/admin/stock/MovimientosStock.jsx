@@ -197,7 +197,7 @@ const MovimientosStock = () => {
                     Movimientos Hoy
                   </Typography>
                   <Typography variant="h4" color="blue-gray">
-                    {Number(estadisticas.total_movimientos)}
+                    {Number(estadisticas?.total_movimientos ?? 0)}
                   </Typography>
                 </div>
                 <Package className="w-8 h-8 text-blue-600" />
@@ -213,7 +213,7 @@ const MovimientosStock = () => {
                     Entradas Hoy
                   </Typography>
                   <Typography variant="h4" className="text-green-600">
-                    {Number(estadisticas.entradas_count)}
+                    {Number(estadisticas?.entradas_count ?? 0)}
                   </Typography>
                 </div>
                 <ArrowUpCircle className="w-8 h-8 text-green-600" />
@@ -229,7 +229,7 @@ const MovimientosStock = () => {
                     Salidas Hoy
                   </Typography>
                   <Typography variant="h4" className="text-red-600">
-                    {Number(estadisticas.salidas_count)}
+                    {Number(estadisticas?.salidas_count ?? 0)}
                   </Typography>
                 </div>
                 <ArrowDownCircle className="w-8 h-8 text-red-600" />
@@ -245,7 +245,7 @@ const MovimientosStock = () => {
                     Ajustes Hoy
                   </Typography>
                   <Typography variant="h4" className="text-blue-600">
-                    {Number(estadisticas.ajustes_count)}
+                    {Number(estadisticas?.ajustes_count ?? 0)}
                   </Typography>
                 </div>
                 <RefreshCw className="w-8 h-8 text-blue-600" />
@@ -261,7 +261,7 @@ const MovimientosStock = () => {
                     Valor Entradas
                   </Typography>
                   <Typography variant="h6" className="text-green-600">
-                    {formatCurrency(estadisticas.entradas_valor_costo)}
+                    {formatCurrency(estadisticas?.entradas_valor_costo ?? 0)}
                   </Typography>
                 </div>
                 <TrendingUp className="w-8 h-8 text-green-600" />
@@ -277,7 +277,7 @@ const MovimientosStock = () => {
                     Valor Salidas
                   </Typography>
                   <Typography variant="h6" className="text-red-600">
-                    {formatCurrency(estadisticas.salidas_valor_costo)}
+                    {formatCurrency(estadisticas?.salidas_valor_costo ?? 0)}
                   </Typography>
                 </div>
                 <TrendingDown className="w-8 h-8 text-red-600" />

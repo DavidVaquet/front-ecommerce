@@ -23,17 +23,7 @@ export const useProductoStats = (filtros = {}, { enabled = true } = {}) => {
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
-    placeholderData: { total: 0, activos: 0, sin_stock: 0, bajo_stock: 0 },
-    onSuccess: (data) => {
-      console.log('stats from server =>', data, {
-        types: {
-          total: typeof data?.total,
-          activos: typeof data?.activos,
-          sin_stock: typeof data?.sin_stock,
-          bajo_stock: typeof data?.bajo_stock,
-        },
-      });
-    },
+    placeholderData: { total: 0, activos: 0, sin_stock: 0, bajo_stock: 0, inactivos: 0 },
     onError: (err) => {
       console.error('Fallo la carga de stats:', err?.message ?? err);
     },

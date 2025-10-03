@@ -5,16 +5,17 @@ import "./index.css";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      staleTime: 60_000,
-      gcTime: 10 * 60_000,
+      refetchOnReconnect: true,
+      staleTime: 120_000,
+      gcTime: 20 * 60_000,
       retry: 1,
       placeholderData: keepPreviousData,
       suspense: false,
-      useErrorBoundary: false
+      useErrorBoundary: false,
     },
     mutations: {
       useErrorBoundary: false,

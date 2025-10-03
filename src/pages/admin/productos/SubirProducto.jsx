@@ -181,10 +181,11 @@ export const SubirProducto = () => {
           categoria_id: Number(categoriaPadre)
           }
         
-        const subcate = crearSubcategoria.mutateAsync(payload);
-        if (subcate) {
+        const subcate =  await crearSubcategoria.mutateAsync(payload);
+        if (subcate?.ok) {
           mostrarNotificacion('success', 'Subcategoría creada correctamente');
           resetFieldsSubCategorys();
+          handleOpenSub()
         }
     } catch (error) {
         mostrarNotificacion('error', error.message || 'Error al crear la subcategoría');
@@ -999,7 +1000,7 @@ export const SubirProducto = () => {
             </div>
           </DialogBody>
           <DialogFooter>
-            <Button className="ml-auto" type="submit" onClick={handleOpenSub}>
+            <Button className="ml-auto" type="submit">
               Añadir categoria
             </Button>
           </DialogFooter>

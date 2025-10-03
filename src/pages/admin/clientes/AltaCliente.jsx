@@ -64,10 +64,10 @@ export const AltaCliente = () => {
   const { data } = useClienteEstadisticas(filtroCategoria)
   const estadisticasClientes = data ?? [];
   // Estadísticas
-  const clientes_hoy = estadisticasClientes.nuevos_hoy;
-  const clientes_hoy_tienda = estadisticasClientes.altas_hoy_manual;
-  const clientes_hoy_online = estadisticasClientes.altas_hoy_online;
-  const clientes_incompletos = estadisticasClientes.incompletos;
+  const clientes_hoy = estadisticasClientes?.nuevos_hoy ?? 0;
+  const clientes_hoy_tienda = estadisticasClientes?.altas_hoy_manual ?? 0;
+  const clientes_hoy_online = estadisticasClientes?.altas_hoy_online ?? 0;
+  const clientes_incompletos = estadisticasClientes?.incompletos ?? 0;
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({

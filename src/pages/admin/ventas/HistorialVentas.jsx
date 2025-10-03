@@ -101,13 +101,13 @@ export const HistorialVentas = () => {
   const totalVentasEstadisticas = totalesVentas ?? [];
 
   // ESTADISTICAS
-  const totalVentas = totalVentasEstadisticas?.total_ventas;
-  const ventasLocal = totalVentasEstadisticas?.total_ventas_local;
-  const ventasEcommerce = totalVentasEstadisticas?.total_ventas_online;
+  const totalVentas = totalVentasEstadisticas?.total_ventas ?? 0;
+  const ventasLocal = totalVentasEstadisticas?.total_ventas_local ?? 0;
+  const ventasEcommerce = totalVentasEstadisticas?.total_ventas_online ?? 0;
 
-  const totalIngresos = totalVentasEstadisticas?.ingresos_totales;
-  const ingresosLocal = totalVentasEstadisticas?.ingresos_local;
-  const ingresosEcommerce = totalVentasEstadisticas?.ingresos_online;
+  const totalIngresos = totalVentasEstadisticas?.ingresos_totales ?? 0;
+  const ingresosLocal = totalVentasEstadisticas?.ingresos_local ?? 0;
+  const ingresosEcommerce = totalVentasEstadisticas?.ingresos_online ?? 0;
 
   // Resetear página cuando cambien filtros
   useEffect(() => { setCurrentPage(1); }, [activeTab, searchDebounced, fechaInicio, fechaFin]);

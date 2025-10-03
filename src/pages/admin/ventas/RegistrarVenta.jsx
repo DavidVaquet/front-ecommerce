@@ -94,10 +94,10 @@ export const RegistrarVenta = () => {
   const estadisticas = ventasEstadisticas ?? [];
   
   // ESTADISTICAS DEL DÍA
-  const ventasHoy = estadisticas.ventasHoy;
-  const totalVentasHoy = estadisticas?.totalVentasHoy;
-  const productosVendidos = estadisticas.productosVendidos;
-  const metaVentas = estadisticas?.metaVentas;
+  const ventasHoy = estadisticas?.ventasHoy ?? 0;
+  const totalVentasHoy = estadisticas?.totalVentasHoy ?? 0;
+  const productosVendidos = estadisticas?.productosVendidos ?? 0;
+  const metaVentas = estadisticas?.metaVentas ?? 0;
   const progresoMeta = parseFloat(((totalVentasHoy / metaVentas) * 100).toFixed(2));
 
   const agregarProducto = (producto) => {
