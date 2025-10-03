@@ -86,11 +86,12 @@ const getChipColor = (estado) => {
       return "amber";
     case "Inactivo":
       return "gray";
-    default:
-      return "blue-gray";
-  }
-};
-
+      default:
+        return "blue-gray";
+      }
+    };
+    const MySwal = withReactContent(Swal);
+    
 
 const Productos = () => {
   const [searchParams] = useSearchParams();
@@ -125,7 +126,6 @@ const Productos = () => {
   
 // NOTIFICACIONES
 const { componenteAlerta, mostrarNotificacion } = useNotificacion();
-const MySwal = withReactContent(Swal);
   const navigate = useNavigate();
 
   // MUTATION

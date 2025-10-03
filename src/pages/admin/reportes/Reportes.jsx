@@ -208,6 +208,11 @@ export const Reportes = () => {
       mostrarNotificacion("error", "Por favor selecciona un tipo de reporte")
       return
     }
+    if (!formatoSeleccionado) {
+      mostrarNotificacion("error", "Por favor selecciona un formato")
+      return
+    }
+
     const necesitaFechas = REQUIERE_FECHAS.has(reporteSeleccionado);
   if (necesitaFechas) {
     if (!periodoInicio || !periodoFin) {
@@ -384,7 +389,6 @@ export const Reportes = () => {
                   Formato por Defecto
                 </Typography>
                 <Select value="xlsx">
-                  <Option value="pdf">PDF</Option>
                   <Option value="xlsx">Excel</Option>
                 </Select>
               </div>
@@ -531,22 +535,28 @@ export const Reportes = () => {
                               Categoría
                             </Typography>
                             <Select
-                                value={categoriaFiltro}
-                                onChange={(value) => setCategoriaFiltro(value)}
-                              >
-
-                                {categoria.map((c) => (
-                                  <Option key={c.id} value={c.id}>
-                                    {c.nombre}
-                                  </Option>
-                                ))}
-                              </Select>
+                            label="Filtrar por categoría"
+                            value={categoriaFiltro}
+                            onChange={(val) => setCategoriaFiltro(val || "")}
+                            className="..."
+                          >
+                            <Option value="">Todas las categorías</Option>
+                            {categoria.map((c) => (
+                              <Option key={c.id} value={String(c.id)}>
+                                {c.nombre}
+                              </Option>
+                            ))}
+                          </Select>
                           </div>
                           <div>
                             <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
                               Formato de Salida
                             </Typography>
-                            <Select value={formatoSeleccionado} onChange={(value) => setFormatoSeleccionado(value)}>
+                            <Select
+                            label="Formato del reporte"
+                            value={formatoSeleccionado} 
+                            onChange={(value) => setFormatoSeleccionado(value)}
+                            >
                               {TIPOS_REPORTES.find((t) => t.id === reporteSeleccionado)?.formatos.map((formato) => (
                                 <Option key={formato} value={formato}>
                                   {formato === 'xlsx' ? 'Excel' : 'PDF'}
