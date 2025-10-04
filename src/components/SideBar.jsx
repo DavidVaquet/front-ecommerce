@@ -54,7 +54,7 @@ export function Sidebar() {
         <img
           src={logo}
           alt="brand"
-          className="w-auto h-auto object-cover mx-auto"
+          className="w-[50px] h-[50px] object-cover mx-auto"
         />
       </div>
 
