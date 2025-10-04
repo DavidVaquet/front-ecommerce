@@ -1,5 +1,5 @@
 import React from "react";
-import logo from "../assets/logoiclub.png";
+import logo from '../assets/logoIclub.webp';
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { useContext } from "react";
