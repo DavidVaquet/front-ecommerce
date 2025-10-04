@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { loginController } from '../../controllers/authController';
 import { AuthContext } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import logoiclub from '../../assets/logoiclub.webp';
-import iclubafuera from '../../assets/iclubfuera.webp';
+import logoiclub from '../../assets/logoIclub.webp';
+import iclubafuera from '../../assets/iclubfuera.webp'
 
 export const Login = () => {
 
