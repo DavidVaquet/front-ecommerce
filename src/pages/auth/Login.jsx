@@ -54,8 +54,8 @@ export const Login = () => {
             <img
               src={logoiclub}
               alt="Logo iClub"
-              width={180} 
-              height={60}
+              width={240} 
+              height={100}
               loading="lazy"
               decoding="async"
               fetchPriority="low"
