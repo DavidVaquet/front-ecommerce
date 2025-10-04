@@ -1,5 +1,5 @@
 import React from "react";
-import logo from '../assets/logoIclub.webp';
+import logo from '../assets/logosidebar.webp'
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { useContext } from "react";
@@ -54,7 +54,7 @@ export function Sidebar() {
         <img
           src={logo}
           alt="brand"
-          className="w-[50px] h-[50px] object-cover mx-auto"
+          className="w-full h-full object-cover mx-auto"
         />
       </div>
 
