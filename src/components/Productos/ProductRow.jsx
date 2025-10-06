@@ -150,8 +150,8 @@ const ProductRow = memo(function ProductRow({ producto, onView, onDelete, onActi
             </IconButton>
           )}
 
-          <IconButton variant="text" color="black" size="sm">
-            <Printer className="h-4 w-4" onClick={imprimir}/>
+          <IconButton variant="text" color="black" size="sm" onClick={imprimir}>
+            <Printer className="h-4 w-4"/>
           </IconButton>
 
           <IconButton variant="text" color="red" size="sm" onClick={eliminar}>

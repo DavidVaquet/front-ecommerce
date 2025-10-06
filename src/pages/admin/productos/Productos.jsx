@@ -729,74 +729,88 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
         </Tabs>
       </Card>
 
-      {/* Modal para imprimir etiquetas */}
-      <Dialog
-        size="xs"
-        open={openEtiqueta}
-        className="bg-transparent shadow-none"
-      >
-        <Card className="mx-auto w-full">
-          <CardBody className="flex flex-col gap-4">
-            <div className="flex flex-row gap-2">
-              <div>
-              <Typography variant="h2" color="blue-gray">
-              Ancho de la etiqueta
-            </Typography>
-            <Input
-              type="number"
-              value={ancho}
-              onChange={(e) => setAncho(e.target.valueAsNumber)}
-            />
-              </div>
-              <div>
-              <Typography variant="h2" color="blue-gray">
-              Alto de la etiqueta
-            </Typography>
-            <Input
-              type="number"
-              value={alto}
-              onChange={(e) => setAlto(e.target.valueAsNumber)}
-            />
-              </div>
-            </div>
-            <div className="flex flex-row gap-2">
-              <div>
-              <Typography variant="h2" color="blue-gray">
-              Cantidad de copias
-            </Typography>
-            <Input
-              type="number"
-              value={copias}
-              onChange={(e) => setCopias(e.target.valueAsNumber)}
-            />
-              </div>
-              <div>
-              <Typography variant="h2" color="blue-gray">
-              Modo de impresión
-            </Typography>
-              <Select value={mode} onChange={(value) => setMode(value)}>
-                <Option value="mac-local">MacOS</Option>
-                <Option value="windows-share">Windows</Option>
-              </Select>
-              </div>
-            </div>
+      <Dialog open={openEtiqueta} size="sm" className="bg-transparent shadow-none">
+  <Card className="mx-auto w-full max-w-md">
+    <CardBody className="space-y-4">
+      {/* Fila 1: Ancho / Alto */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="w-full">
+          <Typography variant="small" color="blue-gray" className="mb-1 font-medium">
+            Ancho de la etiqueta
+          </Typography>
+          <Input
+            className="w-full"
+            type="number"
+            inputMode="decimal"
+            value={ancho ?? ""}
+            onChange={(e) => setAncho(e.target.valueAsNumber)}
+          />
+        </div>
 
-          </CardBody>
-          <CardFooter className="pt-0">
-            <div className="flex justify-center items-center gap-2">
-              <Button variant="gradient" color="red" onClick={handleCloseLabel}>
-                Cancelar
-              </Button>
-              <Button
-                variant="gradient"
-                onClick={() => handlePrint({producto:selectedProduct, copias, ancho, alto, mode})}
-              >
-                Imprimir etiqueta
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
-      </Dialog>
+        <div className="w-full">
+          <Typography variant="small" color="blue-gray" className="mb-1 font-medium">
+            Alto de la etiqueta
+          </Typography>
+          <Input
+            className="w-full"
+            type="number"
+            inputMode="decimal"
+            value={alto ?? ""}
+            onChange={(e) => setAlto(e.target.valueAsNumber)}
+          />
+        </div>
+      </div>
+
+      {/* Fila 2: Copias / Modo */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="w-full">
+          <Typography variant="small" color="blue-gray" className="mb-1 font-medium">
+            Cantidad de copias
+          </Typography>
+          <Input
+            className="w-full"
+            type="number"
+            inputMode="numeric"
+            value={copias ?? ""}
+            onChange={(e) => setCopias(e.target.valueAsNumber)}
+          />
+        </div>
+
+        <div className="w-full">
+          <Typography variant="small" color="blue-gray" className="mb-1 font-medium">
+            Modo de impresión
+          </Typography>
+          <Select
+            value={mode}
+            onChange={setMode}
+            label=""               // sin label flotante
+            className="w-full"
+          >
+            <Option value="mac-local">macOS</Option>
+            <Option value="windows-share">Windows</Option>
+          </Select>
+        </div>
+      </div>
+    </CardBody>
+
+    <CardFooter className="pt-0">
+      <div className="flex justify-center items-center gap-2">
+        <Button variant="gradient" color="red" onClick={handleCloseLabel}>
+          Cancelar
+        </Button>
+        <Button
+          variant="gradient"
+          onClick={() =>
+            handlePrint({ producto: selectedProduct, ancho, alto, copias, mode })
+          }
+          disabled={!selectedProduct || !ancho || !alto || !copias || !mode}
+        >
+          Imprimir etiqueta
+        </Button>
+      </div>
+    </CardFooter>
+  </Card>
+</Dialog>
 
       {/* Modal de Detalles del Producto */}
       <Dialog
