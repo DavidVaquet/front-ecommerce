@@ -52,7 +52,7 @@ import {
   ChevronRight
 } from "lucide-react"
 import { XMarkIcon } from "@heroicons/react/24/outline"
-import { descargarRecibo, enviarReciboService, generarReciboService } from "../../../services/reciboServices";
+import { descargarReciboAttachment, enviarReciboService, generarReciboService } from "../../../services/reciboServices";
 import { useVentas, useVentasTotales } from "../../../hooks/useVentas";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 
@@ -176,9 +176,9 @@ export const HistorialVentas = () => {
    }
  }; 
 
-  const handleDescargarRecibo = async (venta) => {
+  const handleDescargarRecibo =  (venta) => {
   const codigo = venta.codigo;
-  await descargarRecibo(codigo);
+    descargarReciboAttachment(codigo);
 };
 
   const enviarRecibo = async (venta) => {
