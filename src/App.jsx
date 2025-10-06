@@ -13,7 +13,7 @@ import { Estadisticas } from './pages/admin/estadisticas/Estadisticas';
 import Reportes from './pages/admin/reportes/Reportes';
 import AdminLayout from './layouts/AdminLayout';
 import TiendaLayout from './layouts/TiendaLayout';
-import PublicarProductos from './pages/admin/productos/PublicarProducto';
+// import PublicarProductos from './pages/admin/productos/PublicarProducto';
 import PerfilUsuario from './pages/admin/perfil/PerfilUsuario';
 import ConfiguracionesDashboard from './pages/admin/configuraciones/ConfiguracionesDashboard';
 import MovimientosStock from './pages/admin/stock/MovimientosStock';
@@ -53,7 +53,7 @@ function App() {
         <Route element={<AdminLayout />}>
           <Route path="productos" element={<Productos />} />
           <Route path="productos/nuevo" element={<SubirProducto />} />
-          <Route path="productos/publicar" element={<PublicarProductos />} />
+          {/* <Route path="productos/publicar" element={<PublicarProductos />} /> */}
           <Route path="clientes" element={<Clientes />} />
           <Route path="clientes/registrar-cliente" element={<AltaCliente />} />
           <Route path="ventas/registrar-venta" element={<RegistrarVenta />} />

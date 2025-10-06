@@ -1,7 +1,7 @@
 export const formatearPesos = (numero) => {
     return parseFloat(numero).toLocaleString('es-AR', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
 })    
 }
 

@@ -629,8 +629,6 @@ export const RegistrarVenta = () => {
               ) : (
                 <div className="space-y-4">
                   {productosVenta.map((producto, index) => {
-                    const ruta = producto.imagen_url ? producto.imagen_url.replace(/\\/g, '/') : 'uploads/default.jpg';
-                    const imagenPrincipal = `http://localhost:5002/${ruta}`;
                     return (
                       <div
                       key={producto.id}
@@ -641,7 +639,7 @@ export const RegistrarVenta = () => {
                           {index + 1}.
                         </Typography>
                         <Avatar
-                          src={imagenPrincipal}
+                          src={mostrarImagen(producto.imagen_url)}
                           alt={producto.nombre}
                           size="lg"
                           variant="rounded"

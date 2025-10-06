@@ -1,75 +1,89 @@
+// src/services/recibos.service.js
 import { apiFetch } from "../helpers/auth";
-const API_URL = `${import.meta.env.VITE_API_URL}/recibos`;
 
-export const generarReciboServices = async (venta) => {
 
-    try {
+const API_RECIBOS = `${import.meta.env.VITE_API_URL}/recibos`;
 
-        const data = await apiFetch(`${API_URL}/generar-recibo`, {
-            method: 'POST',
-            body: JSON.stringify(venta)
-        })
+const openInNewTab = (url) => {
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
 
-        return data.url;
-    } catch (error) {
-        console.error(error);
-        throw new Error(error.message || 'Error al generar recibo')
-    }
 
-}
-
-export const descargarRecibo = async (codigo) => {
+export const generarReciboService = async (venta) => {
   try {
-    const token = localStorage.getItem("token");
-    if (!token) throw new Error("Token inválido");
-
-    const response = await fetch(`${API_URL}/by-codigo/${codigo}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    const data = await apiFetch(`${API_RECIBOS}/generar`, {
+      method: "POST",
+      body: JSON.stringify(venta),
     });
-
-    if (!response.ok) {
-      throw new Error("No se pudo descargar el recibo");
-    }
-
-    const nombreArchivo = `recibo-${codigo}.pdf`;
-    const blob = await response.blob();
-    const downloadUrl = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = nombreArchivo;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
+    
+    return data;
   } catch (error) {
-    console.error(error.message);
-    throw new Error("Error al descargar el recibo");
+    console.error(error);
+    throw new Error(error?.message || "Error al generar recibo");
   }
 };
 
-export const enviarReciboServices = async (venta) => {
+
+export const verReciboInlinePorCodigo = (codigo) => {
+  const url = `${API_RECIBOS}/by-codigo/${encodeURIComponent(codigo)}`;
+  openInNewTab(url);
+};
+
+
+export const verReciboInlinePorToken = (token) => {
+  const url = `${API_RECIBOS}/link?token=${encodeURIComponent(token)}`;
+  openInNewTab(url);
+};
+
+
+export const descargarReciboAttachment = (codigo) => {
+  const url = `${API_RECIBOS}/download/${encodeURIComponent(codigo)}`;
+  openInNewTab(url);
+};
+
+
+export const enviarReciboService = async (venta) => {
   try {
-
-    const data = await apiFetch(`${API_URL}/enviar-recibo`, {
-      method: 'POST',
-      body: JSON.stringify(venta)
+    const data = await apiFetch(`${API_RECIBOS}/enviar`, {
+      method: "POST",
+      body: JSON.stringify(venta),
     });
-
-    return data;
-
+    return data; 
   } catch (error) {
     console.error(error);
+    throw new Error(error?.message || "Error al enviar el recibo");
   }
-}
+};
+
+
+export const descargarReciboComoBlob = async (codigo) => {
+  try {
+    const resp = await fetch(`${API_RECIBOS}/by-codigo/${encodeURIComponent(codigo)}`, {
+      method: "GET",
+      // Si tu endpoint exige auth, agregá headers acá:
+      // headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    });
+    if (!resp.ok) throw new Error("No se pudo obtener el PDF");
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    return { blob, url, nombre: `recibo-${codigo}.pdf` };
+  } catch (e) {
+    console.error(e);
+    throw new Error("Error al descargar el recibo como Blob");
+  }
+};
+
 
 export const enviarEmailServices = async({email, asunto, mensaje}) => {
   try {
     
-    const data = await apiFetch(`${API_URL}/enviar-email`, {
+    const data = await apiFetch(`${API_RECIBOS}/enviar-email`, {
       method: 'POST',
       body: JSON.stringify({email, asunto, mensaje})
     })

@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { obtenerVentasConDetallesService } from "../../../services/ventasServices";
 import { formatearPesos, formatearPesosRedondeo } from "../../../helpers/formatearPesos";
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
 import { formatearFechaHora } from "../../../helpers/formatoFecha";
@@ -53,9 +52,19 @@ import {
   ChevronRight
 } from "lucide-react"
 import { XMarkIcon } from "@heroicons/react/24/outline"
-import { descargarRecibo, enviarReciboServices, generarReciboServices } from "../../../services/reciboServices";
+import { descargarRecibo, enviarReciboService, generarReciboService } from "../../../services/reciboServices";
 import { useVentas, useVentasTotales } from "../../../hooks/useVentas";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
+
+ const formatearFecha = (fecha) => {
+    return new Date(fecha).toLocaleString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
 
 
 export const HistorialVentas = () => {
@@ -112,15 +121,7 @@ export const HistorialVentas = () => {
   // Resetear página cuando cambien filtros
   useEffect(() => { setCurrentPage(1); }, [activeTab, searchDebounced, fechaInicio, fechaFin]);
 
-  const formatearFecha = (fecha) => {
-    return new Date(fecha).toLocaleString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
+ 
 
   // PAGINACIÓN
   const total = data?.total ?? 0;
@@ -158,17 +159,22 @@ export const HistorialVentas = () => {
     setVentaSeleccionada(null);
   }
 
-  const imprimirRecibo = async (venta) => {
-  const url = await generarReciboServices(venta);
-  const ventana = window.open(url, "_blank");
+   const imprimirRecibo = async (venta) => {
+  try {
+     
+     const data = await generarReciboService(venta);
+     
+    const url = data?.descarga_jwt_url ?? data?.descarga_auth_url;
+     if (!url) throw new Error("No se obtuvo la URL del recibo");
 
-  if (ventana) {
-    ventana.focus();
-    ventana.print();
-  } else {
-    console.warn("El navegador bloqueó la ventana emergente.");
-  }
-  };  
+     
+     window.open(url, "_blank", "noopener");
+     mostrarNotificacion("info", "Abriendo el recibo en una nueva pestaña.");
+   } catch (e) {
+     console.error(e);
+     mostrarNotificacion("error", "No se pudo abrir el recibo.");
+   }
+ }; 
 
   const handleDescargarRecibo = async (venta) => {
   const codigo = venta.codigo;
@@ -176,15 +182,18 @@ export const HistorialVentas = () => {
 };
 
   const enviarRecibo = async (venta) => {
-    try {
-      const reciboEnviado = await enviarReciboServices(venta);
-      if (reciboEnviado) {
-        mostrarNotificacion('success', 'Recibo envíado correctamente')
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }
+   try {
+     const resp = await enviarReciboService(venta);
+    if (resp?.ok) {
+       mostrarNotificacion("success", "Recibo enviado correctamente al email del cliente.");
+     } else {
+       mostrarNotificacion("error", resp?.msg || "No se pudo enviar el recibo.");
+     }
+   } catch (error) {
+     console.error(error);
+     mostrarNotificacion("error", "Error al enviar el recibo por email.");
+   }
+ };
 
 
   return (

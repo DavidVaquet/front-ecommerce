@@ -30,9 +30,6 @@ import {
 import {
   ChevronRightIcon,
   ChevronDownIcon,
-  CubeTransparentIcon,
-  MagnifyingGlassIcon,
-  CircleStackIcon
 } from "@heroicons/react/24/outline";
 
 export function Sidebar() {
@@ -168,7 +165,7 @@ export function Sidebar() {
                       </ListItemPrefix>
                       Ver productos
                     </ListItem>
-                    <ListItem onClick={() => navigate("/admin/productos/publicar")}>
+                    <ListItem onClick={() => navigate("/admin/productos")}>
                       <ListItemPrefix>
                         <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                       </ListItemPrefix>
