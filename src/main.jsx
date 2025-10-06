@@ -10,7 +10,7 @@ export const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
-      staleTime: 120_000,
+      staleTime: 300_000,
       gcTime: 20 * 60_000,
       retry: 1,
       placeholderData: keepPreviousData,

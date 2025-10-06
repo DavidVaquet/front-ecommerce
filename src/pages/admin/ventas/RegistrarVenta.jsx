@@ -1,7 +1,6 @@
 "use client"
-import { clientesEstado } from "../../../services/clienteServices";
-import { registrarVentaService } from "../../../services/ventasServices";
-import { getProductoPorBarcode, getProducts } from "../../../services/productServices";
+
+import { getProductoPorBarcode } from "../../../services/productServices";
 import { useState, useEffect } from "react";
 import { isBarcodeLike } from "../../../utils/barcode";
 import { useNavigate } from "react-router-dom";
@@ -51,6 +50,7 @@ import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { useClientes } from "../../../hooks/useClientes";
 import { useVentasMutation } from "../../../hooks/useVentasMutation";
 import { useVentasEstadisticas } from "../../../hooks/useVentas";
+import { mostrarImagen } from "../../../helpers/mostrarImagen";
 
 
 export const RegistrarVenta = () => {
@@ -566,9 +566,6 @@ export const RegistrarVenta = () => {
                 {busquedaProducto && (
                   <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-10 mt-1 max-h-80 overflow-y-auto">
                     {productos.map((producto) => {
-                      const ruta = producto.imagen_url ? producto.imagen_url.replace(/\\/g, '/') : 'uploads/default.jpg';
-                      const imagenPrincipal = `http://localhost:5002/${ruta}`;
-                      
                       return (
                         <div
                         key={producto.id}
@@ -576,7 +573,7 @@ export const RegistrarVenta = () => {
                         className="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                         >
                         <Avatar
-                          src={imagenPrincipal}
+                          src={mostrarImagen(producto.imagen_url)}
                           alt={producto.nombre}
                           size="md"
                           variant="rounded"

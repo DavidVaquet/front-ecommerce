@@ -60,7 +60,7 @@ const TIPOS_REPORTES = [
     icono: Package,
     categoria: "Inventario",
     tiempo_estimado: "2-3 min",
-    formatos: ["xlsx", "pdf"],
+    formatos: ["xlsx"],
   },
   {
     id: "ventas",
@@ -69,7 +69,7 @@ const TIPOS_REPORTES = [
     icono: BarChart3,
     categoria: "Ventas",
     tiempo_estimado: "1-2 min",
-    formatos: ["xlsx", "pdf"],
+    formatos: ["xlsx"],
   },
   {
     id: "productos_criticos",
@@ -78,7 +78,7 @@ const TIPOS_REPORTES = [
     icono: AlertTriangle,
     categoria: "Alertas",
     tiempo_estimado: "1 min",
-    formatos: ["xlsx", "pdf"],
+    formatos: ["xlsx"],
   },
   {
     id: "rentabilidad",
@@ -87,7 +87,7 @@ const TIPOS_REPORTES = [
     icono: DollarSign,
     categoria: "Financiero",
     tiempo_estimado: "3-4 min",
-    formatos: ["xlsx", "pdf"],
+    formatos: ["xlsx"],
   },
   {
     id: "clientes",
@@ -96,7 +96,7 @@ const TIPOS_REPORTES = [
     icono: Users,
     categoria: "Clientes",
     tiempo_estimado: "2 min",
-    formatos: ["xlsx", "pdf"],
+    formatos: ["xlsx"],
   },
   {
     id: "movimientos",
@@ -105,7 +105,7 @@ const TIPOS_REPORTES = [
     icono: Package,
     categoria: "Stock",
     tiempo_estimado: "2 min",
-    formatos: ["xlsx", "pdf"],
+    formatos: ["xlsx"],
   },
 ]
 
@@ -559,7 +559,7 @@ export const Reportes = () => {
                             >
                               {TIPOS_REPORTES.find((t) => t.id === reporteSeleccionado)?.formatos.map((formato) => (
                                 <Option key={formato} value={formato}>
-                                  {formato === 'xlsx' ? 'Excel' : 'PDF'}
+                                  {formato === 'xlsx' ? 'Excel' : 'XLSX'}
                                 </Option>
                               ))}
                             </Select>

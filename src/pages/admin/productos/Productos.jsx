@@ -4,9 +4,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
 import { useSearchParams, useNavigate } from "react-router";
 import {
-  formatearPesos,
-  formatearMiles,
-  precioToNumber,
+  formatearPesos
 } from "../../../helpers/formatearPesos";
 import StatsCard from "../../../components/StatsCard";
 import ProductRow from "../../../components/Productos/ProductRow";
@@ -1073,7 +1071,7 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
               </Typography>
               <Input
                 name="precio_costo"
-                value={formatearMiles(formularioEditar.precio_costo)}
+                value={formularioEditar.precio_costo}
                 onChange={handleChange}
                 placeholder="ej. $100.000"
               />
@@ -1089,9 +1087,9 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
               </Typography>
               <Input
                 name="precio"
-                value={formatearMiles(formularioEditar.precio)}
+                value={formularioEditar.precio}
                 onChange={handleChange}
-                placeholder="ej. $200.000"
+                placeholder="ej. 200.000"
               />
             </div>
             {/* CATEGORIA */}
