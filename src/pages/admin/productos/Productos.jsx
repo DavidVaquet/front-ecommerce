@@ -111,7 +111,7 @@ const Productos = () => {
   const [ancho, setAncho] = useState(60);
   const [alto, setAlto] = useState(30);
   const [copias, setCopias] = useState(1);
-  const [mode, setMode] = useState("");
+  const [mode, setMode] = useState("mac-local");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [formularioEditar, setFormularioEditar] = useState({
     nombre: "",
@@ -387,12 +387,12 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
   }, [])
 
   const handlePrint = useCallback(
-  async (producto, ancho, alto, copias, mode) => {
+  async ({producto, ancho, alto, copias, mode}) => {
     try {
-      if (!ancho) { mostrarNotificacion('Debes especificar el ancho de la etiqueta'); return; }
-      if (!alto) { mostrarNotificacion('Debes especificar el alto de la etiqueta'); return; }
-      if (!copias || Number(copias) <= 0) { mostrarNotificacion('Debes especificar la cantidad de copias (> 0)'); return; }
-      if (!mode) { mostrarNotificacion('Debes especificar el modo de impresión'); return; }
+      if (!ancho) { mostrarNotificacion('error', 'Debes especificar el ancho de la etiqueta'); return; }
+      if (!alto) { mostrarNotificacion('error', 'Debes especificar el alto de la etiqueta'); return; }
+      if (!copias || Number(copias) <= 0) { mostrarNotificacion('error', 'Debes especificar la cantidad de copias (> 0)'); return; }
+      if (!mode) { mostrarNotificacion('error', 'Debes especificar el modo de impresión'); return; }
 
       const resp = await printEtiqueta({ producto, ancho, alto, copias, mode });
 
@@ -789,7 +789,7 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
               </Button>
               <Button
                 variant="gradient"
-                onClick={() => handlePrint(selectedProduct, copias, ancho, alto, mode)}
+                onClick={() => handlePrint({producto:selectedProduct, copias, ancho, alto, mode})}
               >
                 Imprimir etiqueta
               </Button>
