@@ -1,4 +1,4 @@
-const API_KEY = import.meta.env.API_KEY;
+const API_KEY = import.meta.env.VITE_PRINT_PUBLIC_KEY;
 const API_URL = `${import.meta.env.VITE_API_URL}/print`;
 export const printEtiqueta = async({producto, ancho, alto, copias, mode}) => {
     try {
