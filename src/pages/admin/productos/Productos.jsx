@@ -735,11 +735,11 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
         open={openEtiqueta}
         className="bg-transparent shadow-none"
       >
-        <Card className="mx-auto w-full max-w-[24rem]">
+        <Card className="mx-auto w-full">
           <CardBody className="flex flex-col gap-4">
             <div className="flex flex-row gap-2">
               <div>
-              <Typography variant="h4" color="blue-gray">
+              <Typography variant="h2" color="blue-gray">
               Ancho de la etiqueta
             </Typography>
             <Input
@@ -749,7 +749,7 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
             />
               </div>
               <div>
-              <Typography variant="h4" color="blue-gray">
+              <Typography variant="h2" color="blue-gray">
               Alto de la etiqueta
             </Typography>
             <Input
@@ -761,7 +761,7 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
             </div>
             <div className="flex flex-row gap-2">
               <div>
-              <Typography variant="h4" color="blue-gray">
+              <Typography variant="h2" color="blue-gray">
               Cantidad de copias
             </Typography>
             <Input
@@ -771,12 +771,12 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
             />
               </div>
               <div>
-              <Typography variant="h4" color="blue-gray">
+              <Typography variant="h2" color="blue-gray">
               Modo de impresión
             </Typography>
-              <Select onChange={(value) => setMode(value)}>
-                <Option value="windows-share">MacOS</Option>
-                <Option value="mac-local">Windows</Option>
+              <Select value={mode} onChange={(value) => setMode(value)}>
+                <Option value="mac-local">MacOS</Option>
+                <Option value="windows-share">Windows</Option>
               </Select>
               </div>
             </div>
