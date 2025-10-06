@@ -67,6 +67,7 @@ import { useProductos, useProductoStats } from "../../../hooks/useProductos";
 import { useProductosMutation } from "../../../hooks/useProductosMutation";
 import { useCategorias } from "../../../hooks/useCategorias";
 import { useSubcategorias } from "../../../hooks/useSubcategorias";
+import { printEtiqueta } from "../../../services/printServices";
 
 // Estilos CSS
 const obtenerEstadoProducto = (producto) => {
@@ -102,12 +103,15 @@ const Productos = () => {
   const [activeTab, setActiveTab] = useState("todos");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState(initialSearch);
-  const [copias, setCopias] = useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
   const [subcategoriaSeleccionada, setSubCategoriaSeleccionada] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [openEtiqueta, setOpenEtiqueta] = useState(false);
+  const [ancho, setAncho] = useState(60);
+  const [alto, setAlto] = useState(30);
+  const [copias, setCopias] = useState(1);
+  const [mode, setMode] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [formularioEditar, setFormularioEditar] = useState({
     nombre: "",
@@ -118,6 +122,9 @@ const Productos = () => {
     precio_costo: "",
     descripcion_corta: "",
   });
+
+
+  
   const productsPerPage = 25;
   useEffect(() => {
   setSearchTerm(initialSearch);
@@ -371,7 +378,39 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
         mostrarNotificacion("error", error.message || "No se pudo eliminar");
       }
     });
-  }, [MySwal, eliminarProducto, mostrarNotificacion]);
+  }, [eliminarProducto, mostrarNotificacion]);
+
+
+  const openPrint = useCallback((producto) => {
+    setSelectedProduct(producto);
+    setOpenEtiqueta(true);
+  }, [])
+
+  const handlePrint = useCallback(
+  async (producto, ancho, alto, copias, mode) => {
+    try {
+      if (!ancho) { mostrarNotificacion('Debes especificar el ancho de la etiqueta'); return; }
+      if (!alto) { mostrarNotificacion('Debes especificar el alto de la etiqueta'); return; }
+      if (!copias || Number(copias) <= 0) { mostrarNotificacion('Debes especificar la cantidad de copias (> 0)'); return; }
+      if (!mode) { mostrarNotificacion('Debes especificar el modo de impresión'); return; }
+
+      const resp = await printEtiqueta({ producto, ancho, alto, copias, mode });
+
+      if (resp?.ok || resp?.status === 'queued') {
+        mostrarNotificacion('success', 'Etiqueta en cola de impresión');
+        setSelectedProduct(null);
+        setOpenEtiqueta(false);
+        return;
+      }
+
+      
+      mostrarNotificacion('error', 'No se pudo encolar la etiqueta');
+    } catch (error) {
+      console.error(error);
+      mostrarNotificacion('error', error.message || 'Ocurrió un error al imprimir la etiqueta');
+    }
+  },[mostrarNotificacion]
+);
 
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
@@ -637,7 +676,8 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
                     onEdit={comenzarEdicion}
                     onActivar={activadoLogico}
                     onDelete={handleDelete}
-                    onDesactivar={deleteLogico} />
+                    onDesactivar={deleteLogico}
+                    onPrint={openPrint} />
                   ))}
                 </tbody>
               </table>
@@ -697,7 +737,31 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
       >
         <Card className="mx-auto w-full max-w-[24rem]">
           <CardBody className="flex flex-col gap-4">
-            <Typography variant="h4" color="blue-gray">
+            <div className="flex flex-row gap-2">
+              <div>
+              <Typography variant="h4" color="blue-gray">
+              Ancho de la etiqueta
+            </Typography>
+            <Input
+              type="number"
+              value={ancho}
+              onChange={(e) => setAncho(e.target.valueAsNumber)}
+            />
+              </div>
+              <div>
+              <Typography variant="h4" color="blue-gray">
+              Alto de la etiqueta
+            </Typography>
+            <Input
+              type="number"
+              value={alto}
+              onChange={(e) => setAlto(e.target.valueAsNumber)}
+            />
+              </div>
+            </div>
+            <div className="flex flex-row gap-2">
+              <div>
+              <Typography variant="h4" color="blue-gray">
               Cantidad de copias
             </Typography>
             <Input
@@ -705,6 +769,18 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
               value={copias}
               onChange={(e) => setCopias(e.target.valueAsNumber)}
             />
+              </div>
+              <div>
+              <Typography variant="h4" color="blue-gray">
+              Modo de impresión
+            </Typography>
+              <Select onChange={(value) => setMode(value)}>
+                <Option value="windows-share">MacOS</Option>
+                <Option value="mac-local">Windows</Option>
+              </Select>
+              </div>
+            </div>
+
           </CardBody>
           <CardFooter className="pt-0">
             <div className="flex justify-center items-center gap-2">
@@ -713,7 +789,7 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
               </Button>
               <Button
                 variant="gradient"
-                onClick={() => handlePrint(selectedProduct?.id, copias)}
+                onClick={() => handlePrint(selectedProduct, copias, ancho, alto, mode)}
               >
                 Imprimir etiqueta
               </Button>

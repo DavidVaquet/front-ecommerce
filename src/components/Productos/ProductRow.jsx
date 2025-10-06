@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo } from "react";
 import { mostrarImagen } from "../../helpers/mostrarImagen";
 import { formatearPesos } from "../../helpers/formatearPesos";
 import { Avatar, Chip, IconButton, Typography } from "@material-tailwind/react";
-import { Eye, Edit, Power, PowerOff, Trash2, TrendingUp } from "lucide-react";
+import { Eye, Edit, Power, PowerOff, Trash2, TrendingUp, Printer } from "lucide-react";
 
 
 const obtenerEstadoProducto = (producto) => {
@@ -47,11 +47,12 @@ const areEqual = (prev, next) => {
     && prev.onEdit === next.onEdit
     && prev.onActivar === next.onActivar
     && prev.onDesactivar === next.onDesactivar
-    && prev.onDelete === next.onDelete;
+    && prev.onDelete === next.onDelete
+    && prev.onPrint === next.onPrint;
 };
 
-const ProductRow = memo(function ProductRow({ producto, onView, onDelete, onActivar, onDesactivar, onEdit}) {
-    const estadoStr = useMemo(() => obtenerEstadoProducto(producto), [producto.estado, producto.stock_cantidad, producto]);
+const ProductRow = memo(function ProductRow({ producto, onView, onDelete, onActivar, onDesactivar, onEdit, onPrint}) {
+    const estadoStr = useMemo(() => obtenerEstadoProducto(producto), [producto.estado, producto.stock_cantidad]);
     const chipColor = useMemo(() => getChipColor(estadoStr), [estadoStr]);
 
     const ver = useCallback(() => onView(producto), [onView, producto]);
@@ -59,6 +60,7 @@ const ProductRow = memo(function ProductRow({ producto, onView, onDelete, onActi
     const eliminar = useCallback(() => onDelete(producto), [onDelete, producto]);
     const activar = useCallback(() => onActivar(producto), [onActivar, producto]);
     const desactivar = useCallback(() => onDesactivar(producto), [onDesactivar, producto]);
+    const imprimir = useCallback(() => onPrint(producto), [onPrint, producto]);
 
         return (
     <tr className="hover:bg-gray-50">
@@ -148,8 +150,12 @@ const ProductRow = memo(function ProductRow({ producto, onView, onDelete, onActi
             </IconButton>
           )}
 
+          <IconButton variant="text" color="black" size="sm">
+            <Printer className="h-4 w-4"/>
+          </IconButton>
+
           <IconButton variant="text" color="red" size="sm" onClick={eliminar}>
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" onClick={imprimir} />
           </IconButton>
         </div>
       </td>
