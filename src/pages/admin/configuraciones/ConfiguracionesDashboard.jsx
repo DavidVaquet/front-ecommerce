@@ -428,8 +428,8 @@ const ConfiguracionesDashboard = () => {
         await eliminarUsuario.mutateAsync(id);
         if (eliminarUsuario?.ok) {
           mostrarNotificacion("success", "Usuario eliminado correctamente.");
-
-        }
+          return true;
+                  }
       } catch (error) {
         console.error(error);
         mostrarNotificacion("error", error.message || "No se pudo eliminar");
