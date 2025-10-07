@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import { Bell, AlertTriangle } from "lucide-react";
 import {
@@ -14,6 +15,8 @@ import { useProductos } from "../hooks/useProductos";
 export const Header = () => {
   // USESTATES
   const [open, setOpen] = useState(false);
+  // CONTEXT USER
+  const { user } = useContext(AuthContext);
   // NAVIGATE
   const navigate = useNavigate();
   // OBTENER PRODUCTOS CON CANTIDAD MINIMA PARA LA NOTIFICACION
@@ -98,13 +101,13 @@ export const Header = () => {
           </Menu>
         </div>
         <img
-          src="https://docs.material-tailwind.com/img/face-2.jpg"
-          alt="avatar"
+          src={`https://ui-avatars.com/api/?background=FFEA00&color=fff&name=${encodeURIComponent(user.nombre)}&length=1`}
+          alt={user.nombre}
           className="inline-block relative object-cover object-center !rounded-full w-8 h-8"
         />
         <div>
           <h6 className="text-negro font-worksans font-normal">
-            Administrador
+            {user.nombre ?? 'Usuario'}
           </h6>
         </div>
       </div>
