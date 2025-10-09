@@ -28,6 +28,7 @@ import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { isBarcodeLike } from "../../../utils/barcode";
 import { getProductoPorBarcode } from "../../../services/productServices";
 import { useNotificacion } from "../../../hooks/useNotificacion";
+import MovRows from "../../../components/Movimientos/MovRows";
 
 const MovimientosStock = () => {
   const [filtroTipo, setFiltroTipo] = useState("todos")
@@ -58,7 +59,7 @@ const MovimientosStock = () => {
       return f;
     }, [filtroFecha, searchDebounced, filtroTipo, limite, offset])
     const { data, isLoading } = useMovimientoStock(filtros);
-    const movimientos = data?.items || [];
+    const movimientos = useMemo(() => data?.items ?? [], [data]);
 
     const filtrosEstadisticas = useMemo(() => {
       const { fechaDesde } = computeRange('hoy');
@@ -97,31 +98,8 @@ const MovimientosStock = () => {
   });
 }
 
-  const getTipoIcon = (tipo) => {
-    switch (tipo) {
-      case "Entrada":
-        return <ArrowUpCircle className="w-4 h-4 text-green-600" />
-      case "Salida":
-        return <ArrowDownCircle className="w-4 h-4 text-red-600" />
-      case "Ajuste":
-        return <RefreshCw className="w-4 h-4 text-blue-600" />
-      case "Devolucion_cliente":
-        return <RotateCcw className="w-4 h-4 text-orange-600" />
-      default:
-        return <Package className="w-4 h-4" />
-    }
-  }
 
-  const getTipoBadge = (tipo) => {
-    const variants = {
-      entrada: "green",
-      salida: "red",
-      ajuste: "blue",
-      devolucion_cliente: "orange",
-    }
-
-    return <Chip value={tipo} color={variants[tipo]} icon={getTipoIcon(tipo)} className="capitalize" />
-  }
+ 
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-AR", {
@@ -385,83 +363,25 @@ const MovimientosStock = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {movimientos.map((mov) => {
+                  {movimientos.map((mov) => (
+                    <MovRows
+                    key={mov.id}
+                    fecha_creacion={mov.fecha_creacion}
+                    producto_nombre={mov.producto_nombre}
+                    barcode={mov.barcode}
+                    tipo={mov.tipo}
+                    stock_anterior={mov.stock_anterior}
+                    usuarioNombre={mov.usuario_nombre}
+                    motivo={mov.motivo}
+                    document={mov.document}
+                    costo_unitario={mov.costo_unitario}
+                    precio_venta={mov.precio_venta}
+                    stock_actual={mov.stock_actual}
+                    direction={mov.direction}
+                    cantidad_movimiento={mov.cantidad_movimiento}
+                    />
 
-                    const dir = mov.direction;
-                    const qty = mov.cantidad_movimiento;
-                    const isOut = dir < 0;
-                    const color = isOut ? 'text-red-600' : 'text-green-600';
-                    const signedQty = `${isOut ? '-' : '+'}${formatearEntero(qty)}`;
-
-                    return (
-                    <tr key={mov.id} className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="p-4">
-                        <div>
-                          <Typography variant="small" color="blue-gray" className="font-medium">
-                            {formatearFecha(mov.fecha_creacion.split(" ")[0])}
-                          </Typography>
-                          <Typography variant="small" color="gray">
-                            {fechaHora(mov.fecha_creacion)}
-                          </Typography>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div>
-                          <Typography variant="small" color="blue-gray" className="font-medium">
-                            {mov.producto_nombre}
-                          </Typography>
-                          <Typography variant="small" color="gray">
-                            {mov.barcode}
-                          </Typography>
-                        </div>
-                      </td>
-                      <td className="p-4">{getTipoBadge(mov.tipo)}</td>
-                      <td className="p-4 text-center">
-                        <Typography
-                          variant="small"
-                          className={`font-medium ${color}`}
-                        >
-                          {signedQty}
-                        </Typography>
-                      </td>
-                      <td className="p-4">
-                        <Typography variant="small" color="gray">
-                          {formatearEntero(mov.stock_anterior)} →{" "}
-                          <span className="font-medium text-blue-gray-900">{formatearEntero(mov.stock_actual)}</span>
-                        </Typography>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <Typography variant="small" color="blue-gray">
-                            {mov.usuario_nombre}
-                          </Typography>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Typography variant="small" color="blue-gray" className="max-w-xs truncate">
-                          {mov.motivo}
-                        </Typography>
-                        
-                      </td>
-                      <td className="p-4">
-                        <Chip value={mov.document} variant="outlined" size="sm" />
-                        {formatearEntero(mov.costo_unitario) && (
-                          <Typography variant="small" className="text-green-600 mt-1">
-                            {formatCurrency(Number(mov.costo_unitario))}
-                          </Typography>
-                        )}
-                        {Number(mov.precio_venta).toFixed(2) && (
-                          <Typography variant="small" className="text-blue-600 mt-1">
-                            {formatCurrency(Number(mov.precio_venta))}
-                          </Typography>
-                        )}
-                      </td>
-                    </tr>
-
-                    )
-
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>

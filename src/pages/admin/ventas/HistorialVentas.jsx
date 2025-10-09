@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatearPesos, formatearPesosRedondeo } from "../../../helpers/formatearPesos";
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
 import { formatearFechaHora } from "../../../helpers/formatoFecha";
@@ -55,6 +55,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline"
 import { descargarReciboAttachment, enviarReciboService, generarReciboService } from "../../../services/reciboServices";
 import { useVentas, useVentasTotales } from "../../../hooks/useVentas";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
+import VentasRow from "../../../components/Ventas/VentasRow";
 
  const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleString("es-ES", {
@@ -102,7 +103,7 @@ export const HistorialVentas = () => {
 }, [searchDebounced, activeTab, limit, offset, fechaFin, fechaInicio]);
   // TRAER VENTAS DESDE REACT QUERY 
   const { data, isLoading } = useVentas(filtros);
-  const ventas = data?.ventas ?? [];
+  const ventas = useMemo(() => data?.ventas ?? [], [data])
   // console.log(ventas);
 
   // TRAER ESTADISTICAS DE TOTALES DESDE REACT QUERY
@@ -149,15 +150,16 @@ export const HistorialVentas = () => {
   });
 }
   
-  
-  const handleOpenModal = (venta) => {
+  const handleOpenModal = useCallback((venta) => {
     setOpen(true);
     setVentaSeleccionada(venta);
-  };
-  const handleCloseModal = () => {
+  }, []);
+
+
+  const handleCloseModal = useCallback(() => {
     setOpen(false);
     setVentaSeleccionada(null);
-  }
+  }, []);
 
    const imprimirRecibo = async (venta) => {
   try {
@@ -176,8 +178,7 @@ export const HistorialVentas = () => {
    }
  }; 
 
-  const handleDescargarRecibo =  (venta) => {
-  const codigo = venta.codigo;
+  const handleDescargarRecibo =  (codigo) => {;
     descargarReciboAttachment(codigo);
 };
 
@@ -401,210 +402,27 @@ export const HistorialVentas = () => {
             
               <div className="space-y-4">
                 {ventas.map((venta) => (
-                  <Card key={venta.id} className="border border-gray-200 hover:shadow-md transition-shadow">
-                    <CardBody className="p-6">
-                      <div className="flex flex-col lg:flex-row gap-6">
-                        {/* Información principal */}
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <div className="flex items-center gap-3 mb-2">
-                                <Typography variant="h6" color="blue-gray" className="font-bold">
-                                  {venta.codigo}
-                                </Typography>
-                                <Chip
-                                  value={venta.canal === "local" ? "Local" : "E-commerce"}
-                                  color={venta.canal === "local" ? "deep-orange" : "purple"}
-                                  size="sm"
-                                  variant="ghost"
-                                  className="rounded-full"
-                                  icon={
-                                    venta.canal === "local" ? (
-                                      <Store className="h-3 w-3 mt-[1px]" />
-                                    ) : (
-                                      <Globe className="h-3 w-3 mt-[1px]" />
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4" />
-                                  <span>{formatearFecha(venta.fecha)}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <CreditCard className="h-4 w-4" />
-                                  <span className="capitalize">{venta.medio_pago}</span>
-                                </div>
-                              </div>
-                              {venta.canal === "local" ? (
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
-                                  <div className="flex items-center gap-1">
-                                    <User className="h-4 w-4" />
-                                    <span>Vendedor: {venta.usuario.nombre}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="h-4 w-4" />
-                                    <span>Sucursal Illia</span>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
-                                  <div className="flex items-center gap-1">
-                                    <Smartphone className="h-4 w-4" />
-                                    <span>Plataforma: Tienda Ecommerce</span>
-                                  </div>
-                                  {venta.orden && (
-                                    <div className="flex items-center gap-1">
-                                      <Package className="h-4 w-4" />
-                                      <span>Orden: {venta.orden}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <Menu>
-                              <MenuHandler>
-                                <IconButton variant="text" color="blue-gray">
-                                  <MoreVertical className="h-4 w-4" />
-                                </IconButton>
-                              </MenuHandler>
-                              <MenuList>
-                                <MenuItem className="flex items-center gap-2">
-                                  <Eye className="h-4 w-4" />
-                                  Ver detalles
-                                </MenuItem>
-                                <MenuItem className="flex items-center gap-2">
-                                  <Receipt className="h-4 w-4" />
-                                  Imprimir recibo
-                                </MenuItem>
-                                <MenuItem className="flex items-center gap-2" onClick={() => handleDescargarRecibo(venta)}>
-                                  <Download className="h-4 w-4" />
-                                  Descargar PDF
-                                </MenuItem>
-                              </MenuList>
-                            </Menu>
-                          </div>
-
-                          {/* Información del cliente */}
-                          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                            <Typography
-                              variant="small"
-                              color="blue-gray"
-                              className="font-medium mb-2 flex items-center gap-2"
-                            >
-                              <User className="h-4 w-4" />
-                              Cliente
-                            </Typography>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                              <span>
-                                <strong>Nombre:</strong> {venta.cliente.nombre}
-                              </span>
-                              <span>
-                                <strong>Email:</strong> {venta.cliente.email}
-                              </span>
-                              <span>
-                                <strong>Teléfono:</strong> {venta.cliente.telefono}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Productos */}
-                          <div>
-                            <Typography
-                              variant="small"
-                              color="blue-gray"
-                              className="font-medium mb-3 flex items-center gap-2"
-                            >
-                              <Package className="h-4 w-4" />
-                              Productos ({venta.productos.length})
-                            </Typography>
-                            <div className="space-y-2">
-                              {venta.productos.map((producto) => (
-                                <div
-                                  key={producto.id}
-                                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg"
-                                >
-                                  <Avatar
-                                    src={mostrarImagen(producto.imagen)}
-                                    alt={producto.nombre}
-                                    size="sm"
-                                    variant="rounded"
-                                    className="border border-gray-200"
-                                  />
-                                  <div className="flex-1">
-                                    <Typography variant="small" color="blue-gray" className="font-medium">
-                                      {producto.nombre}
-                                    </Typography>
-                                    <Typography variant="small" color="gray">
-                                      ${producto.precio.toFixed(2)} × {producto.cantidad}
-                                    </Typography>
-                                  </div>
-                                  <Typography variant="small" color="blue-gray" className="font-bold">
-                                    ${(producto.precio * producto.cantidad).toFixed(2)}
-                                  </Typography>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Resumen financiero */}
-                        <div className="lg:w-80">
-                          <Card className="bg-gray-50 border border-gray-200">
-                            <CardBody className="p-4">
-                              <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2">
-                                <DollarSign className="h-5 w-5" />
-                                Resumen de Venta
-                              </Typography>
-                              <div className="space-y-3">
-                                <div className="flex justify-between">
-                                  <Typography variant="small" color="blue-gray">
-                                    Subtotal:
-                                  </Typography>
-                                  <Typography variant="small" color="blue-gray" className="font-medium">
-                                    ${venta.subtotal}
-                                  </Typography>
-                                </div>
-                                {venta.descuento > 0 && (
-                                  <div className="flex justify-between">
-                                    <Typography variant="small" color="blue-gray">
-                                      Descuento:
-                                    </Typography>
-                                    <Typography variant="small" color="red" className="font-medium">
-                                      -${venta.descuento}
-                                    </Typography>
-                                  </div>
-                                )}
-                                <div className="flex justify-between">
-                                  <Typography variant="small" color="blue-gray">
-                                    Impuestos:
-                                  </Typography>
-                                  <Typography variant="small" color="blue-gray" className="font-medium">
-                                    ${venta.impuestos}
-                                  </Typography>
-                                </div>
-                                <hr className="border-gray-300" />
-                                <div className="flex justify-between">
-                                  <Typography variant="h6" color="blue-gray">
-                                    Total:
-                                  </Typography>
-                                  <Typography variant="h6" color="deep-orange" className="font-bold">
-                                    ${venta.total.toFixed(2)}
-                                  </Typography>
-                                </div>
-                              </div>
-                              <div className="mt-4">
-                                <Button color="deep-orange" className="w-full" size="sm" onClick={() => handleOpenModal(venta)}>
-                                  Ver Detalles Completos
-                                </Button>
-                              </div>
-                            </CardBody>
-                          </Card>
-                        </div>
-                      </div>
-                    </CardBody>
-                  </Card>
+                  <VentasRow 
+                  key={venta.id}
+                  id={venta.id}
+                  codigo={venta.codigo}
+                  canal={venta.canal}
+                  fecha={venta.fecha}
+                  medio_pago={venta.medio_pago}
+                  usuarioNombre={venta.usuario.nombre}
+                  orden={venta.orden}
+                  clienteNombre={venta.cliente.nombre}
+                  clienteEmail={venta.cliente.email}
+                  clienteTelefono={venta.cliente.telefono}
+                  productos={venta.productos}
+                  subtotal={venta.subtotal}
+                  total={venta.total}
+                  descuento={venta.descuento}
+                  impuestos={venta.impuestos}
+                  venta={venta}
+                  onDetalle={handleOpenModal}
+                  onDescargarRecibo={handleDescargarRecibo}  
+                  />
                 ))}
               </div>
             

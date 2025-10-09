@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import { Login } from './pages/auth/Login';
 import { SubirProducto } from './pages/admin/productos/SubirProducto';
 import { Productos } from './pages/admin/productos/Productos';
@@ -19,59 +19,96 @@ import ConfiguracionesDashboard from './pages/admin/configuraciones/Configuracio
 import MovimientosStock from './pages/admin/stock/MovimientosStock';
 import RegistrarMovimientoStock from './pages/admin/stock/RegistrarMovimientoStock';
 import { RestablecerContrasena } from './pages/auth/RecoveryPassword';
+import { Boxes, ShoppingCart, Users, BarChart3, FileText, Package, Settings, User as UserIcon, ClipboardList } from "lucide-react";
 
-function App() {
-  
 
-  return (
-    
-    
 
-    <BrowserRouter>
-    <Toaster
-        position="top-center"
-        toastOptions={{
-          style: {
-            background: '#333',
-            color: '#fff',
+export const router = createBrowserRouter([
+  // RUTAS PUBLICAS
+  { path: "/login", element: <Login /> },
+  { path: "/restablecer-password/:token", element: <RestablecerContrasena /> },
+  { path: "/restablecer-password", element: <RestablecerContrasena /> },
+
+  // TIENDA PUBLICA
+  { path: "/", element: <TiendaLayout /> },
+
+  // RUTAS PRIVADAS
+  { 
+    path: '/admin',
+    element: <PrivateRoute/>,
+    children: [
+      {
+        element: <AdminLayout/>,
+        children: [
+          {
+            path: "productos",
+            element: <Productos/>,
+            handle: { header: { title: 'Productos', icon: Package}}
           },
-        }}
-      />
-    <Routes>
+          {
+            path: "productos/nuevo",
+            element: <SubirProducto/>,
+            handle: { header: { title: 'Nuevo producto', icon: Package}}
+          },
+          {
+            path: "clientes",
+            element: <Clientes/>,
+            handle: { header: { title: 'Clientes', icon: Users}}
+          },
+          {
+            path: "clientes/registrar-cliente",
+            element: <AltaCliente/>,
+            handle: { header: { title: 'Registrar cliente', icon: Users}}
+          },
+          {
+            path: "ventas/registrar-venta",
+            element: <RegistrarVenta/>,
+            handle: { header: { title: 'Registrar venta', icon: ShoppingCart}}
+          },
+          {
+            path: "ventas/historial-ventas",
+            element: <HistorialVentas/>,
+            handle: { header: { title: 'Historial de ventas', icon: ClipboardList}}
+          },
+          {
+            path: "stock/movimientos-stock",
+            element: <MovimientosStock/>,
+            handle: { header: { title: 'Movimientos de stock', icon: Package}}
+          },
+          {
+            path: "stock/registrar-movimiento-stock",
+            element: <RegistrarMovimientoStock/>,
+            handle: { header: { title: 'Registrar movimiento', icon: Package}}
+          },
+          {
+            path: "ordenes",
+            element: <Ordenes/>,
+            handle: { header: { title: 'Órdenes', icon: FileText}}
+          },
+          {
+            path: "estadisticas",
+            element: <Estadisticas/>,
+            handle: { header: { title: 'Estadísticas', icon: BarChart3}}
+          },
+          {
+            path: "reportes",
+            element: <Reportes/>,
+            handle: { header: { title: 'Reportes', icon: FileText}}
+          },
+          {
+            path: "perfil",
+            element: <PerfilUsuario/>,
+            handle: { header: { title: 'Perfil', icon: UserIcon}}
+          },
+          {
+            path: "settings",
+            element: <ConfiguracionesDashboard/>,
+            handle: { header: { title: 'Configuraciones', icon: Settings}}
+          },
+        ],
+      },
+    ],
+  },
+]);
 
-      {/* Rutas publicas */}
-      <Route path='/login' element={<Login/>}/>
-      <Route path='/restablecer-password/:token' element={<RestablecerContrasena/>}/>
-      <Route path='/restablecer-password' element={<RestablecerContrasena/>}/>
-      {/* Ecommerce */}
-      <Route path='/' element={<TiendaLayout/>}>
-
-      </Route>
-
-      {/* Rutas privadas */}
-      <Route path="/admin" element={<PrivateRoute />}>
-        <Route element={<AdminLayout />}>
-          <Route path="productos" element={<Productos />} />
-          <Route path="productos/nuevo" element={<SubirProducto />} />
-          {/* <Route path="productos/publicar" element={<PublicarProductos />} /> */}
-          <Route path="clientes" element={<Clientes />} />
-          <Route path="clientes/registrar-cliente" element={<AltaCliente />} />
-          <Route path="ventas/registrar-venta" element={<RegistrarVenta />} />
-          <Route path="ventas/historial-ventas" element={<HistorialVentas />} />
-          <Route path="stock/movimientos-stock" element={<MovimientosStock />} />
-          <Route path="stock/registrar-movimiento-stock" element={<RegistrarMovimientoStock />} />
-          <Route path="ordenes" element={<Ordenes />} />
-          <Route path="estadisticas" element={<Estadisticas />} />
-          <Route path="reportes" element={<Reportes />} />
-          <Route path="perfil" element={<PerfilUsuario />} />
-          <Route path="settings" element={<ConfiguracionesDashboard />} />
-
-        </Route>
-      </Route>
-
-    </Routes>
-    </BrowserRouter>
-  )
-}
-
-export default App
+export default router;

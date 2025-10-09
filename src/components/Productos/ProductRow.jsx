@@ -4,7 +4,6 @@ import { formatearPesos } from "../../helpers/formatearPesos";
 import { Avatar, Chip, IconButton, Typography } from "@material-tailwind/react";
 import { Eye, Edit, Power, PowerOff, Trash2, TrendingUp, Printer } from "lucide-react";
 
-
 const obtenerEstadoProducto = (producto) => {
   if (producto.estado === 0) return "Inactivo";
   if (producto.stock_cantidad === 0) return "Sin stock";
@@ -14,55 +13,29 @@ const obtenerEstadoProducto = (producto) => {
 
 const getChipColor = (estado) => {
   switch (estado) {
-    case "Activo":
-      return "green";
-    case "Sin stock":
-      return "red";
-    case "Bajo stock":
-      return "amber";
-    case "Inactivo":
-      return "gray";
-    default:
-      return "blue-gray";
+    case "Activo": return "green";
+    case "Sin stock": return "red";
+    case "Bajo stock": return "amber";
+    case "Inactivo": return "gray";
+    default: return "blue-gray";
   }
 };
 
-const areEqual = (prev, next) => {
-  const a = prev.producto, b = next.producto;
-  const same =
-    a.id === b.id &&
-    a.nombre === b.nombre &&
-    a.categoria_nombre === b.categoria_nombre &&
-    a.precio === b.precio &&
-    a.precio_costo === b.precio_costo &&
-    a.cantidad === b.cantidad &&
-    a.stock_cantidad === b.stock_cantidad &&
-    (a.total_vendido || 0) === (b.total_vendido || 0) &&
-    a.estado === b.estado &&
-    a.imagen_url === b.imagen_url &&
-    a.barcode === b.barcode;
+function ProductRow({ producto, onView, onDelete, onActivar, onDesactivar, onEdit, onPrint }) {
+  const estadoStr = useMemo(
+    () => obtenerEstadoProducto(producto),
+    [producto.estado, producto.stock_cantidad]
+  );
+  const chipColor = useMemo(() => getChipColor(estadoStr), [estadoStr]);
 
-  return same
-    && prev.onView === next.onView
-    && prev.onEdit === next.onEdit
-    && prev.onActivar === next.onActivar
-    && prev.onDesactivar === next.onDesactivar
-    && prev.onDelete === next.onDelete
-    && prev.onPrint === next.onPrint;
-};
+  const ver = useCallback(() => onView(producto), [onView, producto]);
+  const editar = useCallback(() => onEdit(producto), [onEdit, producto]);
+  const eliminar = useCallback(() => onDelete(producto), [onDelete, producto]);
+  const activar = useCallback(() => onActivar(producto), [onActivar, producto]);
+  const desactivar = useCallback(() => onDesactivar(producto), [onDesactivar, producto]);
+  const imprimir = useCallback(() => onPrint(producto), [onPrint, producto]);
 
-const ProductRow = memo(function ProductRow({ producto, onView, onDelete, onActivar, onDesactivar, onEdit, onPrint}) {
-    const estadoStr = useMemo(() => obtenerEstadoProducto(producto), [producto.estado, producto.stock_cantidad]);
-    const chipColor = useMemo(() => getChipColor(estadoStr), [estadoStr]);
-
-    const ver = useCallback(() => onView(producto), [onView, producto]);
-    const editar = useCallback(() => onEdit(producto), [onEdit, producto]);
-    const eliminar = useCallback(() => onDelete(producto), [onDelete, producto]);
-    const activar = useCallback(() => onActivar(producto), [onActivar, producto]);
-    const desactivar = useCallback(() => onDesactivar(producto), [onDesactivar, producto]);
-    const imprimir = useCallback(() => onPrint(producto), [onPrint, producto]);
-
-        return (
+  return (
     <tr className="hover:bg-gray-50">
       <td className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
@@ -131,27 +104,17 @@ const ProductRow = memo(function ProductRow({ producto, onView, onDelete, onActi
           </IconButton>
 
           {producto.estado === 0 ? (
-            <IconButton
-              variant="text"
-              color="green"
-              size="sm"
-              onClick={activar}
-            >
+            <IconButton variant="text" color="green" size="sm" onClick={activar}>
               <Power className="h-4 w-4" />
             </IconButton>
           ) : (
-            <IconButton
-              variant="text"
-              color="red"
-              size="sm"
-              onClick={desactivar}
-            >
+            <IconButton variant="text" color="red" size="sm" onClick={desactivar}>
               <PowerOff className="h-4 w-4" />
             </IconButton>
           )}
 
           <IconButton variant="text" color="black" size="sm" onClick={imprimir}>
-            <Printer className="h-4 w-4"/>
+            <Printer className="h-4 w-4" />
           </IconButton>
 
           <IconButton variant="text" color="red" size="sm" onClick={eliminar}>
@@ -161,7 +124,34 @@ const ProductRow = memo(function ProductRow({ producto, onView, onDelete, onActi
       </td>
     </tr>
   );
-    
-});
+}
+
+
+const areEqual = (prev, next) => {
+  const a = prev.producto, b = next.producto;
+
+  const sameProducto =
+    a.id === b.id &&
+    a.nombre === b.nombre &&
+    a.categoria_nombre === b.categoria_nombre &&
+    a.precio === b.precio &&
+    a.precio_costo === b.precio_costo &&
+    a.cantidad === b.cantidad &&
+    a.stock_cantidad === b.stock_cantidad &&
+    (a.total_vendido || 0) === (b.total_vendido || 0) &&
+    a.estado === b.estado &&
+    a.imagen_url === b.imagen_url &&
+    a.barcode === b.barcode;
+
+  const sameHandlers =
+    prev.onView === next.onView &&
+    prev.onEdit === next.onEdit &&
+    prev.onActivar === next.onActivar &&
+    prev.onDesactivar === next.onDesactivar &&
+    prev.onDelete === next.onDelete &&
+    prev.onPrint === next.onPrint;
+
+  return sameProducto && sameHandlers;
+};
 
 export default memo(ProductRow, areEqual);

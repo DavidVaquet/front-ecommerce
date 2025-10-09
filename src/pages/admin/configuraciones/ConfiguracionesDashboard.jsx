@@ -1204,7 +1204,7 @@ const ConfiguracionesDashboard = () => {
                             onChange={(e) =>
                               setConfigVentas({
                                 ...configVentas,
-                                validezPresupuesto: Number.parseInt(
+                                fx_rate_usd_ars: Number.parseInt(
                                   e.target.value
                                 ),
                               })

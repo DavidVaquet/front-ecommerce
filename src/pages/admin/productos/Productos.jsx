@@ -155,7 +155,7 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
 
   // Obtener productos
   const { data, isLoading, error, refetch, isFetching } = useProductos(filtros);
-  const products = data?.rows ?? [];
+  const products = useMemo(() => data?.rows ?? [], [data]);
   // console.log(data);
 
   // Obtener categorias y subcategorias
@@ -456,7 +456,8 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
         <StatsCard
          titulo='Total Productos'
          valor={totalProductos}
-         icono={<Package className="h-6 w-6 text-deep-orange-500" />} />
+         icono={<Package className="h-6 w-6 text-deep-orange-500" />}
+         iconoBackground='deep-orange-50' />
         {/* Card Productos Activos */}
         <StatsCard
         titulo="Productos Activos"
@@ -465,7 +466,9 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
         progreso={porcActivos}
         progresoTexto={`${porcActivos}% del total`}
         colorProgreso="green"
-        colorTyppography='blue-gray'/>
+        colorTyppography='blue-gray'
+        iconoBackground='green-50'
+        />
         {/* Card Sin Stock */}
         <StatsCard
         titulo="Sin Stock"
@@ -474,7 +477,9 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
         progreso={porcSinStock}
         progresoTexto={`${porcSinStock}% del total`}
         colorProgreso="red"
-        colorTyppography='blue-gray' />
+        colorTyppography='blue-gray'
+        iconoBackground='red-50'
+        />
         {/* Card Bajo Stock */}
         <StatsCard
         titulo="Bajo Stock"
@@ -483,7 +488,9 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
         progreso={porcBajoStock}
         progresoTexto={`${porcBajoStock}% del total`}
         colorProgreso="amber"
-        colorTyppography='blue-gray'/>
+        colorTyppography='blue-gray'
+        iconoBackground='yellow-50'
+        />
       </div>
 
       {/* Filtros y Búsqueda */}

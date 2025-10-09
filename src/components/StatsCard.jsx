@@ -1,6 +1,15 @@
 import React, {memo} from 'react';
 import { Card, CardBody, Typography, Progress } from "@material-tailwind/react";
 
+const bgColorMap = {
+  'green-50': 'bg-green-50',
+  'blue-50': 'bg-blue-50',
+  'yellow-50': 'bg-yellow-50',
+  'deep-orange-50': 'bg-deep-orange-50',
+  'gray-50': 'bg-gray-50',
+  'red-50': 'bg-red-50'
+};
+
 const StatsCard = memo(function StatsCard({
   titulo,
   valor,
@@ -8,8 +17,11 @@ const StatsCard = memo(function StatsCard({
   progreso,
   progresoTexto,
   colorProgreso,
-  colorTyppography
+  colorTyppography,
+  iconoBackground
 }){
+
+  const bgClass = bgColorMap[iconoBackground] ?? 'bg-gray-50';
 
   return (
     <Card className="shadow-sm border border-gray-200">
@@ -32,7 +44,7 @@ const StatsCard = memo(function StatsCard({
                 </Typography>
               </div>
               {icono ? (
-              <div className="h-12 w-12 rounded-full bg-deep-orange-50 flex items-center justify-center">
+              <div className={`h-12 w-12 rounded-full bg-${iconoBackground} flex items-center justify-center`}>
                 {icono}
               </div>
 

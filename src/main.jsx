@@ -1,8 +1,9 @@
 import { createRoot } from "react-dom/client";
+import { RouterProvider } from "react-router-dom";
 import { keepPreviousData, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import "./index.css";
-import App from "./App.jsx";
+import { router } from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 
 export const queryClient = new QueryClient({
@@ -27,7 +28,7 @@ export const queryClient = new QueryClient({
 createRoot(document.getElementById("root")).render(
   <QueryClientProvider client={queryClient} >
     <AuthProvider> 
-    <App />        
+      <RouterProvider router={router}/>
     </AuthProvider>
     <ReactQueryDevtools initialIsOpen={false} />
   </QueryClientProvider>

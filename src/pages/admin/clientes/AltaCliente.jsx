@@ -61,13 +61,15 @@ export const AltaCliente = () => {
   const filtroCategoria = useMemo(() => ({
     scope: 'alta'
   }), [])
-  const { data } = useClienteEstadisticas(filtroCategoria)
-  const estadisticasClientes = data ?? [];
+  const { data } = useClienteEstadisticas(filtroCategoria);
   // Estadísticas
-  const clientes_hoy = estadisticasClientes?.nuevos_hoy ?? 0;
-  const clientes_hoy_tienda = estadisticasClientes?.altas_hoy_manual ?? 0;
-  const clientes_hoy_online = estadisticasClientes?.altas_hoy_online ?? 0;
-  const clientes_incompletos = estadisticasClientes?.incompletos ?? 0;
+  const clientes_hoy = data?.nuevos_hoy ?? 0;
+  const clientes_hoy_tienda = data?.nuevos_hoy_tienda ?? 0;
+  const clientes_hoy_online = data?.altas_hoy_online ?? 0;
+  const clientes_incompletos = data?.incompletos ?? 0;
+  const porcNuevosHoy = data?.nuevos_hoy_tienda ?? 0;
+  const porClientesIncompletos = data?.clientes_incompletos ?? 0;
+
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -219,7 +221,7 @@ export const AltaCliente = () => {
             </div>
             <div className="mt-3 flex items-center gap-1">
               <Typography variant="small" color="blue" className="font-medium">
-                {((clientes_hoy_tienda / clientes_hoy_online) * 100)}% del total
+                {porcNuevosHoy}% del total
               </Typography>
             </div>
           </CardBody>
@@ -266,7 +268,7 @@ export const AltaCliente = () => {
             </div>
             <div className="mt-3 flex items-center gap-1">
               <Typography variant="small" color="deep-orange" className="font-medium">
-                {((clientes_incompletos / (clientes_hoy_tienda  + clientes_hoy_tienda)) * 100).toFixed(1)}% activos
+                {porClientesIncompletos}% activos
               </Typography>
             </div>
           </CardBody>
@@ -282,7 +284,7 @@ export const AltaCliente = () => {
               <User className="h-6 w-6 text-deep-orange-500" />
             </div>
             <div>
-              <Typography variant="h5" color="blue-gray">
+              <Typography variant="h5" color="blue-gray" className="uppercase">
                 Información del Cliente
               </Typography>
               <Typography color="gray" className="mt-1 font-normal text-sm">

@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom"
 import { bajaCliente, editarClienteService } from "../../../services/clienteServices"
 import { useNotificacion } from "../../../hooks/useNotificacion.jsx"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { formatearFecha, formatearFechaHora } from "../../../helpers/formatoFecha.js"
 import { provinciasConCiudades } from "../../../helpers/provinciasCiudades.js"
 import {
@@ -65,6 +65,13 @@ import { enviarEmailText } from "../../../helpers/enviarEmail.js"
 import { useClienteEstadisticas, useClientesCompras } from "../../../hooks/useClientes.jsx"
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue.jsx"
 import { useClienteMutation } from "../../../hooks/useClientesMutation.jsx"
+import ClientesRow from "../../../components/Clientes/ClientesRow.jsx"
+
+const getChipColor = (estado) => {
+  if (estado === true) return "green"
+  if (estado === false) return "red"
+  return "blue-gray"
+}
 
 export const Clientes = () => {
   // Estados
@@ -99,9 +106,17 @@ export const Clientes = () => {
   // Notificaciones
   const { componenteAlerta, mostrarNotificacion } = useNotificacion();
   // Modales
-  const handleOpen = () => setOpenDetalles(!openDetalles)
-  const handleOpenEditar = () => setOpenEditar(!openEditar)
-  const handleOpenEmail = () => setOpenEmail(!openEmail)
+  const handleOpen = useCallback(() => {
+  setOpenDetalles(prev => !prev);
+  }, []);
+  const handleOpenEditar = useCallback(() => setOpenEditar(prev => !prev), []);
+  const openEmailFor = useCallback((usuario) => {
+  setClienteSeleccionado(usuario);
+  setOpenEmail(true);
+}, []);
+const toggleEmail = useCallback(() => {
+  setOpenEmail(prev => !prev);
+}, []);
   const navigate = useNavigate()
   const clientesPerPage = 25;
 
@@ -124,7 +139,7 @@ export const Clientes = () => {
     return f;
   }, [limite, offset, searchDebounced, activeTab, filtroEstado, filtroTipo])
   const { data, isLoading } = useClientesCompras(filtro);
-  const clientes = data?.items ?? [];
+  const clientes = useMemo(() => data?.items ?? [], [data]);
   
 
   // TRAER DESDE REACT QUERY LAS ESTADISTICAS DE CLIENTES
@@ -132,7 +147,6 @@ export const Clientes = () => {
     scope: 'gestion'
   }), [])
   const { data: dataEst } = useClienteEstadisticas(filtroCategoria);
-  const estadisticasClientes = dataEst ?? [];
 
   // RESETEAR PÁGINA CUANDO CAMBIEN LOS FILTROS
   useEffect(() => {
@@ -147,12 +161,12 @@ export const Clientes = () => {
   const showEmpty = !isLoading && total === 0;
   
 
-  const detalleClientes = (cliente) => {
+  const detalleClientes = useCallback((cliente) => {
     setClienteSeleccionado(cliente)
     handleOpen()
-  }
+  }, [handleOpen]);
 
-  const cambiarEstado = async (cliente) => {
+  const cambiarEstado = useCallback( async (cliente) => {
     try {
       const nuevoEstado = !cliente.estado
       const payload = {
@@ -171,9 +185,9 @@ export const Clientes = () => {
       console.error(error)
       mostrarNotificacion('error', error.message || 'Error al cambiar el estado del cliente');
     }
-  }
+  }, [suspenderCliente, mostrarNotificacion])
 
-  const comenzarEdicion = (cliente) => {
+  const comenzarEdicion = useCallback((cliente) => {
     const provinciaEncontrada = Object.keys(provinciasConCiudades).find((prov) =>
       provinciasConCiudades[prov].includes(cliente.ciudad),
     )
@@ -190,11 +204,11 @@ export const Clientes = () => {
       pais: cliente.pais,
       codigo_postal: cliente.codigo_postal,
       notas: cliente.notas,
-      es_vip: cliente.vip,
+      es_vip: cliente.es_vip,
     })
     setClienteSeleccionado(cliente)
-    handleOpenEditar()
-  }
+    setOpenEditar(true);
+  }, [])
 
   const validarFormulario = () => {
     if (!formularioEditar.nombre.trim()) {
@@ -300,7 +314,8 @@ export const Clientes = () => {
         mostrarNotificacion('success', 'Email envíado correctamente');
         setAsuntoEmail("");
         setMensajeEmail("");
-        handleOpenEmail();
+        setClienteSeleccionado(null);
+        setOpenEmail(false);
       } else{
         mostrarNotificacion('error', 'Error al envíar el email');
       }
@@ -309,29 +324,21 @@ export const Clientes = () => {
     }
   }
 
+
   // Estadísticas
-  const totalUsuarios = estadisticasClientes.total_usuarios;
-  const usuariosEcommerce = estadisticasClientes.usuarios_ecommerce;
-  const usuariosManuales = estadisticasClientes.usuarios_manuales;
-  const usuariosActivos = estadisticasClientes.usuarios_activos;
-  const usuariosVip = estadisticasClientes.usuarios_vip;
+  const totalUsuarios = dataEst?.total_usuarios ?? 0;
+  const usuariosEcommerce = dataEst?.usuarios_ecommerce ?? 0;
+  const usuariosManuales = dataEst?.usuarios_manuales ?? 0;
+  const usuariosActivos = dataEst?.usuarios_activos ?? 0;
+  const usuariosVip = dataEst?.usuarios_vip ?? 0;
+  const porcEcommerce = dataEst?.porcentaje_ecommerce ?? 0;
+  const porcUserActivo = dataEst?.porcentaje_user_activos ?? 0;
 
-  const totalGastado = estadisticasClientes.total_gastado;
-  const promedioGasto = estadisticasClientes.promedio_gasto;
+  // const totalGastado = estadisticasClientes.total_gastado;
+  const promedioGasto = dataEst?.gasto_promedio ?? 0;
 
-  const getChipColor = (estado) => {
-    if (estado === true) return "green"
-    if (estado === false) return "red"
-    return "blue-gray"
-  }
 
-  const getTipoIcon = (esVip) => {
-    if (esVip) {
-      return <Crown className="h-4 w-4" />
-    } else {
-      return <UserCheck className="h-4 w-4" />
-    }
-  }
+
 
   return (
     <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
@@ -386,7 +393,7 @@ export const Clientes = () => {
                   Online: {usuariosEcommerce} | Manual: {usuariosManuales}
                 </Typography>
               </div>
-              <Progress value={(usuariosEcommerce / totalUsuarios) * 100} color="blue" />
+              <Progress value={porcEcommerce} color="blue" />
             </div>
           </CardBody>
         </Card>
@@ -408,7 +415,7 @@ export const Clientes = () => {
             </div>
             <div className="mt-3 flex items-center gap-1">
               <Typography variant="small" color="green" className="font-medium">
-                {((usuariosActivos / totalUsuarios) * 100)}% del total
+                {porcUserActivo}% del total
               </Typography>
             </div>
           </CardBody>
@@ -566,136 +573,15 @@ export const Clientes = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {clientes.map((usuario) => (
-                      <tr key={usuario.id} className="hover:bg-gray-50">
-                        <td className="p-4 border-b border-gray-200">
-                          <div className="flex items-center gap-3">
-                            <Avatar
-                              src={`https://ui-avatars.com/api/background=0D8ABC&color=fff?name=${usuario.nombre}+${usuario.apellido}`}
-                              alt={`${usuario.nombre} ${usuario.apellido}`}
-                              size="md"
-                              className="border border-gray-200"
-                            />
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <Typography variant="small" color="blue-gray" className="font-medium">
-                                  {usuario.nombre} {usuario.apellido}
-                                </Typography>
-                                {usuario.tipo_cliente === true && <Crown className="h-4 w-4 text-yellow-500" />}
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Chip
-                                  value={usuario.tipo_cliente}
-                                  color={usuario.vip === true ? "yellow" : "blue"}
-                                  size="sm"
-                                  variant="ghost"
-                                  className="rounded-full capitalize"
-                                  icon={getTipoIcon(usuario.tipo_cliente)}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 border-b border-gray-200">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-3 w-3 text-gray-500" />
-                              <Typography variant="small" color="blue-gray">
-                                {usuario.email}
-                              </Typography>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-3 w-3 text-gray-500" />
-                              <Typography variant="small" color="gray">
-                                {usuario.telefono}
-                              </Typography>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 border-b border-gray-200">
-                          <Chip
-                            value={usuario.origen === "ecommerce" ? "E-commerce" : "Manual"}
-                            color={usuario.origen === "ecommerce" ? "purple" : "deep-orange"}
-                            size="sm"
-                            variant="ghost"
-                            className="rounded-full"
-                            icon={
-                              usuario.origen === "ecommerce" ? (
-                                <Globe className="h-3 w-3" />
-                              ) : (
-                                <Store className="h-3 w-3" />
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-4 border-b border-gray-200">
-                          <Chip
-                            value={usuario.estado === true ? "Activo" : "Inactivo"}
-                            color={getChipColor(usuario.estado)}
-                            size="sm"
-                            variant="ghost"
-                            className="rounded-full capitalize"
-                          />
-                        </td>
-                        <td className="p-4 border-b border-gray-200">
-                          <div className="space-y-1">
-                            <Typography variant="small" color="blue-gray" className="font-medium">
-                              {usuario.cantidad_compras} compras
-                            </Typography>
-                            <Typography variant="small" color="gray">
-                              ${Number(usuario.total_gastado)}
-                            </Typography>
-                          </div>
-                        </td>
-                        <td className="p-4 border-b border-gray-200">
-                          <div className="space-y-1">
-                            <Typography variant="small" color="blue-gray">
-                              {formatearFechaHora(usuario.fecha_ultima_compra)}
-                            </Typography>
-                            <Typography variant="small" color="gray">
-                              Registro: {formatearFecha(usuario.fecha_creacion)}
-                            </Typography>
-                          </div>
-                        </td>
-                        <td className="p-4 border-b border-gray-200">
-                          <div className="flex gap-2">
-                            <IconButton variant="text" color="blue" size="sm" onClick={() => detalleClientes(usuario)}>
-                              <Eye className="h-4 w-4" />
-                            </IconButton>
-                            <IconButton
-                              variant="text"
-                              color="blue-gray"
-                              size="sm"
-                              onClick={() => comenzarEdicion(usuario)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </IconButton>
-                            <Menu>
-                              <MenuHandler>
-                                <IconButton variant="text" color="blue-gray" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </IconButton>
-                              </MenuHandler>
-                              <MenuList>
-                                <MenuItem
-                                className="flex items-center gap-2"
-                                onClick={() => {
-                                  setClienteSeleccionado(usuario);
-                                  handleOpenEmail();
-                                }}
-                                >
-                                  <Mail className="h-4 w-4" />
-                                  Enviar email
-                                </MenuItem>
-                                <MenuItem className="flex items-center gap-2" onClick={() => cambiarEstado(usuario)}>
-                                  <UserX className="h-4 w-4" />
-                                  {usuario.estado === true ? "Suspender cuenta" : "Reactivar cuenta"}
-                                </MenuItem>
-                              </MenuList>
-                            </Menu>
-                          </div>
-                        </td>
-                      </tr>
+                    {clientes.map((usuarios) => (
+                      <ClientesRow
+                      key={usuarios.id}
+                      usuario={usuarios}
+                      onDetalle={detalleClientes}
+                      onEdit={comenzarEdicion}
+                      onToggleEstado={cambiarEstado}
+                      onAbrirEmail={openEmailFor}
+                       />
                     ))}
                   </tbody>
                 </table>
@@ -1135,7 +1021,7 @@ export const Clientes = () => {
       </Dialog>
 
       {/* MODAL PARA ENVIAR MENSAJES */}
-      <Dialog open={openEmail} size="xs" handler={handleOpenEmail}>
+      <Dialog open={openEmail} size="xs" handler={toggleEmail}>
         <div className="flex items-center justify-between">
           <DialogHeader className="flex flex-col items-start">
             {" "}
@@ -1175,7 +1061,7 @@ export const Clientes = () => {
           </div>
         </DialogBody>
         <DialogFooter className="space-x-2">
-          <Button variant="text" color="gray" onClick={handleOpenEmail}>
+          <Button variant="text" color="gray" onClick={toggleEmail}>
             Cancelar
           </Button>
           <Button variant="gradient" color="gray" onClick={()=> enviarMail(clienteSeleccionado?.email, asuntoEmail, mensajeEmail)}>

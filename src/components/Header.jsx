@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useContext } from "react";
+import { useMatches } from "react-router";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import { Bell, AlertTriangle } from "lucide-react";
@@ -11,6 +12,7 @@ import {
   Typography,
 } from "@material-tailwind/react";
 import { useProductos } from "../hooks/useProductos";
+import { Home } from "lucide-react";
 
 export const Header = () => {
   // USESTATES
@@ -26,6 +28,13 @@ export const Header = () => {
   const { data } = useProductos(filtros);
   const total = data?.total ?? 0;
   const productosBajoStock = data?.rows ?? [];
+
+  const matches = useMatches();
+  const { title, Icon } = useMemo(() => {
+    const last = [...matches].reverse().find(m => m.handle?.header);
+    const header = last?.handle?.header;
+    return { title: header.title ?? 'Inicio', Icon: header.icon ?? Home};
+  }, [matches])
   
   const handleRedirect = (p) => {
     const searchValue = p.barcode || p.nombre;
@@ -34,10 +43,9 @@ export const Header = () => {
   }
   return (
     <div className="flex w-full h-[80px] bg-white items-center justify-between p-8">
-      <div>
-        <h1 className="text-negro font-worksans uppercase font-semibold">
-          Productos
-        </h1>
+      <div className="flex items-center gap-2">
+        <Icon className="h-5 w-5 text-blue-gray-900" />
+        <h1 className="text-negro font-worksans uppercase font-semibold">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">
