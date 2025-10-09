@@ -109,7 +109,7 @@ export const Header = () => {
           </Menu>
         </div>
         <img
-          src={`https://ui-avatars.com/api/?background=FFEA00&color=fff&name=${encodeURIComponent(user.nombre)}&length=1`}
+          src={`https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=${encodeURIComponent(user.nombre)}&length=1`}
           alt={user.nombre}
           className="inline-block relative object-cover object-center !rounded-full w-8 h-8"
         />
