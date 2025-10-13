@@ -70,8 +70,8 @@ import { printEtiqueta } from "../../../services/printServices";
 // Estilos CSS
 const obtenerEstadoProducto = (producto) => {
   if (producto.estado === 0) return "Inactivo";
-  if (producto.stock_cantidad === 0) return "Sin stock";
-  if (producto.stock_cantidad < 10) return "Bajo stock";
+  if (producto.cantidad === 0) return "Sin stock";
+  if (producto.cantidad < 10) return "Bajo stock";
   return "Activo";
 };
 
@@ -457,7 +457,9 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
          titulo='Total Productos'
          valor={totalProductos}
          icono={<Package className="h-6 w-6 text-deep-orange-500" />}
-         iconoBackground='deep-orange-50' />
+         iconoBackground='deep-orange-50'
+         colorTyppography='blue-gray'
+          />
         {/* Card Productos Activos */}
         <StatsCard
         titulo="Productos Activos"
@@ -911,7 +913,7 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
                         </Typography>
                       </div>
                       <Typography variant="h4" color="blue">
-                        {selectedProduct.stock_cantidad}
+                        {selectedProduct.cantidad}
                       </Typography>
                     </Card>
 
@@ -923,11 +925,11 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
                           color="blue-gray"
                           className="font-medium"
                         >
-                          Categoría
+                          Subcategoría
                         </Typography>
                       </div>
                       <Typography variant="h6" color="purple">
-                        {selectedProduct.categoria_nombre || "Sin categoría"}
+                        {selectedProduct.subcategoria_nombre || "Sin categoría"}
                       </Typography>
                     </Card>
 

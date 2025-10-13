@@ -19,7 +19,8 @@ import ConfiguracionesDashboard from './pages/admin/configuraciones/Configuracio
 import MovimientosStock from './pages/admin/stock/MovimientosStock';
 import RegistrarMovimientoStock from './pages/admin/stock/RegistrarMovimientoStock';
 import { RestablecerContrasena } from './pages/auth/RecoveryPassword';
-import { Boxes, ShoppingCart, Users, BarChart3, FileText, Package, Settings, User as UserIcon, ClipboardList } from "lucide-react";
+import { Boxes, ShoppingCart, Users, BarChart3, FileText, Package, Settings, User as UserIcon, ClipboardList, LayoutGrid } from "lucide-react";
+import { GestionCategorias } from './pages/admin/categorias/GestionCategorias';
 
 
 
@@ -49,6 +50,11 @@ export const router = createBrowserRouter([
             path: "productos/nuevo",
             element: <SubirProducto/>,
             handle: { header: { title: 'Nuevo producto', icon: Package}}
+          },
+          {
+            path: "categorias",
+            element: <GestionCategorias/>,
+            handle: { header: { title: 'Categorías', icon: LayoutGrid}}
           },
           {
             path: "clientes",

@@ -5,6 +5,7 @@ import { formatearPesos, formatearPesosRedondeo } from "../../../helpers/formate
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
 import { formatearFechaHora } from "../../../helpers/formatoFecha";
 import { useNotificacion } from "../../../hooks/useNotificacion";
+import ButtonResponsive from "../../../components/Button";
 import {
   Button,
   Card,
@@ -17,10 +18,6 @@ import {
   Tabs,
   TabsHeader,
   Tab,
-  Menu,
-  MenuHandler,
-  MenuList,
-  MenuItem,
   Progress,
   Dialog,
   DialogHeader,
@@ -29,8 +26,6 @@ import {
 } from "@material-tailwind/react"
 import {
   Search,
-  Filter,
-  Eye,
   Package,
   CreditCard,
   DollarSign,
@@ -42,8 +37,6 @@ import {
   BarChart3,
   Download,
   Receipt,
-  MoreVertical,
-  Clock,
   MapPin,
   Mail,
   Smartphone,
@@ -204,24 +197,24 @@ export const HistorialVentas = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight uppercase">Historial de Ventas</h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-gray-600 mt-1 lg:text-base text-[14px]">
               Visualiza y analiza todas las ventas realizadas tanto en el local como en la tienda e-commerce.
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outlined" size="md" color="blue-gray" className="flex items-center gap-2 uppercase">
-              <Download className="h-5 w-5" />
+            <ButtonResponsive
+            variant= "outlined"
+            color="blue-gray"
+            icon={Download} >
               Exportar Reporte
-            </Button>
-            <Button
-              variant="filled"
-              color="deep-orange"
-              className="flex items-center gap-2 uppercase shadow-md"
-              size="md"
-            >
-              <BarChart3 className="h-5 w-5" />
+            </ButtonResponsive>
+            <ButtonResponsive
+            variant= "filled"
+            color="deep-orange"
+            icon={BarChart3} >
               Ver Analytics
-            </Button>
+            </ButtonResponsive>
+            
           </div>
         </div>
       </div>
@@ -365,7 +358,7 @@ export const HistorialVentas = () => {
       {/* Tabs y Lista de Ventas */}
       <Card className="shadow-sm border border-gray-200">
         <Tabs value={activeTab}>
-          <TabsHeader className="p-2">
+          <TabsHeader className="p-2 whitespace-nowrap">
             <Tab value="todos" className="text-sm font-medium" onClick={() => { setActiveTab('todos'), setCurrentPage(1)}}>
               Todas ({totalVentas})
             </Tab>
@@ -393,7 +386,7 @@ export const HistorialVentas = () => {
               <div className="flex items-center gap-2">
 
               <Globe className="h-4 w-4" />
-              E-commerce ({ventasEcommerce})
+              Tienda ({ventasEcommerce})
               </div>
             </Tab>
           </TabsHeader>

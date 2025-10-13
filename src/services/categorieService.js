@@ -33,3 +33,24 @@ export const createCategoryService = async ({nombre, descripcion, activo}) => {
         throw new Error(error.message || 'Fallo al crear una categoria.' );
     }
 };
+
+export const getCategoriasSubCategorias = async ({ limit, offset, search, visible, estado, visibleSub, estadoSub } = {}) => {
+
+    try {
+        const url = new URL(`${API_URL}/get-categories-subcategories`);
+        if (limit > 0) url.searchParams.set('limit', limit);
+        if (offset != null) url.searchParams.set('offset', offset);
+        if (search != null) url.searchParams.set('search', search);
+        if (visible != null) url.searchParams.set('visible', visible);
+        if (visibleSub != null) url.searchParams.set('visibleSub', visibleSub);
+        if (estado != null) url.searchParams.set('estado', estado);
+        if (estadoSub != null) url.searchParams.set('estadoSub', estadoSub);
+
+        const res = await apiFetch(`${url}`);
+
+        return res;
+    } catch (error) {
+        console.error(error);
+        throw new Error(error.message);
+    }
+}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatearFecha, fechaHora } from "../../../helpers/formatoFecha";
 import { formatearEntero } from "../../../helpers/numeros";
 import { computeRange } from "../../../helpers/rangoFecha";
@@ -35,6 +35,7 @@ const MovimientosStock = () => {
   const [filtroFecha, setFiltroFecha] = useState("semana")
   const [busqueda, setBusqueda] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [scannerEnabled] = useState(true);
   const movimientosPerPage = 25;
   
   // TRAER MOVIMIENTOS DESDE REACT QUERY
@@ -99,8 +100,6 @@ const MovimientosStock = () => {
 }
 
 
- 
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-AR", {
       style: "currency",
@@ -112,8 +111,9 @@ const MovimientosStock = () => {
   const {componenteAlerta, mostrarNotificacion} = useNotificacion();
 
   // INPUT DE BUSQUEDA CONTROLADO
-  const handleScanOrSearch = async () => {
-    const input = (searchDebounced || '').trim();
+  const handleScanOrSearch = useCallback(async (codigoOpcional) => {
+    const raw = (typeof codigoOpcional === 'string' ? codigoOpcional : searchDebounced);
+    const input = (raw || '').trim();
     if (!input) return;
   
     if (isBarcodeLike(input)) {
@@ -131,7 +131,66 @@ const MovimientosStock = () => {
       }
       return;
     }
-  };
+  }, [setBusqueda, mostrarNotificacion, searchDebounced]);
+
+  const handleScanRef = useRef(handleScanOrSearch);
+  useEffect(() => { handleScanRef.current = handleScanOrSearch; }, [handleScanOrSearch]);
+
+  useEffect(() => {
+    if (!scannerEnabled) return;
+
+    let buffer = '';
+    let timer;
+    let locked = false;
+
+    const shouldIgnoreFocus = () => {
+      const el = document.activeElement;
+      if (!el) return false;
+      const tag = el.tagName;
+
+      if ((tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable) && el.dataset.scanIgnore === "true") {
+        return true;
+      }
+      return false;
+    };
+
+    const flush = () => {
+      if (!buffer || locked) return;
+      locked = true;
+      const code = buffer.trim();
+      buffer = "";
+
+      Promise.resolve(handleScanRef.current(code)).finally(() => {
+        setTimeout(() => { locked = false }, 50);
+      })
+    };
+
+    const onKeyDown = (e) => {
+      if (shouldIgnoreFocus()) return;
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        flush();
+        return;
+      }
+
+      if (e.key.length === 1) {
+        buffer += e.key;
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          flush();
+        }, 70)
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("keydown", onKeyDown);
+    }
+  }, [scannerEnabled])
+  
+  
 
   
   return (
@@ -274,13 +333,6 @@ const MovimientosStock = () => {
                   icon={<Search className="w-4 h-4" />}
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleScanOrSearch();
-                    }
-                  }}
                 />
               </div>
               <div className="flex gap-2">
@@ -410,9 +462,7 @@ const MovimientosStock = () => {
                     color="blue-gray"
                     size="sm"
                     disabled={currentPage === totalPages}
-                    onClick={() =>
-                      setCurrentPage((p) => goToPage(currentPage + 1, setCurrentPage, topRef, totalPages))
-                    }
+                    onClick={() => goToPage(currentPage + 1, setCurrentPage, topRef, totalPages)}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </IconButton>

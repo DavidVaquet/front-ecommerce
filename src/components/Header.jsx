@@ -45,7 +45,7 @@ export const Header = () => {
     <div className="flex w-full h-[80px] bg-white items-center justify-between p-8">
       <div className="flex items-center gap-2">
         <Icon className="h-5 w-5 text-blue-gray-900" />
-        <h1 className="text-negro font-worksans uppercase font-semibold">{title}</h1>
+        <h1 className="text-xs text-negro font-worksans uppercase font-semibold">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">

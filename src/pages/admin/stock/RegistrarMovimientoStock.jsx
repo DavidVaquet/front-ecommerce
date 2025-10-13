@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useMemo, } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSearchParams } from 'react-router'
 import {
   Plus,
@@ -10,7 +10,6 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   RefreshCw,
-  Truck,
   RotateCcw,
   Calculator,
   FileText,
@@ -22,13 +21,10 @@ import {
   Typography,
   Button,
   Input,
-  Select,
-  Option,
   Textarea,
   Chip,
   Alert,
 } from "@material-tailwind/react"
-import { registrarMovStockServices, stockMovements } from "../../../services/stockServices";
 import { useNotificacion } from "../../../hooks/useNotificacion"
 import { formatearEntero } from "../../../helpers/numeros";
 import { formatearFechaHora } from "../../../helpers/formatoFecha"
@@ -54,6 +50,7 @@ const RegistrarMovimientoStock = () => {
   const [busquedaProducto, setBusquedaProducto] = useState("");
   const [mostrarBusqueda, setMostrarBusqueda] = useState(false);
   const [errors, setErrors] = useState({});
+  const [scannerEnabled] = useState(true);
   const [formData, setFormData] = useState({
     tipo: tipoParam ?? "",
     producto: "",
@@ -121,7 +118,7 @@ const RegistrarMovimientoStock = () => {
     }
   }
 
-  const seleccionarProducto = (producto) => {
+  const seleccionarProducto = useCallback((producto) => {
     setProductoSeleccionado(producto)
     setFormData((prev) => ({
       ...prev,
@@ -131,7 +128,7 @@ const RegistrarMovimientoStock = () => {
     }))
     setMostrarBusqueda(false)
     setBusquedaProducto("")
-  }
+  }, []);
 
   const calcularStockResultante = () => {
     if (!productoSeleccionado || !formData.cantidad) return null
@@ -289,8 +286,9 @@ const RegistrarMovimientoStock = () => {
   const tipoSeleccionado = tiposMovimiento.find((t) => t.codigo === formData.tipo)
   const stockResultante = calcularStockResultante();
 
-  const handleScanOrSearch = async () => {
-    const input = (busquedaProducto || '').trim();
+  const handleScanOrSearch = useCallback(async (codigoOpcional) => {
+    const raw = (typeof codigoOpcional === 'string' ? codigoOpcional : busquedaProducto);
+    const input = (raw || '').trim();
     if (!input) return;
   
     if (isBarcodeLike(input)) {
@@ -298,7 +296,7 @@ const RegistrarMovimientoStock = () => {
         const producto = await getProductoPorBarcode(input);
         if (producto) {
           seleccionarProducto(producto);
-          mostrarNotificacion("success", `Agregado por código: ${input}`);
+          mostrarNotificacion("success", `Agregado por código: ${producto.nombre}`);
           setBusquedaProducto(""); 
           return;
         }
@@ -319,7 +317,68 @@ const RegistrarMovimientoStock = () => {
     } else {
       mostrarNotificacion("error", "No se encontraron productos con ese nombre");
     }
-  };
+  }, [seleccionarProducto, busquedaProducto, mostrarNotificacion, refetch]);
+
+  const handleScanRef = useRef(handleScanOrSearch);
+   useEffect(() => {
+     handleScanRef.current = handleScanOrSearch
+   }, [handleScanOrSearch]);
+  
+  
+   useEffect(() => {
+     if (!scannerEnabled) return;
+  
+     let buffer = '';
+     let timer;
+     let locked = false;
+  
+    const shouldIgnoreFocus = () => {
+      const el = document.activeElement;
+      if (!el) return false;
+      const tag = el.tagName;
+  
+      if ((tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable) && el.dataset.scanIgnore === "true") {
+          return true;
+        }
+        return false;
+    };
+  
+    const flush = () => {
+      if (!buffer || locked) return;
+      locked = true;
+      const code = buffer.trim();
+      buffer = "";
+      Promise.resolve(handleScanRef.current(code)).finally(() => {
+        setTimeout(() => { locked = false }, 50);
+      })
+    }
+  
+    const onKeyDown = (e) => {
+      
+      if (shouldIgnoreFocus()) return;
+  
+      if (e.key === "Enter") {
+        e.preventDefault();
+        flush();
+        return;
+      }
+  
+      if (e.key.length === 1) {
+        buffer += e.key;
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          flush();
+        }, 80);
+      }
+    }
+  
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("keydown", onKeyDown)
+    };
+  
+   }, [scannerEnabled])
   
   return (
     
@@ -411,14 +470,7 @@ const RegistrarMovimientoStock = () => {
                               setBusquedaProducto(e.target.value)
                               setMostrarBusqueda(e.target.value.length > 0)
                             }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleScanOrSearch();
-                              }
-                            }}
                             icon={<Search className="w-4 h-4" />}
-                            autoFocus
                           />
 
                           {mostrarBusqueda && busquedaProducto && (
@@ -525,6 +577,7 @@ const RegistrarMovimientoStock = () => {
                           type="number"
                           value={formData.cantidad}
                           onChange={(e) => handleInputChange("cantidad", e.target.value)}
+                          data-scan-ignore="true"
                           error={!!errors.cantidad}
                         />
                         {errors.cantidad && (
@@ -543,6 +596,7 @@ const RegistrarMovimientoStock = () => {
                           type="number"
                           value={formData.stock_objetivo}
                           onChange={(e) => handleInputChange("stock_objetivo", e.target.value)}
+                          data-scan-ignore="true"
                           error={!!errors.stock_objetivo}
                         />
                         {errors.stock_objetivo && (
@@ -559,6 +613,7 @@ const RegistrarMovimientoStock = () => {
                           label="Número de documento"
                           value={formData.documento}
                           onChange={(e) => handleInputChange("documento", e.target.value)}
+                          data-scan-ignore="true"
                           icon={<FileText className="w-4 h-4" />}
                         />
                       </div>
@@ -571,6 +626,7 @@ const RegistrarMovimientoStock = () => {
                             label="Cliente"
                             value={formData.cliente}
                             onChange={(e) => handleInputChange("cliente", e.target.value)}
+                            data-scan-ignore="true"
                             error={!!errors.cliente}
                             icon={<User className="w-4 h-4" />}
                           />
@@ -590,6 +646,7 @@ const RegistrarMovimientoStock = () => {
                             label="Costo unitario"
                             value={formData.costo}
                             onChange={(e) => handleInputChange("costo", e.target.value)}
+                            data-scan-ignore="true"
                             error={!!errors.costo}
                             icon={<Calculator className="w-4 h-4" />}
                           />
@@ -613,6 +670,7 @@ const RegistrarMovimientoStock = () => {
                             type="number"
                             value={formData.costo}
                             onChange={(e) => handleInputChange("costo", e.target.value)}
+                            data-scan-ignore="true"
                             icon={<Calculator className="w-4 h-4" />}
                           />
                         </div>
@@ -622,6 +680,7 @@ const RegistrarMovimientoStock = () => {
                             type="number"
                             value={formData.precio}
                             onChange={(e) => handleInputChange("precio", e.target.value)}
+                            data-scan-ignore="true"
                             icon={<Calculator className="w-4 h-4" />}
                           />
                         </div>
@@ -634,6 +693,7 @@ const RegistrarMovimientoStock = () => {
                           label="Motivo del movimiento"
                           value={formData.motivo}
                           onChange={(e) => handleInputChange("motivo", e.target.value)}
+                          data-scan-ignore="true"
                           error={!!errors.motivo}
                           rows={3}
                         />

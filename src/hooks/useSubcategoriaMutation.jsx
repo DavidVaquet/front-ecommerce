@@ -1,5 +1,6 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { addSubcategoryService } from "../services/subcategorieService";
+import { qkCategoriasSubcategoria } from "./useCategorias";
 
 export const useSubcategoriasMutation = () => {
     const qc = useQueryClient();
@@ -10,6 +11,7 @@ export const useSubcategoriasMutation = () => {
         mutationFn: (payload) => addSubcategoryService(payload),
         onSuccess: () => { 
             invalidate();
+            qkCategoriasSubcategoria();
         }
     })
 

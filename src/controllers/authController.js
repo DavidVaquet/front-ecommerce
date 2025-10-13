@@ -14,7 +14,7 @@ export const loginController = async ({email, password, toast, setUser, navigate
 
         if (ROLES_ADMIN.includes(rol)) {
             navigate("/admin/productos")
-        } else if (data.usuario.rol === 'cliente') {
+        } else if (rol) {
             navigate("/perfil")
         } else {
             navigate("/login")

@@ -1,7 +1,7 @@
 "use client"
 
 import { getProductoPorBarcode } from "../../../services/productServices";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { isBarcodeLike } from "../../../utils/barcode";
 import { useNavigate } from "react-router-dom";
 import {
@@ -63,6 +63,7 @@ export const RegistrarVenta = () => {
   const [activeTab, setActiveTab] = useState("todos");
   const [canal, setCanal] = useState('local');
   const [currency, setCurrency] = useState('ARS');
+  const [scannerEnabled] = useState(true);
 
   // NAVEGACION
   const navigate = useNavigate();
@@ -100,22 +101,27 @@ export const RegistrarVenta = () => {
   const metaVentas = estadisticas?.metaVentas ?? 0;
   const progresoMeta = parseFloat(((totalVentasHoy / metaVentas) * 100).toFixed(2));
 
-  const agregarProducto = (producto) => {
-    const productoExistente = productosVenta.find((p) => p.id === producto.id)
-
-    if (productoExistente) {
-      if (productoExistente.cantidadSeleccionada < producto.cantidad) {
-        setProductosVenta(productosVenta.map((p) => (p.id === producto.id ? { ...p, cantidadSeleccionada: p.cantidadSeleccionada + 1 } : p)))
-        mostrarNotificacion("success", "Cantidad actualizada")
+  const agregarProducto = useCallback((producto) => {
+  setProductosVenta(prev => {
+    const existente = prev.find(p => p.id === producto.id);
+    if (existente) {
+      if (existente.cantidadSeleccionada < (producto.cantidad ?? existente.cantidad ?? 0)) {
+        mostrarNotificacion("success", "Cantidad actualizada");
+        return prev.map(p => p.id === producto.id
+          ? { ...p, cantidadSeleccionada: p.cantidadSeleccionada + 1 }
+          : p
+        );
       } else {
-        mostrarNotificacion("error", "Stock insuficiente")
+        mostrarNotificacion("error", "Stock insuficiente");
+        return prev;
       }
     } else {
-      setProductosVenta([...productosVenta, { ...producto, cantidadSeleccionada: 1 }])
-      mostrarNotificacion("success", `${producto.nombre} agregado a la venta`)
+      mostrarNotificacion("success", `${producto.nombre} agregado a la venta`);
+      return [...prev, { ...producto, cantidadSeleccionada: 1 }];
     }
-    setBusquedaProducto("")
-  }
+  });
+  setBusquedaProducto("");
+}, [mostrarNotificacion, setBusquedaProducto]);
 
   const actualizarCantidad = (id, nuevaCantidad) => {
     if (nuevaCantidad <= 0) {
@@ -230,14 +236,15 @@ export const RegistrarVenta = () => {
         setImpuesto("")
   }
 
-   const handleScanOrSearch = async () => {
-   const input = (busquedaProducto || '').trim();
+   const handleScanOrSearch = useCallback(async (codigoOpcional) => {
+   const raw = typeof codigoOpcional === 'string' ? codigoOpcional : busquedaProducto;
+   const input = (raw || '').trim();
    if (!input) return;
 
    if (isBarcodeLike(input)) {
      try {
        const producto = await getProductoPorBarcode(input);
-       if (producto && producto.cantidad > 0) {
+       if (producto) {
         agregarProducto(producto);
          mostrarNotificacion("success", `Agregado por código: ${input}`);
          setBusquedaProducto(""); 
@@ -260,7 +267,70 @@ export const RegistrarVenta = () => {
    } else {
      mostrarNotificacion("error", "No se encontraron productos con ese nombre");
    }
- };
+ }, [agregarProducto, busquedaProducto, mostrarNotificacion, refetch]);
+
+ const handleScanRef = useRef(handleScanOrSearch);
+ useEffect(() => {
+   handleScanRef.current = handleScanOrSearch
+ }, [handleScanOrSearch]);
+
+
+ useEffect(() => {
+   if (!scannerEnabled) return;
+
+   let buffer = '';
+   let timer;
+   let locked = false;
+
+  const shouldIgnoreFocus = () => {
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = el.tagName;
+
+    if ((tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable) && el.dataset.scanIgnore === "true") {
+        return true;
+      }
+      return false;
+  };
+
+  const flush = () => {
+    if (!buffer || locked) return;
+    locked = true;
+    const code = buffer.trim();
+    buffer = "";
+    Promise.resolve(handleScanRef.current(code)).finally(() => {
+      setTimeout(() => { locked = false }, 50);
+    })
+  }
+
+  const onKeyDown = (e) => {
+    
+    if (shouldIgnoreFocus()) return;
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      flush();
+      return;
+    }
+
+    if (e.key.length === 1) {
+      buffer += e.key;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        flush();
+      }, 80);
+    }
+  }
+
+  window.addEventListener("keydown", onKeyDown);
+  return () => {
+    clearTimeout(timer);
+    window.removeEventListener("keydown", onKeyDown)
+  };
+
+ }, [scannerEnabled])
+ 
+ 
 
   // Atajos de teclado
   useEffect(() => {
@@ -559,7 +629,6 @@ export const RegistrarVenta = () => {
                        handleScanOrSearch();
                      }
                    }}
-                  autoFocus
                   />
 
                 {/* Dropdown de productos mejorado */}
@@ -740,6 +809,7 @@ export const RegistrarVenta = () => {
                   <Input
                     type="number"
                     label="% Descuento"
+                    data-scan-ignore="true"
                     value={descuentoGeneral}
                     onChange={(e) =>
                       setDescuentoGeneral(Math.max(0, Math.min(100, Number.parseFloat(e.target.value) || 0)))
@@ -761,6 +831,7 @@ export const RegistrarVenta = () => {
                   <Input
                     type="number"
                     label="% Impuesto"
+                    data-scan-ignore="true"
                     value={impuesto}
                     onChange={(e) => setImpuesto(Math.max(0, Math.min(100, Number.parseFloat(e.target.value) || 0)))}
                     className="!border-gray-300"

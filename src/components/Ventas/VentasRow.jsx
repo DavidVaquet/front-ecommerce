@@ -79,11 +79,11 @@ function VentasRow ({
                                 <div className="flex items-center gap-4 text-sm text-gray-600">
                                   <div className="flex items-center gap-1">
                                     <User className="h-4 w-4" />
-                                    <span>Vendedor: {usuarioNombre}</span>
+                                    <span className="whitespace-nowrap">Vendedor: {usuarioNombre}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <MapPin className="h-4 w-4" />
-                                    <span>Sucursal Illia</span>
+                                    <span className="whitespace-nowrap">Sucursal Illia</span>
                                   </div>
                                 </div>
                               ) : (
