@@ -5,9 +5,9 @@ import { AuthContext } from '../context/AuthContext';
 const ADMIN_ROLES = ['admin', 'vendedor', 'supervisor'];
 
 export const PrivateRoute = () => {
-  const { user, token, isReady } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
 
-  if (!isReady) return <Navigate to='/login' replace />
+  
   if (!user || !token) return <Navigate to='/login' replace />
   
   const rol = user.rol.trim().toLowerCase();
