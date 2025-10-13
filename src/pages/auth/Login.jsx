@@ -8,7 +8,7 @@ import iclubafuera from '../../assets/iclubfuera.webp'
 
 export const Login = () => {
 
-  const { setUser } = useContext(AuthContext);
+  const { setUser, setToken } = useContext(AuthContext);
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

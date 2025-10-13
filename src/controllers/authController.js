@@ -2,11 +2,13 @@ import { login } from "../services/authServices";
 
 const ROLES_ADMIN = ['admin', 'supervisor', 'vendedor'];
 
-export const loginController = async ({email, password, toast, setUser, navigate}) => {
+export const loginController = async ({email, password, toast, setUser, navigate, setToken}) => {
 
     try {
         const data = await login({email, password});
-        setUser(data.usuario);
+        const token = data?.token;
+        setUser(data?.usuario);
+        setToken(token);
         localStorage.setItem('usuario', JSON.stringify(data.usuario));
         localStorage.setItem('token', data.token);
         const rol = (data.usuario.rol || "").toLowerCase().trim();
