@@ -22,7 +22,8 @@ export const Login = () => {
       password,
       toast,
       setUser,
-      navigate
+      navigate,
+      setToken
     })
   }
 
