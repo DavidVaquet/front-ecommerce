@@ -68,7 +68,7 @@ export const GestionCategorias = () => {
       const f = { limit, offset, search: debouncedSearch }
       if (activeTab === 'activos') f.estado = true;
       if (activeTab === 'inactivos') f.estado = false;
-      
+      return f;
   }, [limit, offset, debouncedSearch, activeTab])
 
   const { data, isLoading, error, refetch, isFetching } = useCategoriaSubcategoria(filtros);
