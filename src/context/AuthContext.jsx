@@ -5,24 +5,26 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ( {children} ) => {
 
-const [user, setUser] = useState(null);
-const [isReady, setIsReady] = useState(false);
-const [token, setToken] = useState(null);
+const [user, setUser] = useState(() => {
 
-  useEffect(() => {
-    try {
-      const u = localStorage.getItem('usuario');
-      const t = localStorage.getItem('token');
-      if (u) setUser(JSON.parse(u));
-      if (t) setToken(t);
-      
-    } catch {}
-      setIsReady(true);
-  }, [])
+  try {
+    const raw = localStorage.getItem('usuario');
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed ?? parsed?.user ?? null;
+  } catch {
+    return null;
+  }
+});
+
+const [token, setToken] = useState(() => {
+  const t = localStorage.getItem('token');
+  return t && t !== 'null' && t !== 'undefined' ? t : null;
+})
+
   
 
 return (
-    <AuthContext.Provider value={{ user, setUser, token, setToken, isReady }}>
+    <AuthContext.Provider value={{ user, setUser, token, setToken }}>
         {children}
     </AuthContext.Provider>
 )
