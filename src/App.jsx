@@ -1,8 +1,7 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Login } from './pages/auth/Login';
 import { SubirProducto } from './pages/admin/productos/SubirProducto';
 import { Productos } from './pages/admin/productos/Productos';
-import { Toaster } from 'react-hot-toast';
 import { RegistrarVenta } from './pages/admin/ventas/RegistrarVenta';
 import { AltaCliente } from './pages/admin/clientes/AltaCliente';
 import { Ordenes } from './pages/admin/ordenes/Ordenes';
@@ -19,7 +18,7 @@ import ConfiguracionesDashboard from './pages/admin/configuraciones/Configuracio
 import MovimientosStock from './pages/admin/stock/MovimientosStock';
 import RegistrarMovimientoStock from './pages/admin/stock/RegistrarMovimientoStock';
 import { RestablecerContrasena } from './pages/auth/RecoveryPassword';
-import { Boxes, ShoppingCart, Users, BarChart3, FileText, Package, Settings, User as UserIcon, ClipboardList, LayoutGrid } from "lucide-react";
+import { ShoppingCart, Users, BarChart3, FileText, Package, Settings, User as UserIcon, ClipboardList, LayoutGrid } from "lucide-react";
 import { GestionCategorias } from './pages/admin/categorias/GestionCategorias';
 
 
@@ -41,6 +40,10 @@ export const router = createBrowserRouter([
       {
         element: <AdminLayout/>,
         children: [
+          { 
+            index: true, 
+            element: <Navigate to="productos" replace />
+          },
           {
             path: "productos",
             element: <Productos/>,

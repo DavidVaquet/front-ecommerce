@@ -10,7 +10,7 @@ export const PrivateRoute = () => {
   if (!isReady) return <Navigate to='/login' replace />
   if (!user || !token) return <Navigate to='/login' replace />
   
-  const rol = user.rol;
+  const rol = user.rol.trim().toLowerCase();
 
   if (ADMIN_ROLES.includes(rol)) return <Outlet />
   if (rol === 'cliente') return <Navigate to='/' replace />
