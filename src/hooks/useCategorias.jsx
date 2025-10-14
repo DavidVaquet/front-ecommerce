@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAllCategories, getCategoriasSubCategorias } from "../services/categorieService";
+import { getAllCategories, getCategoriasSubCategorias, getStatsCategorias } from "../services/categorieService";
 
 export const qkCategorias = (f = {}) => ['categorias', f];
 export const qkCategoriasSubcategoria = (f = {}) => ['categorias', 'subcategorias', f];
@@ -23,3 +23,31 @@ export const useCategoriaSubcategoria = (filtros = {}) => {
         placeholderData: (prev) => prev
     })
 };
+
+export const useStatsCategoriaSubcategorias = () => {
+    return useQuery({
+        queryKey: ['categorias', 'subcategorias', 'stats'],
+        queryFn: () => getStatsCategorias(),
+        staleTime: Infinity,
+        refetchOnWindowFocus: 'always',
+        placeholderData: (prev) => prev,
+        select: (raw) => {
+            const r = raw ?? {};
+
+            const categorias_activas = r?.categorias_activas ?? 0;
+            const categorias_inactivas = r?.categorias_inactivas ?? 0;
+            const subcategorias_activas = r?.subcategorias_activas ?? 0;
+            const subcategorias_inactivas = r?.subcategorias_inactivas ?? 0;
+            const total_categorias = r?.total_categorias ?? 0;
+
+            return { 
+                categorias_activas,
+                categorias_inactivas,
+                subcategorias_activas,
+                subcategorias_inactivas,
+                total_categorias
+            }
+        
+    }
+    })
+}

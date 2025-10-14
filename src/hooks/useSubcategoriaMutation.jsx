@@ -11,7 +11,7 @@ export const useSubcategoriasMutation = () => {
         mutationFn: (payload) => addSubcategoryService(payload),
         onSuccess: () => { 
             invalidate();
-            qkCategoriasSubcategoria();
+            qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria()});
         }
     })
 

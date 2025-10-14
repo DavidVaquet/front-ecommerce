@@ -9,9 +9,9 @@ export const useCategoriasMutation = () => {
 
     const crearCategoria = useMutation({
         mutationFn: (payload) => createCategoryService(payload),
-        onSuccess: () => {
+        onSuccess: async () => {
             invalidate();
-            qkCategoriasSubcategoria();
+            qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria()});
         }
     });
 

@@ -331,6 +331,7 @@ const MovimientosStock = () => {
                   label="Buscar producto o SKU"
                   placeholder="Ingresa el nombre del producto o código de barra"
                   icon={<Search className="w-4 h-4" />}
+                  data-scan-ignore="true"
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                 />
@@ -361,7 +362,7 @@ const MovimientosStock = () => {
                 <FileText className="w-5 h-5" />
                 Historial de Movimientos
                 <Chip
-                  value={`${movimientos.length} registros`}
+                  value={`${total ?? 0} registros`}
                   color="blue-gray"
                   variant="ghost"
                   className="ml-2"

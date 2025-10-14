@@ -623,12 +623,7 @@ export const RegistrarVenta = () => {
                   value={busquedaProducto}
                   onChange={(e) => setBusquedaProducto(e.target.value)}
                   className="!border-gray-300"
-                   onKeyDown={(e) => {
-                     if (e.key === 'Enter') {
-                       e.preventDefault();
-                       handleScanOrSearch();
-                     }
-                   }}
+                  data-scan-ignore="true"
                   />
 
                 {/* Dropdown de productos mejorado */}

@@ -54,3 +54,13 @@ export const getCategoriasSubCategorias = async ({ limit, offset, search, visibl
         throw new Error(error.message);
     }
 }
+
+
+export const getStatsCategorias = async () => {
+    try {
+        const res = await apiFetch(`${API_URL}/get-stats-categories-subcategories`);
+        return res;
+    } catch (error) {
+        throw new Error(error);
+    }
+}

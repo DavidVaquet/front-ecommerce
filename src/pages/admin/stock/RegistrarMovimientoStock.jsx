@@ -466,6 +466,7 @@ const RegistrarMovimientoStock = () => {
                           <Input
                             label="Buscar producto por nombre o código de barra"
                             value={busquedaProducto}
+                            data-scan-ignore="true"
                             onChange={(e) => {
                               setBusquedaProducto(e.target.value)
                               setMostrarBusqueda(e.target.value.length > 0)
