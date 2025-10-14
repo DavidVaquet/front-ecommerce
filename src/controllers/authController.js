@@ -2,7 +2,7 @@ import { login } from "../services/authServices";
 
 const ROLES_ADMIN = ['admin', 'supervisor', 'vendedor'];
 
-export const loginController = async ({email, password, toast, setUser, navigate, setToken}) => {
+export const loginController = async ({email, password, mostrarNotificacion, setUser, navigate, setToken}) => {
 
     try {
         const data = await login({email, password});
@@ -23,6 +23,6 @@ export const loginController = async ({email, password, toast, setUser, navigate
         }
         
     } catch (error) {
-        toast.error( error.message || 'Error al iniciar sesion.');
+        mostrarNotificacion('error', error.message || 'Error al iniciar sesion.');
     }
 };

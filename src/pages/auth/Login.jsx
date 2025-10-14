@@ -2,9 +2,9 @@ import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginController } from '../../controllers/authController';
 import { AuthContext } from '../../context/AuthContext';
-import toast from 'react-hot-toast';
 import logoiclub from '../../assets/logoIclub.webp';
 import iclubafuera from '../../assets/iclubfuera.webp'
+import { useNotificacion } from '../../hooks/useNotificacion';
 
 export const Login = () => {
 
@@ -13,6 +13,9 @@ export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  // NOTIFICACION
+  const {mostrarNotificacion, componenteAlerta} = useNotificacion();
+
   const handleSubmit = async (e) => {
 
     e.preventDefault();
@@ -20,7 +23,7 @@ export const Login = () => {
     await loginController({
       email,
       password,
-      toast,
+      mostrarNotificacion,
       setUser,
       navigate,
       setToken
@@ -30,6 +33,7 @@ export const Login = () => {
 
     return (
     <div className="h-screen flex items-center justify-center w-full bg-white">
+      {componenteAlerta}
       <div className="flex h-4/6 w-4/6 rounded-lg shadow-lg border-black border-2 overflow-hidden">
 
         {/* Panel izquierdo - imagen grande (prioridad alta) */}
