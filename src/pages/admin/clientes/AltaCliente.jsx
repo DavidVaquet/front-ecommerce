@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import {
   Button,
   Card,
@@ -32,6 +33,7 @@ import {
 } from "lucide-react"
 import { useClienteMutation } from "../../../hooks/useClientesMutation";
 import { useClienteEstadisticas } from "../../../hooks/useClientes";
+import ButtonResponsive from "../../../components/Button";
 
 export const AltaCliente = () => {
   const [formData, setFormData] = useState({
@@ -133,7 +135,7 @@ export const AltaCliente = () => {
       resetFormulario();
     } catch (error) {
       console.error(error);
-      mostrarNotificacion(error.message || 'Error al crear el cliente');
+      mostrarNotificacion('error', error.message || 'Error al crear el cliente');
     }
   }
 
@@ -156,25 +158,27 @@ export const AltaCliente = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight uppercase">Registrar Nuevo Cliente</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-[22px] whitespace-nowrap lg:text-3xl font-semibold tracking-tight uppercase">Registrar Nuevo Cliente</h1>
+            <p className="text-gray-600 mt-1 lg:text-base text-sm">
               Agrega la información completa del cliente para mejorar la experiencia de compra.
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outlined" size="md" color="blue-gray" className="flex items-center gap-2 uppercase">
-              <Users className="h-5 w-5" />
-              Ver Clientes
-            </Button>
-            <Button
-              variant="filled"
-              color="deep-orange"
-              className="flex items-center gap-2 uppercase shadow-md"
-              size="md"
-            >
-              <UserPlus className="h-5 w-5" />
-              Reporte de clientes
-            </Button>
+
+            <ButtonResponsive 
+            variant="outlined" 
+            color="blue-gray"
+            icon={Users}
+            children="VER CLIENTES"
+            className="flex items-center gap-2 uppercase px-2.5 py-2.5 text-xs md:py-2 md:px-4 md:text-sm whitespace-nowrap"
+            />
+            <ButtonResponsive 
+            variant="filled"
+            color="deep-orange"
+            icon={UserPlus}
+            className="flex items-center gap-2 uppercase px-2.5 py-2.5 text-xs md:py-2 md:px-4 md:text-sm whitespace-nowrap"
+            children="Reporte de clientes"
+            />
           </div>
         </div>
       </div>
@@ -280,11 +284,11 @@ export const AltaCliente = () => {
         <form onSubmit={handleCreateClient}>
         <CardHeader color="white" floated={false} shadow={false} className="m-0 p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-deep-orange-50">
+            <div className="flex items-center justify-center lg:h-10 lg:w-10 h-10 w-11 rounded-full bg-deep-orange-50">
               <User className="h-6 w-6 text-deep-orange-500" />
             </div>
             <div>
-              <Typography variant="h5" color="blue-gray" className="uppercase">
+              <Typography variant="h5" color="blue-gray" className="uppercase whitespace-nowrap text-[16px] lg:">
                 Información del Cliente
               </Typography>
               <Typography color="gray" className="mt-1 font-normal text-sm">
@@ -304,7 +308,7 @@ export const AltaCliente = () => {
                   Información Personal
                 </Typography>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                       <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
                         Nombre*
@@ -440,7 +444,7 @@ export const AltaCliente = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                       <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
                         Ciudad
@@ -497,7 +501,7 @@ export const AltaCliente = () => {
                     Notas del Cliente
                   </Typography>
                   <Textarea
-                    label="Preferencias, observaciones especiales..."
+                    placeholder="Preferencias, observaciones especiales..."
                     value={formData.notas}
                     onChange={(e) => handleInputChange("notas", e.target.value)}
                     className="!border-gray-300"
@@ -534,13 +538,19 @@ export const AltaCliente = () => {
         </div>
 
         <CardFooter className="flex items-center justify-between p-6 border-t border-gray-200">
-          <Button variant="text" color="blue-gray" onClick={resetFormulario}>
-            Cancelar
-          </Button>
-          <div className="flex gap-3">
-            <Button color="deep-orange" className="shadow-md" type="submit" disabled={crearCliente.isPending}>
-              Guardar Cliente
-            </Button>
+          <div className="flex gap-7 lg:gap-3">
+            <ButtonResponsive 
+            variant="text"
+            onClick={resetFormulario}
+            children="Cancelar"
+            />
+            <ButtonResponsive 
+            color="deep-orange"
+            type="submit"
+            disabled={crearCliente.isPending}
+            children="Guardar cliente"
+            />
+      
           </div>
         </CardFooter>
         </form>

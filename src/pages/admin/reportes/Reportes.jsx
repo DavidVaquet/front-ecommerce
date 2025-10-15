@@ -50,6 +50,7 @@ import { useNotificacion } from "../../../hooks/useNotificacion";
 import { UseReportes } from "../../../hooks/useReportes";
 import { useCategorias } from "../../../hooks/useCategorias";
 import { useReportesMutation } from "../../../hooks/useReportesMutation";
+import ButtonResponsive from "../../../components/Button";
 
 // Datos de ejemplo para los reportes
 const TIPOS_REPORTES = [
@@ -348,27 +349,24 @@ export const Reportes = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2 uppercase">Reportes DEL SISTEMA</h1>
-            <p className="text-gray-600">Genera, programa y gestiona todos tus reportes de inventario</p>
+            <h1 className="text-2xl font-bold lg:text-3xl lg:font-semibold text-gray-900 mb-2 uppercase">Reportes DEL SISTEMA</h1>
+            <p className="text-gray-600 text-sm lg:text-base">Genera, programa y gestiona todos tus reportes de inventario</p>
           </div>
           <div className="flex gap-3">
-            <Button
-              variant="outlined"
+            <ButtonResponsive
+            variant="outlined"
               color="blue-gray"
-              className="flex items-center gap-2 uppercase"
               onClick={() => setMostrarConfiguracion(!mostrarConfiguracion)}
-            >
-              <Settings className="h-4 w-4" />
-              Configuración
-            </Button>
-            <Button
+              children="Configuración"
+              icon={Settings}
+            />
+            <ButtonResponsive
               color="blue"
               className="flex items-center gap-2 uppercase"
               onClick={() => setActiveTab("generar")}
-            >
-              <Plus className="h-4 w-4" />
-              Nuevo Reporte
-            </Button>
+              icon={Plus}
+              children="Nuevo Reporte"
+            />
           </div>
         </div>
       </div>
@@ -417,11 +415,11 @@ export const Reportes = () => {
       {/* Tabs de Reportes */}
       <Card className="shadow-sm">
         <Tabs value={activeTab} onChange={setActiveTab}>
-          <TabsHeader className="bg-gray-50">
+          <TabsHeader className="bg-gray-50 overflow-x-auto px-1 lg:px-6">
             <Tab value="generar">
               <div className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              <span>Generar Reporte</span>
+              <span className="whitespace-nowrap">Generar Reporte</span>
               </div>
             </Tab>
             <Tab value="historial">
@@ -444,7 +442,7 @@ export const Reportes = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Selección de Tipo de Reporte */}
                 <div className="lg:col-span-2">
-                  <Typography variant="h6" color="blue-gray" className="font-semibold uppercase  mb-4">
+                  <Typography color="blue-gray" className="font-semibold text-base lg:text-xl uppercase mb-4">
                     Selecciona el Tipo de Reporte
                   </Typography>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -689,27 +687,28 @@ export const Reportes = () => {
 
             {/* Tab Historial */}
             <TabPanel value="historial" className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <Typography variant="h6" color="blue-gray" className="font-bold">
+              <div className="flex-col lg:flex lg:flex-row items-center justify-between mb-6">
+                <Typography variant="h6" color="blue-gray" className="font-bold uppercase">
                   Historial de Reportes
                 </Typography>
-                <div className="flex gap-3">
-                  <Button variant="outlined" color="blue-gray" size="sm" className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    Filtrar
-                  </Button>
-                  <Button 
+                <div className="mt-3 flex lg:mt-0 gap-3">
+                  <ButtonResponsive 
                   variant="outlined" 
                   color="blue-gray" 
-                  size="sm" 
-                  className="flex items-center gap-2"
+                  icon={Filter}
+                  children="Filtrar"
+                  />
+                  <ButtonResponsive 
+                  variant="outlined" 
+                  color="blue-gray"
                   onClick={() => {
                     refetch();
                     mostrarNotificacion('success', 'Reportes actualizados');
-                  }}>
-                    <RefreshCw className="h-4 w-4" />
-                    Actualizar
-                  </Button>
+                  }}
+                  icon={RefreshCw}
+                  children="Actualizar"
+                  />
+                  
                 </div>
               </div>
 

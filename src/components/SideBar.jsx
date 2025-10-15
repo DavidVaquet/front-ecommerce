@@ -10,22 +10,16 @@ import {
   List,
   ListItem,
   ListItemPrefix,
-  ListItemSuffix,
-  Chip,
   Accordion,
   AccordionHeader,
   AccordionBody,
-  Alert,
-  Input,
 } from "@material-tailwind/react";
 import {
   PresentationChartBarIcon,
   ShoppingBagIcon,
   UserCircleIcon,
   Cog6ToothIcon,
-  InboxIcon,
   PowerIcon,
-  MinusIcon,
 } from "@heroicons/react/24/solid";
 import { ChevronRightIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 
@@ -40,7 +34,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sticky top-0 h-screen ">
+    <aside className="hidden lg:block lg:sticky top-0 h-screen ">
       <Card className="min-h-screen w-full max-w-[20rem]  shadow-xl shadow-blue-gray-900/5 bg-white">
         <div className="h-[80px] w-full overflow-hidden">
           <img
@@ -50,12 +44,6 @@ export function Sidebar() {
           />
         </div>
 
-        {/* <div className="p-2">
-        <Input
-          icon={<MagnifyingGlassIcon className="h-5 w-5" />}
-          label="Search"
-        />
-      </div> */}
         <List>
           <Accordion
             open={open === 1}

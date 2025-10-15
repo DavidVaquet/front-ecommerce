@@ -203,11 +203,11 @@ const MovimientosStock = () => {
           <CardBody className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <Typography variant="h4" color="blue-gray" className="flex items-center gap-2 mb-2 uppercase">
+                <Typography color="blue-gray" className="flex text-xl font-semibold lg:text-2xl items-center gap-2 mb-2 uppercase">
                   <BarChart3 className="w-6 h-6 text-blue-600" />
                   Movimientos de Stock
                 </Typography>
-                <Typography color="gray" className="font-normal">
+                <Typography color="gray" className="font-normal lg:text-base text-base">
                   Seguimiento detallado de todos los movimientos del inventario
                 </Typography>
               </div>
@@ -336,7 +336,7 @@ const MovimientosStock = () => {
                   onChange={(e) => setBusqueda(e.target.value)}
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <Select label="Tipo de movimiento" value={filtroTipo} onChange={(value) => setFiltroTipo(value)}>
                   <Option value="todos">Todos los tipos</Option>
                   <Option value="entrada">Entradas</Option>

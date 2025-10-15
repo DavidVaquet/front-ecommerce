@@ -20,12 +20,14 @@ import {
   DialogHeader,
   DialogFooter,
 } from "@material-tailwind/react";
+import { Plus, Upload } from 'lucide-react'
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useCategorias } from "../../../hooks/useCategorias";
 import { useCategoriasMutation } from "../../../hooks/useCategoriasMutation";
 import { useSubcategorias } from "../../../hooks/useSubcategorias";
 import { useSubcategoriasMutation } from "../../../hooks/useSubcategoriaMutation";
 import { useNotificacion } from "../../../hooks/useNotificacion";
+import ButtonResponsive from "../../../components/Button";
 
 export const SubirProducto = () => {
   const [nombre, setNombre] = useState("");
@@ -238,73 +240,28 @@ export const SubirProducto = () => {
       {componenteAlerta}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
         <div>
-          <h1 className="text-3xl font-semibold uppercase">Agregar Producto</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl lg:text-3xl font-semibold uppercase">Agregar Producto</h1>
+          <p className="text-gray-600 font-normal mt-2 lg:mt-1 text-sm lg:text-base">
             Sube, gestiona y comparte tu producto sin esfuerzo y de forma
             fluida.
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button
+        <div className="flex gap-3 mt-1 lg:mt-0">
+          <ButtonResponsive
             variant="outlined"
-            size="md"
-            className="flex items-center gap-2 uppercase"
             onClick={handleOpen}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              className="h-4 w-4"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Crear Categoría
-          </Button>
-          <Button
-            className="flex items-center gap-2 uppercase"
+            className="flex items-center gap-0 whitespace-nowrap uppercase px-1 py-2 text-xs md:py-2 md:px-4 md:text-sm"
+            icon={Plus}
+            children="Crear Categoría"
+          />
+          <ButtonResponsive
             color="blue-gray"
             onClick={handleOpenSub}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              className="h-4 w-4"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Crear Subcategoria
-          </Button>
-          {/* <Button color="deep-orange" className="flex items-center gap-2 uppercase shadow-md">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="h-5 w-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
-              />
-            </svg>
-            SUBIR PRODUCTO
-          </Button> */}
+            icon={Plus}
+            className="flex items-center gap-0 whitespace-nowrap uppercase px-1 py-2 text-xs md:py-2 md:px-4 md:text-sm"
+            children="Crear Subcategoría"
+          />
+          
         </div>
       </div>
 
@@ -318,11 +275,11 @@ export const SubirProducto = () => {
             className="m-0 p-6 border-b border-gray-200"
           >
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-deep-orange-50">
+              <div className="lg:flex lg:items-center lg:justify-center hidden lg:block h-10 w-10 rounded-full bg-deep-orange-50">
                 <span className="text-xl">📦</span>
               </div>
               <div>
-                <Typography variant="h5" color="blue-gray">
+                <Typography color="blue-gray" className="lg:text-xl text-base uppercase font-semibold whitespace-nowrap">
                   Información del producto
                 </Typography>
                 <Typography color="gray" className="mt-1 font-normal text-sm">
@@ -436,7 +393,7 @@ export const SubirProducto = () => {
                   <Typography variant="h6" color="blue-gray" className="mb-4">
                     Precios
                   </Typography>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                       <Typography
                         variant="small"
@@ -505,7 +462,7 @@ export const SubirProducto = () => {
                 </div>
 
                 <div>
-                  <Typography variant="h6" color="blue-gray" className="mb-4">
+                  <Typography variant="small" color="blue-gray" className="mb-4 font-medium">
                     Cantidad actual <span className="text-red-700 font-bold">*</span>
                   </Typography>
                   <Input
@@ -521,7 +478,7 @@ export const SubirProducto = () => {
                   />
                 </div>
                 <div>
-                  <Typography variant="h6" color="blue-gray" className="mb-4">
+                  <Typography variant="small" color="blue-gray" className="mb-4 font-medium">
                     Cantidad mínima
                   </Typography>
                   <Input
@@ -542,7 +499,7 @@ export const SubirProducto = () => {
               <div className="flex flex-col h-full overflow-hidden">
                 <div className="space-y-5  pr-2 max-h-full">
                   <div>
-                    <Typography variant="h6" color="blue-gray" className="mb-4">
+                    <Typography variant="h6" color="blue-gray" className="mb-4 font-medium">
                       Imágenes del producto <span className="text-red-700 font-bold">*</span>
                     </Typography>
                     <div
@@ -629,13 +586,13 @@ export const SubirProducto = () => {
                     )}
                   </div>
                   <div className="flex flex-col">
-                    <Typography variant="h6" color="blue-gray" className="mb-4">
+                    <Typography variant="small" color="blue-gray" className="mb-4 font-medium">
                       Descripción corta
                     </Typography>
                     <input
                       type="text"
                       placeholder="Descripción de la vista previa en la tienda"
-                      className="!border-gray-300 min-h-[40px] px-2 py-1 rounded border"
+                      className="!border-gray-300 min-h-[20px] px-2 py-1 rounded border"
                       onChange={(e) => {
                         if (e.target.value.length <= 160) {
                           setDescripcionCorta(e.target.value);
@@ -649,7 +606,7 @@ export const SubirProducto = () => {
                   </div>
 
                   <div>
-                    <Typography variant="h6" color="blue-gray" className="mb-4">
+                    <Typography variant="small" color="blue-gray" className="mb-4 font-medium">
                       Descripción
                     </Typography>
                     <Textarea
@@ -662,7 +619,7 @@ export const SubirProducto = () => {
                   </div>
 
                   <div>
-                    <Typography variant="h6" color="blue-gray" className="mb-4">
+                    <Typography variant="h6" color="blue-gray" className="mb-4 font-medium">
                       Detalles del producto
                     </Typography>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -759,35 +716,18 @@ export const SubirProducto = () => {
           </div>
 
           <CardFooter className="flex items-center justify-between p-6 border-t border-gray-200">
-            <Button
-              variant="text"
-              color="blue-gray
-           "
-            >
-              Cancelar
-            </Button>
-            <Button
-              color="deep-orange"
-              type="submit"
-              className="flex items-center gap-2 uppercase shadow-md"
-              disabled={crearProducto.isPending}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="h-5 w-5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
-                />
-              </svg>
-              {crearProducto.isPending ? 'SUBIENDO PRODUCTO' : 'SUBIR PRODUCTO'}
-            </Button>
+            <ButtonResponsive
+            variant="text"
+            color="blue-gray"
+            children="Cancelar"
+            />
+            <ButtonResponsive
+            color="deep-orange"
+            type="submit"
+            disabled={crearProducto.isPending}
+            icon={Upload}
+            children={crearProducto.isPending ? 'SUBIENDO PRODUCTO' : 'SUBIR PRODUCTO'}
+            />
           </CardFooter>
         </form>
       </Card>

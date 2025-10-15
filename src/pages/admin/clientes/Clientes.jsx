@@ -66,6 +66,7 @@ import { useClienteEstadisticas, useClientesCompras } from "../../../hooks/useCl
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue.jsx"
 import { useClienteMutation } from "../../../hooks/useClientesMutation.jsx"
 import ClientesRow from "../../../components/Clientes/ClientesRow.jsx"
+import ButtonResponsive from "../../../components/Button.jsx"
 
 const getChipColor = (estado) => {
   if (estado === true) return "green"
@@ -346,26 +347,27 @@ const toggleEmail = useCallback(() => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight uppercase">Clientes del Sistema</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight uppercase">Clientes del Sistema</h1>
+            <p className="text-gray-600 mt-1 lg:text-base text-sm">
               Gestiona todos los clientes registrados tanto del e-commerce como agregados manualmente.
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outlined" color="blue-gray" className="flex items-center gap-2 normal-case" size="md">
-              <Download className="h-5 w-5" />
-              EXPORTAR LISTA
-            </Button>
-            <Button
-              variant="filled"
-              color="deep-orange"
-              className="flex items-center gap-2 normal-case shadow-md"
-              size="md"
-              onClick={() => navigate("/admin/clientes/registrar-cliente")}
-            >
-              <UserPlus className="h-5 w-5" />
-              NUEVO CLIENTE
-            </Button>
+          <div className="flex gap-4 lg:gap-3">
+            <ButtonResponsive 
+            variant="outlined" 
+            color="blue-gray"
+            icon={Download}
+            children="EXPORTAR LISTA"
+            />
+            <ButtonResponsive 
+            variant="filled"
+            color="deep-orange"
+            icon={UserPlus}
+            onClick={() => navigate("/admin/clientes/registrar-cliente")}
+            children="NUEVO CLIENTE"
+            />
+            
+            
           </div>
         </div>
       </div>
@@ -509,7 +511,7 @@ const toggleEmail = useCallback(() => {
       {/* Tabs y Lista de Usuarios */}
       <Card className="shadow-sm border border-gray-200">
         <Tabs value={activeTab}>
-          <TabsHeader className="p-2">
+          <TabsHeader className="p-2 whitespace-nowrap overflow-x-auto">
             <Tab value="todos" onClick={() => setActiveTab('todos')}>
               <div className="flex flex-row items-center justify-center gap-2">
                 <List className="h-4 w-4" />

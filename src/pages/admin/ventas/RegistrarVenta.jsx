@@ -51,6 +51,7 @@ import { useClientes } from "../../../hooks/useClientes";
 import { useVentasMutation } from "../../../hooks/useVentasMutation";
 import { useVentasEstadisticas } from "../../../hooks/useVentas";
 import { mostrarImagen } from "../../../helpers/mostrarImagen";
+import ButtonResponsive from "../../../components/Button";
 
 
 export const RegistrarVenta = () => {
@@ -362,11 +363,11 @@ export const RegistrarVenta = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight uppercase">Registrar Nueva Venta</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight uppercase">Registrar Nueva Venta</h1>
+            <p className="text-gray-600 mt-1 lg:text-base text-sm">
               Agrega productos, selecciona cliente y procesa la venta de forma rápida.
             </p>
-            <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-4 mt-3 lg:mt-2">
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <Zap className="h-4 w-4" />
                 <span>Ctrl+Enter para procesar</span>
@@ -374,25 +375,21 @@ export const RegistrarVenta = () => {
             </div>
           </div>
           <div className="flex gap-3">
-            <Button
+            <ButtonResponsive
             variant="outlined" 
-            color="blue-gray" 
-            className="flex items-center gap-2 uppercase"
-            onClick={() => navigate('/admin/ventas/historial-ventas')}>
-              <Receipt className="h-5 w-5" />
-              Ver Historial
-            </Button>
-            <Button
+            color="blue-gray"
+            onClick={() => navigate('/admin/ventas/historial-ventas')}
+            icon={Receipt}
+            children="Ver Historial"
+            />
+            <ButtonResponsive
               variant="filled"
               color="deep-orange"
-              className="flex items-center gap-2 uppercase shadow-md"
-              size="lg"
               onClick={handleCreateVenta}
               disabled= {crearVenta.isPending}
-            >
-              <Calculator className="h-5 w-5" />
-              Procesar Venta
-            </Button>
+              icon={Calculator}
+              children="Procesar Venta"
+            />
           </div>
         </div>
       </div>
@@ -593,7 +590,7 @@ export const RegistrarVenta = () => {
 
               {/* Tabs para categorías */}
               <Tabs value={activeTab} onChange={(value) => setActiveTab(value)} className="mb-4">
-                <TabsHeader className="bg-gray-50">
+                <TabsHeader className="bg-gray-50 overflow-x-auto whitespace-nowrap p-2">
                   <Tab value="todos">Todos</Tab>
                   <Tab value="populares">
                     <div className="flex items-center gap-1">
@@ -618,7 +615,8 @@ export const RegistrarVenta = () => {
 
               <div className="relative">
                 <Input
-                  label="Buscar productos por nombre o código de barra"
+                  label="Buscar productos"
+                  placeholder="Buscar productos por nombre o código de barra"
                   icon={<Search className="h-5 w-5" />}
                   value={busquedaProducto}
                   onChange={(e) => setBusquedaProducto(e.target.value)}
@@ -628,149 +626,215 @@ export const RegistrarVenta = () => {
 
                 {/* Dropdown de productos mejorado */}
                 {busquedaProducto && (
-                  <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-10 mt-1 max-h-80 overflow-y-auto">
-                    {productos.map((producto) => {
-                      return (
-                        <div
-                        key={producto.id}
-                        onClick={() => agregarProducto(producto)}
-                        className="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
-                        >
-                        <Avatar
-                          src={mostrarImagen(producto.imagen_url)}
-                          alt={producto.nombre}
-                          size="md"
-                          variant="rounded"
-                          className="border border-gray-200"
-                          />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Typography variant="small" color="blue-gray" className="font-medium">
-                              {producto.nombre}
-                            </Typography>
-                            {producto.popular && <Star className="h-4 w-4 text-yellow-500" />}
-                            {producto.descuento > 0 && <Chip size="sm" value={`-${producto.descuento}%`} color="red" />}
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <Typography variant="small" color="gray">
-                              Stock: {producto.cantidad}
-                            </Typography>
-                            <Typography variant="small" color="blue-gray" className="font-medium">
-                              ${Number(producto.precio).toFixed(2)}
-                            </Typography>
-                            <Chip size="sm" value={producto.categoria_nombre} color="blue-gray" />
-                          </div>
-                        </div>
-                        <PlusCircle className="h-5 w-5 text-deep-orange-500" />
-                      </div>
-                      )})}
-                  </div>
-                )}
+  <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-10 mt-1 max-h-72 sm:max-h-80 overflow-y-auto">
+    {productos.map((producto) => {
+      return (
+        <div
+          key={producto.id}
+          onClick={() => agregarProducto(producto)}
+          className="flex items-start lg:items-center gap-3 p-2 lg:p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+        >
+          <Avatar
+            src={mostrarImagen(producto.imagen_url)}
+            alt={producto.nombre}
+            variant="rounded"
+            className="border border-gray-200 !w-10 !h-10 lg:!w-12 lg:!h-12"
+          />
+
+          {/* Texto y tags */}
+          <div className="flex-1 min-w-0">
+            {/* Nombre + badges */}
+            <div className="flex items-start gap-2 mb-1 min-w-0">
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="font-medium truncate"
+                title={producto.nombre}
+              >
+                {producto.nombre}
+              </Typography>
+              {producto.popular && (
+                <Star className="h-4 w-4 text-yellow-500 shrink-0" />
+              )}
+              {producto.descuento > 0 && (
+                <Chip
+                  size="sm"
+                  value={`-${producto.descuento}%`}
+                  color="red"
+                  className="shrink-0"
+                />
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs lg:text-sm">
+              <Typography variant="small" color="gray" className="whitespace-nowrap">
+                Stock: {producto.cantidad}
+              </Typography>
+
+              <Typography
+                variant="small"
+                color="blue-gray"
+                className="font-medium whitespace-nowrap"
+              >
+                ${Number(producto.precio).toFixed(2)}
+              </Typography>
+
+              {/* Oculto en mobile para no desbordar */}
+              <Chip
+                size="sm"
+                value={producto.categoria_nombre}
+                color="blue-gray"
+                className="hidden sm:inline-flex"
+              />
+            </div>
+          </div>
+
+          <PlusCircle className="h-5 w-5 text-deep-orange-500 shrink-0" />
+        </div>
+      );
+    })}
+  </div>
+)}
               </div>
             </CardBody>
           </Card>
 
           {/* Lista de Productos en la Venta Mejorada */}
-          <Card className="shadow-sm border border-gray-200">
-            <CardBody className="p-6">
-              <Typography variant="h6" color="blue-gray" className="mb-4 flex items-center gap-2 uppercase font-semibold">
-                <ShoppingCart className="h-5 w-5 mb-1" />
-                Productos en el carrito ({productosVenta.length})
-              </Typography>
+<Card className="shadow-sm border border-gray-200">
+  <CardBody className="p-3 lg:p-6">
+    <Typography
+      variant="h6"
+      color="blue-gray"
+      className="mb-3 lg:mb-4 flex items-center gap-2 uppercase font-semibold text-base lg:text-lg"
+    >
+      <ShoppingCart className="h-5 w-5 mb-0.5" />
+      Productos en el carrito ({productosVenta.length})
+    </Typography>
 
-              {productosVenta.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <ShoppingCart className="h-16 w-16 text-gray-300 mb-4" />
-                  <Typography variant="h6" color="blue-gray">
-                    No hay productos agregados
-                  </Typography>
-                  <Typography variant="small" color="gray" className="mt-1 text-center">
-                    Busca y agrega productos para comenzar la venta.
-                    <br />
-                    Usa las pestañas para filtrar por categoría.
-                  </Typography>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {productosVenta.map((producto, index) => {
-                    return (
-                      <div
-                      key={producto.id}
-                      className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
-                      >
-                      <div className="flex items-center gap-1">
-                        <Typography variant="small" color="gray" className="w-6">
-                          {index + 1}.
-                        </Typography>
-                        <Avatar
-                          src={mostrarImagen(producto.imagen_url)}
-                          alt={producto.nombre}
-                          size="lg"
-                          variant="rounded"
-                          className="border border-gray-200"
-                          />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Typography variant="small" color="blue-gray" className="font-medium">
-                            {producto.nombre}
-                          </Typography>
-                          {producto.popular && <Star className="h-4 w-4 text-yellow-500" />}
-                          {producto.descuento > 0 && <Chip size="sm" value={`-${producto.descuento}%`} color="red" />}
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <Typography variant="small" color="gray">
-                            ${Number(producto.precio).toFixed(2)} c/u
-                          </Typography>
-                          {producto.descuento > 0 && (
-                            <Typography variant="small" color="green" className="font-medium">
-                              Precio con descuento: ${(producto.precio * (1 - producto.descuento / 100)).toFixed(2)}
-                            </Typography>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <IconButton
-                            variant="outlined"
-                            size="sm"
-                            onClick={() => actualizarCantidad(producto.id, producto.cantidadSeleccionada - 1)}
-                            className="rounded-full"
-                            >
-                            <span className="text-lg">-</span>
-                          </IconButton>
-                          <Typography variant="small" color="blue-gray" className="w-8 text-center font-medium">
-                            {producto.cantidadSeleccionada}
-                          </Typography>
-                          <IconButton
-                            variant="outlined"
-                            size="sm"
-                            onClick={() => actualizarCantidad(producto.id, producto.cantidadSeleccionada + 1)}
-                            // disabled={producto.cantidad >= producto.stock}
-                            className="rounded-full"
-                            >
-                            <span className="text-lg">+</span>
-                          </IconButton>
-                        </div>
-                        <Typography variant="small" color="blue-gray" className="font-bold w-24 text-right">
-                          ${producto.precio}
-                        </Typography>
-                        <IconButton
-                          variant="text"
-                          color="red"
-                          size="sm"
-                          onClick={() => eliminarProducto(producto.id)}
-                          className="rounded-full"
-                          >
-                          <Trash2 className="h-4 w-4" />
-                        </IconButton>
-                      </div>
-                    </div>
-                    )})}
-                </div>
-              )}
-            </CardBody>
-          </Card>
+    {productosVenta.length === 0 ? (
+      <div className="flex flex-col items-center justify-center py-10 lg:py-12 text-center">
+        <ShoppingCart className="h-14 w-14 text-gray-300 mb-3 lg:h-16 lg:w-16 lg:mb-4" />
+        <Typography variant="h6" color="blue-gray" className="text-base lg:text-lg">
+          No hay productos agregados
+        </Typography>
+        <Typography variant="small" color="gray" className="mt-1">
+          Busca y agrega productos para comenzar la venta.
+          <br className="hidden sm:block" />
+          Usa las pestañas para filtrar por categoría.
+        </Typography>
+      </div>
+    ) : (
+      <div className="space-y-3 lg:space-y-4">
+        {productosVenta.map((producto, index) => {
+  const precioUnit = Number(producto.precio);
+  const totalItem = (precioUnit * producto.cantidadSeleccionada).toFixed(2);
+
+  return (
+    <div
+      key={producto.id}
+      className="rounded-lg border border-gray-200 p-3 lg:p-4 hover:shadow-sm transition-shadow"
+    >
+      {/* fila 1: avatar + nombre + precio c/u */}
+      <div className="flex gap-3">
+        <Typography variant="small" color="gray" className="w-5 lg:w-6 text-center shrink-0">
+          {index + 1}.
+        </Typography>
+
+        <Avatar
+          src={mostrarImagen(producto.imagen_url)}
+          alt={producto.nombre}
+          variant="rounded"
+          className="border border-gray-200 !w-12 !h-12 lg:!w-16 lg:!h-16 shrink-0"
+        />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2 min-w-0">
+            <Typography
+              variant="small"
+              color="blue-gray"
+              className="font-medium truncate"
+              title={producto.nombre}
+            >
+              {producto.nombre}
+            </Typography>
+
+            <Typography
+              variant="small"
+              color="blue-gray"
+              className="font-semibold whitespace-nowrap"
+            >
+              ${precioUnit.toFixed(2)} <span className="text-gray-500">c/u</span>
+            </Typography>
+          </div>
+
+          {/* badges (solo si existen) */}
+          <div className="mt-1 flex items-center gap-2">
+            {producto.popular && <Star className="h-4 w-4 text-yellow-500" />}
+            {producto.descuento > 0 && (
+              <Chip size="sm" value={`-${producto.descuento}%`} color="red" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* fila 2: stepper + total */}
+      <div className="mt-3 flex items-center justify-between">
+        {/* stepper tipo píldora */}
+        <div className="inline-flex items-center rounded-full border border-gray-300 overflow-hidden">
+          <button
+            type="button"
+            onClick={() =>
+              actualizarCantidad(producto.id, producto.cantidadSeleccionada - 1)
+            }
+            className="px-3 py-1.5 active:scale-95"
+            aria-label="Disminuir"
+          >
+            –
+          </button>
+          <span className="w-10 text-center font-medium select-none">
+            {producto.cantidadSeleccionada}
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              actualizarCantidad(producto.id, producto.cantidadSeleccionada + 1)
+            }
+            className="px-3 py-1.5 active:scale-95"
+            aria-label="Aumentar"
+          >
+            +
+          </button>
+        </div>
+
+        <Typography
+          variant="small"
+          color="blue-gray"
+          className="font-extrabold text-right text-base lg:text-lg"
+        >
+          ${totalItem}
+        </Typography>
+      </div>
+
+      {/* fila 3: acciones secundarias (solo borrar) */}
+      <div className="mt-2 flex justify-end">
+        <IconButton
+          variant="text"
+          color="red"
+          size="sm"
+          onClick={() => eliminarProducto(producto.id)}
+          className="rounded-full"
+          aria-label="Quitar del carrito"
+        >
+          <Trash2 className="h-4 w-4" />
+        </IconButton>
+      </div>
+    </div>
+  );
+})}
+      </div>
+    )}
+  </CardBody>
+</Card>
         </div>
 
         {/* Resumen de Venta Mejorado */}

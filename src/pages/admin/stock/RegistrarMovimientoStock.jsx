@@ -34,6 +34,7 @@ import { isBarcodeLike } from "../../../utils/barcode";
 import { getProductoPorBarcode } from "../../../services/productServices";
 import { useMovimientoStock } from "../../../hooks/useMovimientosStock";
 import { useStockMutation } from "../../../hooks/useStockMutation";
+import ButtonResponsive from "../../../components/Button"
 
 const RegistrarMovimientoStock = () => {
   
@@ -391,18 +392,21 @@ const RegistrarMovimientoStock = () => {
           <CardBody className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <Typography variant="h4" color="blue-gray" className="flex items-center gap-2 font-semibold mb-2 uppercase">
-                  <Plus className="w-7 h-7 text-blue-600" />
+                <Typography color="blue-gray" className="flex text-[17px] whitespace-nowrap lg:text-2xl items-center gap-0 lg:gap-2 font-semibold mb-2 uppercase">
+                  <Plus className="w-7 h-7 text-blue-600 lg:block hidden" />
                   Registrar Movimiento de Stock
                 </Typography>
-                <Typography color="gray" className="font-normal">
+                <Typography color="gray" className="font-normal lg:text-base text-sm">
                   Registra entradas, salidas, ajustes y transferencias de inventario
                 </Typography>
               </div>
-              <Button color="gray" className="flex items-center justify-center text-sm" size="md" onClick={() => window.history.back()}>
-                <X className="w-5 h-5 mr-1" />
-                Cancelar
-              </Button>
+              <ButtonResponsive 
+              color="gray" 
+              onClick={() => window.history.back()}
+              icon={X}
+              children="Cancelar"
+              className="flex items-center justify-center gap-2 uppercase px-2.5 py-2.5 text-xs md:py-2 md:px-4 md:text-sm"
+              />
             </div>
           </CardBody>
         </Card>
@@ -464,7 +468,8 @@ const RegistrarMovimientoStock = () => {
                       <div className="space-y-4">
                         <div className="relative">
                           <Input
-                            label="Buscar producto por nombre o código de barra"
+                            label="Buscar productos"
+                            placeholder="Buscar producto por nombre o código de barra"
                             value={busquedaProducto}
                             data-scan-ignore="true"
                             onChange={(e) => {
@@ -484,14 +489,17 @@ const RegistrarMovimientoStock = () => {
                                     className="p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
                                   >
                                     <div className="flex justify-between items-start">
-                                      <div className="flex-1">
-                                        <Typography variant="small" color="blue-gray" className="font-medium">
-                                          {producto.nombre}
-                                        </Typography>
-                                        <Typography variant="small" color="gray" className="mt-1">
-                                          Barcode: {producto.barcode} • {producto.categoria_nombre}
-                                        </Typography>
-                                      </div>
+                                      <div className="lg:flex-1 flex flex-col">
+                                      <Typography variant="small" color="blue-gray" className="font-medium">
+                                        {producto.nombre}
+                                      </Typography>
+
+                                      <Typography variant="small" color="gray" className="mt-1">
+                                        <span className="block sm:inline">Barcode: {producto.barcode}</span>
+                                        <span className="hidden sm:inline mx-1">•</span>
+                                        <span className="block sm:inline">Categoría: {producto.categoria_nombre}</span>
+                                      </Typography>
+                                    </div>
                                       <Chip
                                         value={`Stock: ${producto.cantidad}`}
                                         color={

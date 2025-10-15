@@ -47,6 +47,7 @@ import { useNotificacion } from "../../../hooks/useNotificacion"
 import { useCategoriasMutation } from "../../../hooks/useCategoriasMutation";
 import { useSubcategoriasMutation } from "../../../hooks/useSubcategoriaMutation";
 import withReactContent from "sweetalert2-react-content";
+import ButtonResponsive from "../../../components/Button";
 
 const EstadoBadge = ({ estado }) =>
   estado ? (
@@ -397,7 +398,7 @@ export const GestionCategorias = () => {
       {componenteAlerta}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <Typography className="font-semibold text-black tracking-tight uppercase text-3xl">
+          <Typography className="font-semibold text-black tracking-tight uppercase text-2xl lg:text-3xl">
             GESTIÓN DE CATEGORÍAS
           </Typography>
           <Typography variant="paragraph" color="gray" className="mt-1">
@@ -405,14 +406,19 @@ export const GestionCategorias = () => {
           </Typography>
         </div>
         <div className="flex gap-3">
-          <Button variant="outlined" className="flex items-center gap-2" onClick={() => navigate('/admin/estadisticas?tab=categorias')}>
-            <ChartNoAxesColumnIncreasing className="h-4 w-4" />
-            ESTADISTICAS
-          </Button>
-          <Button className="flex items-center gap-2 bg-orange-500" onClick={handleOpen}>
-            <Plus className="h-5 w-5" />
-            NUEVA CATEGORÍA
-          </Button>
+          <ButtonResponsive 
+          variant="outlined"
+          onClick={() => navigate('/admin/estadisticas?tab=categorias')}
+          icon={ChartNoAxesColumnIncreasing}
+          children='ESTADISTICAS'
+          />
+          <ButtonResponsive
+          className="flex items-center gap-2 uppercase px-2.5 py-2.5 text-xs md:py-2 md:px-4 md:text-sm bg-orange-500"
+          onClick={handleOpen}
+          icon={Plus}
+          children='NUEVA CATEGORÍA'
+          />
+        
         </div>
       </div>
 
@@ -545,8 +551,8 @@ export const GestionCategorias = () => {
                 </div>
               )}
               {/* paginación simple */}
-              <div className="flex items-center justify-between mt-6 text-black">
-                <Typography variant="small" color="gray">
+              <div className="lg:flex flex-col lg:items-center lg:justify-between mt-6 text-black">
+                <Typography variant="small" color="gray" className="mb-4">
                   {total === 0 ? "Sin resultados" : `Mostrando ${start}-${end} de ${total} categorías`}
                 </Typography>
                 <div className="flex gap-2">
@@ -674,7 +680,7 @@ export const GestionCategorias = () => {
           {modoEdicionSub && subcategoriaSeleccionada ? <Pencil className="h-5 w-5 text-blue-600" aria-hidden="true" />
                               : <PlusCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
                               }
-          <Typography variant="h4" className="uppercase">
+          <Typography variant="h4" className="uppercase text-xl lg:text-2xl">
             {modoEdicionSub  && subcategoriaSeleccionada ? "Editar Subcategoría" : ''}
           </Typography>
         </DialogHeader>
@@ -682,7 +688,7 @@ export const GestionCategorias = () => {
         <DialogBody className="space-y-6">
           {modoEdicionSub && subcategoriaSeleccionada && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <Input 
                   label="Nombre de la subcategoría" 
@@ -703,8 +709,8 @@ export const GestionCategorias = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                <div className="lg:mb-0 mb-2">
                 <Input
                 label="Descripción" 
                 placeholder="Describe la subcategoría..." 
@@ -760,7 +766,7 @@ export const GestionCategorias = () => {
         <DialogBody className="space-y-6">
           {modoEdicion ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <Input 
                   label="Nombre de la categoría" 
@@ -781,8 +787,8 @@ export const GestionCategorias = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                <div className="mb-2 lg:mb-0">
                 <Input
                 label="Descripción" 
                 placeholder="Describe la categoría..." 

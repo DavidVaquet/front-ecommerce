@@ -196,14 +196,15 @@ export const HistorialVentas = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight uppercase">Historial de Ventas</h1>
-            <p className="text-gray-600 mt-1 lg:text-base text-[14px]">
+            <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight uppercase">Historial de Ventas</h1>
+            <p className="text-gray-600 mt-1 lg:text-base text-sm">
               Visualiza y analiza todas las ventas realizadas tanto en el local como en la tienda e-commerce.
             </p>
           </div>
           <div className="flex gap-3">
             <ButtonResponsive
             variant= "outlined"
+            className="flex items-center gap-2 uppercase px-2.5 py-2.5 text-xs md:py-2 md:px-4 md:text-sm whitespace-nowrap"
             color="blue-gray"
             icon={Download} >
               Exportar Reporte
@@ -211,6 +212,7 @@ export const HistorialVentas = () => {
             <ButtonResponsive
             variant= "filled"
             color="deep-orange"
+            className="flex items-center gap-2 uppercase px-2.5 py-2.5 text-xs md:py-2 md:px-4 md:text-sm whitespace-nowrap"
             icon={BarChart3} >
               Ver Analytics
             </ButtonResponsive>
@@ -358,7 +360,7 @@ export const HistorialVentas = () => {
       {/* Tabs y Lista de Ventas */}
       <Card className="shadow-sm border border-gray-200">
         <Tabs value={activeTab}>
-          <TabsHeader className="p-2 whitespace-nowrap">
+          <TabsHeader className="p-2 whitespace-nowrap overflow-x-auto">
             <Tab value="todos" className="text-sm font-medium" onClick={() => { setActiveTab('todos'), setCurrentPage(1)}}>
               Todas ({totalVentas})
             </Tab>

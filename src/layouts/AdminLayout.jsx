@@ -6,13 +6,13 @@ import { Toaster } from 'react-hot-toast';
 
 export const AdminLayout = () => {
   return (
-    <div className='flex min-h-screen'>
+    <div className='flex min-h-screen w-full'>
 
         <Toaster position='top-center' toastOptions={{duration: 3000}}/>
         {/* SideBar */}
         <Sidebar />
         {/* Contenido principal */}
-        <main className='flex-1 flex flex-col dark:bg-gray-900 text-white'>
+        <main className='flex-1 flex flex-col min-w-0 dark:bg-gray-900 text-white'>
         {/* Header */}
         <Header/>
         {/* Contenido Dinamico */}

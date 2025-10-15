@@ -59,6 +59,7 @@ import {
   CheckCircle,
   Power,
   PowerOff,
+  Upload,
 } from "lucide-react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useProductos, useProductoStats } from "../../../hooks/useProductos";
@@ -66,6 +67,7 @@ import { useProductosMutation } from "../../../hooks/useProductosMutation";
 import { useCategorias } from "../../../hooks/useCategorias";
 import { useSubcategorias } from "../../../hooks/useSubcategorias";
 import { printEtiqueta } from "../../../services/printServices";
+import ButtonResponsive from "../../../components/Button";
 
 // Estilos CSS
 const obtenerEstadoProducto = (producto) => {
@@ -416,37 +418,23 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-semibold uppercase tracking-tight">
+            <h1 className="lg:text-3xl text-2xl font-semibold uppercase tracking-tight">
               Gestión de Productos
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-gray-600 mt-1 lg:text-base text-sm">
               Controlá tus productos activos, precios y stock desde un solo
               lugar.
             </p>
           </div>
-          <Button
+
+          <ButtonResponsive
             variant="gradient"
             color="deep-orange"
-            className="flex items-center gap-2"
-            size="md"
             onClick={() => navigate('/admin/productos/nuevo')}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="h-5 w-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
-              />
-            </svg>
-            NUEVO PRODUCTO
-          </Button>
+            children="Nuevo Producto"
+            icon={Upload}
+            className="lg:block hidden lg:flex items-center gap-2 uppercase px-2.5 py-2.5 text-xs md:py-2 md:px-4 md:text-sm"
+          />
         </div>
       </div>
 
@@ -551,7 +539,7 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
       {/* Tabs y Tabla de Productos */}
       <Card className="shadow-sm border border-gray-200">
         <Tabs value={activeTab}>
-          <TabsHeader className="p-2">
+          <TabsHeader className="p-2 whitespace-nowrap overflow-x-auto">
             <Tab
               value="todos"
               className="text-sm font-medium"

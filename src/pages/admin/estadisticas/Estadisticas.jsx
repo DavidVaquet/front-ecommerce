@@ -38,8 +38,6 @@ import {
   Download,
   Filter,
   RefreshCw,
-  Eye,
-  FileText,
   PieChart,
   Activity,
   Target,
@@ -54,6 +52,7 @@ import {
 import { useCategorias } from "../../../hooks/useCategorias.jsx";
 import { useEstadisticasDashboard } from "../../../hooks/useEstadisticas.jsx";
 import { useNavigate } from "react-router";
+import ButtonResponsive from "../../../components/Button.jsx";
 
 export const Estadisticas = () => {
   const [searchParams] = useSearchParams();
@@ -177,45 +176,38 @@ export const Estadisticas = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2 uppercase">
+            <h1 className="text-[22px] lg:text-3xl lg:text-left lg:font-semibold font-bold text-gray-900 mb-2 uppercase">
               Estadísticas del sistema
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-sm lg:text-base">
               Análisis completo de tu inventario y rendimiento de ventas
             </p>
           </div>
           <div className="flex gap-3">
             
-                <Button
+      
+                <ButtonResponsive
+                  children='VER REPORTES'
+                  icon={Download}
                   variant="outlined"
                   color="blue-gray"
-                  className="flex uppercase items-center gap-2"
                   onClick={() => navigate('/admin/reportes')}
+                  />
+                  <ButtonResponsive
+                  color="blue"
+                  icon={RefreshCw}
+                  loading={isFetching}
+                  onClick={async () => {
+                    try {
+                      await refetch({ throwOnError: true });
+                      mostrarNotificacion("success", "Datos actualizados");
+                    } catch (e) {
+                      mostrarNotificacion("error", e?.message ?? "No se pudo actualizar");
+                    }
+                  }}
                 >
-                  <Download className="h-4 w-4" />
-                  VER REPORTES
-                </Button>
-              
-            <Button
-            color="blue"
-            className="flex items-center gap-2 uppercase"
-            onClick={async () => {
-              try {
-                await refetch({ throwOnError: true });
-                mostrarNotificacion('success', 'Datos actualizados');
-              } catch (e) {
-                mostrarNotificacion("error", e?.message ?? "No se pudo actualizar");
-              }
-            }}
-            disabled={isFetching} 
-          >
-            {isFetching ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            Actualizar datos
-          </Button>
+                  Actualizar datos
+                </ButtonResponsive>
           </div>
         </div>
       </div>
@@ -454,7 +446,7 @@ export const Estadisticas = () => {
       {/* Tabs de Análisis */}
       <Card className="shadow-sm">
         <Tabs value={activeTab} onChange={setActiveTab}>
-          <TabsHeader className="bg-gray-50">
+          <TabsHeader className="bg-gray-50 overflow-x-auto px-1 lg:px-6">
             <Tab value="resumen">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
@@ -464,7 +456,7 @@ export const Estadisticas = () => {
             <Tab value="productos">
               <div className="flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                <span className="text-base">Productos Top</span>
+                <span className="text-base whitespace-nowrap">Productos Top</span>
               </div>
             </Tab>
             <Tab value="categorias">
@@ -483,16 +475,15 @@ export const Estadisticas = () => {
 
           <TabsBody>
             {/* Tab Resumen */}
-            <TabPanel value="resumen" className="p-6">
+            <TabPanel value="resumen" className="p-3 lg:p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Gráfico de Ventas por Categoría */}
                 <Card className="shadow-sm">
-                  <CardBody className="p-6">
+                  <CardBody className="p-3 lg:p-6">
                     <div className="flex items-center justify-between mb-6">
                       <Typography
-                        variant="h6"
                         color="blue-gray"
-                        className="font-bold"
+                        className="font-bold truncate text-base lg:text-lg"
                       >
                         Ventas por Categoría
                       </Typography>
@@ -536,7 +527,7 @@ export const Estadisticas = () => {
 
                 {/* Métricas Adicionales */}
                 <Card className="shadow-sm">
-                  <CardBody className="p-6">
+                  <CardBody className="p-3 lg:p-6">
                     <Typography
                       variant="h6"
                       color="blue-gray"
@@ -623,21 +614,18 @@ export const Estadisticas = () => {
             </TabPanel>
 
             {/* Tab Productos Top */}
-            <TabPanel value="productos" className="p-6">
+            <TabPanel value="productos" className="p-3 lg:p-6">
               <Card className="shadow-sm">
-                <CardBody className="p-6">
+                <CardBody className="lg:px-6 lg:py-6 px-2 py-3">
                   <div className="flex items-center justify-between mb-6">
                     <Typography
-                      variant="h6"
                       color="blue-gray"
-                      className="font-semibold uppercase flex items-center gap-2"
+                      className="whitespace-nowrap font-semibold lg:text-xl text-base uppercase flex items-center gap-2"
                     >
                       <Star className="h-6 w-6 text-yellow-500" />
                       Productos Más Vendidos
                     </Typography>
-                    <Button variant="outlined" color="blue-gray" size="sm">
-                      Ver Todos
-                    </Button>
+                    
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-max table-auto text-left">
@@ -846,11 +834,11 @@ export const Estadisticas = () => {
             </TabPanel>
 
             {/* Tab Categorías */}
-            <TabPanel value="categorias" className="p-6">
+            <TabPanel value="categorias" className="p-3 lg:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {ventas_por_categoria.map((categoria) => (
                   <Card key={categoria.categoria} className="shadow-sm">
-                    <CardBody className="p-6">
+                    <CardBody className="p-3 lg:p-6">
                       <div className="flex items-center justify-between mb-4">
                         <Typography
                           variant="h6"
@@ -918,22 +906,21 @@ export const Estadisticas = () => {
             </TabPanel>
 
             {/* Tab Alertas */}
-            <TabPanel value="alertas" className="p-6">
+            <TabPanel value="alertas" className="p-3 lg:p-6">
               <Card className="shadow-sm border-l-4 border-l-red-500">
-                <CardBody className="p-6">
+                <CardBody className="p-3 lg:p-6">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 bg-red-100 rounded-lg">
                       <AlertTriangle className="h-6 w-6 text-red-600" />
                     </div>
                     <div>
                       <Typography
-                        variant="h6"
                         color="red"
-                        className="font-semibold uppercase"
+                        className="font-semibold text-sm lg:text-xl uppercase"
                       >
                         Productos que Requieren Atención
                       </Typography>
-                      <Typography variant="small" color="gray">
+                      <Typography variant="small" color="gray" className="text-sm lg:text-xl">
                         {critTotal} productos necesitan
                         reabastecimiento
                       </Typography>
@@ -942,10 +929,10 @@ export const Estadisticas = () => {
                   <div className="space-y-4">
                     {critItems.map((producto) => (
                       <Card key={producto.id} className="shadow-sm border">
-                        <CardBody className="p-4">
-                          <div className="flex items-center justify-between">
+                        <CardBody className="lg:p-4 p-3">
+                          <div className="flex-col lg:flex lg:flex-row items-center lg:justify-between">
                             <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
+                              <div className="flex items-center gap-3 mb-3 lg:mb-2">
                                 <Typography
                                   variant="h6"
                                   color="blue-gray"
@@ -975,7 +962,7 @@ export const Estadisticas = () => {
                                   </Typography>
                                 </div>
                                 <div>
-                                  <Typography variant="small" color="gray">
+                                  <Typography variant="small" color="gray" className="whitespace-nowrap">
                                     Stock Actual
                                   </Typography>
                                   <Typography
@@ -987,7 +974,7 @@ export const Estadisticas = () => {
                                   </Typography>
                                 </div>
                                 <div>
-                                  <Typography variant="small" color="gray">
+                                  <Typography variant="small" color="gray" className="whitespace-nowrap">
                                     Stock Mínimo
                                   </Typography>
                                   <Typography
@@ -998,8 +985,8 @@ export const Estadisticas = () => {
                                     {producto.stock_minimo}
                                   </Typography>
                                 </div>
-                                <div>
-                                  <Typography variant="small" color="gray">
+                                <div className="">
+                                  <Typography variant="small" color="gray" className="whitespace-nowrap">
                                     Días sin venta
                                   </Typography>
                                   <Typography
@@ -1012,17 +999,11 @@ export const Estadisticas = () => {
                                 </div>
                               </div>
                             </div>
-                            <div className="flex gap-2">
-                              {/* <IconButton
-                                variant="outlined"
-                                color="blue"
-                                size="sm"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </IconButton> */}
+                            <div className="flex mt-4 lg:mt-0 gap-2">
                               <Button 
                               color="deep-orange" 
                               size="sm"
+                              className="w-full lg:w-auto"
                               onClick={() => handleReabastecer(producto)}>
                                 Reabastecer
                               </Button>

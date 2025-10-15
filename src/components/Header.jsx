@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useContext } from "react";
+import React, { useMemo, useState, useContext, useEffect } from "react";
 import { useMatches } from "react-router";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router";
@@ -12,13 +12,26 @@ import {
   Typography,
 } from "@material-tailwind/react";
 import { useProductos } from "../hooks/useProductos";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { Home } from "lucide-react";
+import { MenuDrawer } from "./MenuDrawer";
 
 export const Header = () => {
   // USESTATES
   const [open, setOpen] = useState(false);
+  const [openMobile, setOpenMobile] = useState(false);
   // CONTEXT USER
   const { user } = useContext(AuthContext);
+  // HOOK
+  const isMobile = useIsMobile();
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(true)
+    } else {
+      setOpenMobile(false)
+    }
+  }, [isMobile])
+  
   // NAVIGATE
   const navigate = useNavigate();
   // OBTENER PRODUCTOS CON CANTIDAD MINIMA PARA LA NOTIFICACION
@@ -43,10 +56,15 @@ export const Header = () => {
   }
   return (
     <div className="flex w-full h-[80px] bg-white items-center justify-between p-8">
+      {openMobile ? (
+        <MenuDrawer 
+        titleNombre='Holaaaa logo!'/>
+      ) : (
       <div className="flex items-center gap-2">
-        <Icon className="h-5 w-5 text-blue-gray-900" />
-        <h1 className="text-xs text-negro uppercase font-semibold">{title}</h1>
+        <Icon className="h-5 w-5 md:h-6 md:w-6 text-blue-gray-900" />
+        <h1 className="text-xs md:text-base text-negro uppercase font-semibold">{title}</h1>
       </div>
+      )}
       <div className="flex items-center gap-4">
         <div className="relative">
           <Menu open={open} handler={setOpen}>
