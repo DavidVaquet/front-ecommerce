@@ -392,7 +392,7 @@ export const GestionCategorias = () => {
   }, []);
 
   return (
-    <div className="flex flex-col w-full py-6 px-8 space-y-8">
+    <div className="flex flex-col w-full py-6 px-8 space-y-8 text-black">
       {/* Notificaciones */}
       {componenteAlerta}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -449,7 +449,7 @@ export const GestionCategorias = () => {
       </div>
 
       {/* Filtros y búsqueda */}
-      <Card className="shadow-sm">
+      <Card className="shadow-sm text-black">
         <CardBody className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
@@ -480,7 +480,7 @@ export const GestionCategorias = () => {
       </Card>
 
       {/* Tabs y contenido */}
-      <Card className="shadow-sm">
+      <Card className="shadow-sm text-black">
         <Tabs value={activeTab} onChange={setActiveTab}>
           <TabsHeader className="p-2">
             <Tab 
@@ -545,7 +545,7 @@ export const GestionCategorias = () => {
                 </div>
               )}
               {/* paginación simple */}
-              <div className="flex items-center justify-between mt-6">
+              <div className="flex items-center justify-between mt-6 text-black">
                 <Typography variant="small" color="gray">
                   {total === 0 ? "Sin resultados" : `Mostrando ${start}-${end} de ${total} categorías`}
                 </Typography>
@@ -574,7 +574,7 @@ export const GestionCategorias = () => {
       </Card>
 
           {/* Modal - Categorias*/}
-            <Dialog size="sm" open={open} handler={handleOpen} className="p-4">
+            <Dialog size="sm" open={open} handler={handleOpen} className="p-4 text-black">
               <form onSubmit={handleNewCategory}>
                 <DialogHeader className="relative m-0 block">
                   <Typography variant="h4" color="blue-gray">
@@ -669,7 +669,7 @@ export const GestionCategorias = () => {
             </Dialog>
 
       {/* Modal */}
-      <Dialog open={modalAbiertoSub} handler={cerrarModalSub} size="md">
+      <Dialog open={modalAbiertoSub} handler={cerrarModalSub} size="md" className="text-black">
         <DialogHeader className="flex items-center gap-2">
           {modoEdicionSub && subcategoriaSeleccionada ? <Pencil className="h-5 w-5 text-blue-600" aria-hidden="true" />
                               : <PlusCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
@@ -746,7 +746,7 @@ export const GestionCategorias = () => {
 
 
       {/* Modal */}
-      <Dialog open={modalAbierto} handler={cerrarModal} size="md">
+      <Dialog open={modalAbierto} handler={cerrarModal} size="md" className="text-black">
         <DialogHeader className="flex items-center gap-2">
           {modoEdicion  ? (categoriaSeleccionada
                         ? <Pencil className="h-5 w-5 text-blue-600" aria-hidden="true" />
@@ -876,7 +876,7 @@ export const GestionCategorias = () => {
       </Dialog>
 
       {/* Modal - SubCategorias*/}
-            <Dialog size="sm" open={openSub} handler={handleCloseModalSub} className="p-4">
+            <Dialog size="sm" open={openSub} handler={handleCloseModalSub} className="p-4 text-black">
               <form onSubmit={handleNewSubcategory}>
                 <DialogHeader className="relative m-0 block">
                   <Typography variant="h4" color="blue-gray">

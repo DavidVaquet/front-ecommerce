@@ -44,7 +44,7 @@ export const CategoriaRow = memo(function CategoriaRow({
   );
 
   return (
-    <Card className="border border-gray-200">
+    <Card className="border border-gray-200 text-black">
       <CardBody className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">

@@ -101,7 +101,7 @@ export const Login = () => {
               <div className="flex justify-center mt-6">
                 <button
                   type="submit"
-                  className="text-white bg-negro text-base font-semibold w-full py-2 rounded-3xl "
+                  className="text-white bg-negro hover:bg-blue-gray-900 text-base font-semibold w-full py-2 rounded-3xl "
                 >
                   Iniciar sesión
                 </button>
