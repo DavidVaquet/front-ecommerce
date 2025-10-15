@@ -151,7 +151,7 @@ export const PublicarProductos = () => {
 
 
   return (
-    <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
+    <div className="text-black flex flex-col w-full py-6 px-8">
       {/* Alerta flotante */}
       {mostrarAlerta && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">

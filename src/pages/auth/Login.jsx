@@ -70,10 +70,10 @@ export const Login = () => {
 
           {/* Formulario */}
           <div className="flex flex-1 flex-col items-center gap-4">
-            <h1 className="text-4xl text-center text-negro font-bold font-worksans">
+            <h1 className="text-4xl text-center text-negro font-semibold ">
               Bienvenido de nuevo a iClub
             </h1>
-            <p className="text-center font-worksans text-negro">
+            <p className="text-center  text-negro">
               Ingresá para acceder a tu cuenta y administrar tu tienda.
             </p>
 
@@ -84,7 +84,7 @@ export const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Correo electrónico"
-                  className="w-full px-4 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 font-worksans focus:ring-black"
+                  className="w-full px-4 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2  focus:ring-black"
                   autoComplete="username"
                 />
               </div>
@@ -94,14 +94,14 @@ export const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Contraseña"
-                  className="w-full px-4 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 font-worksans focus:ring-black"
+                  className="w-full px-4 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2  focus:ring-black"
                   autoComplete="current-password"
                 />
               </div>
               <div className="flex justify-center mt-6">
                 <button
                   type="submit"
-                  className="text-white bg-negro text-base font-semibold w-full py-2 rounded-3xl font-worksans"
+                  className="text-white bg-negro text-base font-semibold w-full py-2 rounded-3xl "
                 >
                   Iniciar sesión
                 </button>
@@ -109,7 +109,7 @@ export const Login = () => {
             </form>
 
             <div className="flex flex-col items-center gap-4">
-              <span className="text-black font-semibold hover:text-gris font-worksans">
+              <span className="text-black font-semibold hover:text-gris ">
                 <Link to="/restablecer-password">¿Olvidaste tu contraseña?</Link>
               </span>
             </div>

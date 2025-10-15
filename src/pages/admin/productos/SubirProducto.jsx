@@ -232,7 +232,7 @@ export const SubirProducto = () => {
   };
 
   return (
-    <div className="text-black flex flex-col w-full min-h-screen py-6 px-8 font-worksans overflow-hidden">
+    <div className="text-black flex flex-col w-full min-h-screen py-6 px-8  overflow-hidden">
       {/* Header */}
       {/* ALERTA */}
       {componenteAlerta}

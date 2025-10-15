@@ -391,7 +391,7 @@ const RegistrarMovimientoStock = () => {
           <CardBody className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <Typography variant="h4" color="blue-gray" className="flex items-center gap-2 mb-2 uppercase">
+                <Typography variant="h4" color="blue-gray" className="flex items-center gap-2 font-semibold mb-2 uppercase">
                   <Plus className="w-7 h-7 text-blue-600" />
                   Registrar Movimiento de Stock
                 </Typography>

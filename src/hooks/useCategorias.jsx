@@ -36,16 +36,14 @@ export const useStatsCategoriaSubcategorias = () => {
 
             const categorias_activas = r?.categorias_activas ?? 0;
             const categorias_inactivas = r?.categorias_inactivas ?? 0;
-            const subcategorias_activas = r?.subcategorias_activas ?? 0;
-            const subcategorias_inactivas = r?.subcategorias_inactivas ?? 0;
             const total_categorias = r?.total_categorias ?? 0;
+            const total_subcategorias = r?.total_subcategorias ?? 0;
 
             return { 
                 categorias_activas,
                 categorias_inactivas,
-                subcategorias_activas,
-                subcategorias_inactivas,
-                total_categorias
+                total_categorias,
+                total_subcategorias
             }
         
     }

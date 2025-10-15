@@ -341,12 +341,12 @@ const toggleEmail = useCallback(() => {
 
 
   return (
-    <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
+    <div className="text-black flex flex-col w-full py-6 px-8">
       {/* Header */}
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight uppercase">Clientes del Sistema</h1>
+            <h1 className="text-3xl font-semibold tracking-tight uppercase">Clientes del Sistema</h1>
             <p className="text-gray-600 mt-1">
               Gestiona todos los clientes registrados tanto del e-commerce como agregados manualmente.
             </p>

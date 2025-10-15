@@ -1,5 +1,5 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { addSubcategoryService } from "../services/subcategorieService";
+import { addSubcategoryService, deleteSubcategoryServices, updateSubcategoryServices } from "../services/subcategorieService";
 import { qkCategoriasSubcategoria } from "./useCategorias";
 
 export const useSubcategoriasMutation = () => {
@@ -11,9 +11,25 @@ export const useSubcategoriasMutation = () => {
         mutationFn: (payload) => addSubcategoryService(payload),
         onSuccess: () => { 
             invalidate();
-            qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria()});
+            qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria(), exact: false});
         }
     })
 
-    return { crearSubcategoria }
+    const editarSubcategoria = useMutation({
+            mutationFn: (payload) => updateSubcategoryServices(payload),
+            onSuccess: () => {
+                invalidate();
+                qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria(), exact: false});
+            }
+        });
+    
+        const eliminarSubcategoria = useMutation({
+            mutationFn: (payload) => deleteSubcategoryServices(payload),
+            onSuccess: () => {
+                invalidate();
+                qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria(), exact: false});
+            }
+        });
+
+    return { crearSubcategoria, eliminarSubcategoria, editarSubcategoria }
 } 

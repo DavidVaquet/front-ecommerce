@@ -45,7 +45,7 @@ export const Header = () => {
     <div className="flex w-full h-[80px] bg-white items-center justify-between p-8">
       <div className="flex items-center gap-2">
         <Icon className="h-5 w-5 text-blue-gray-900" />
-        <h1 className="text-xs text-negro font-worksans uppercase font-semibold">{title}</h1>
+        <h1 className="text-xs text-negro uppercase font-semibold">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">
@@ -54,7 +54,7 @@ export const Header = () => {
               <IconButton variant="text" className="relative">
                 <Bell className="h-5 w-5 text-orange-900" />
                 {total > 0 && (
-                  <span className="absolute -top-2 -right-1 bg-red-600 text-white rounded-full text-xs w-4 h-4 flex items-center justify-center">
+                  <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-[19px] h-[19px] flex items-center justify-center">
                     {total}
                   </span>
                 )}
@@ -114,7 +114,7 @@ export const Header = () => {
           className="inline-block relative object-cover object-center !rounded-full w-8 h-8"
         />
         <div>
-          <h6 className="text-negro font-worksans font-normal">
+          <h6 className="text-negro font-normal">
             {user.nombre ?? 'Usuario'}
           </h6>
         </div>

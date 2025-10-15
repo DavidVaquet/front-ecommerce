@@ -13,11 +13,19 @@ import {
 
 
 const EstadoBadge = ({ estado }) =>
-  estado === true ? (
-    <Chip value='Activo' color="green" size="sm" className="text-xs" />
+  estado ? (
+    <Chip value="Activo" color="green" variant="filled" size="sm" className="text-xs" />
   ) : (
-    <Chip value='Inactivo' color="red" size="sm" className="text-xs" />
+    <Chip value="Inactivo" color="red" variant="filled" size="sm" className="text-xs" />
   );
+
+const VisibleEdge = ({ visible }) =>
+  Number(visible) === 1 ? (
+    <Chip value="Visible" color="blue" variant="filled" size="sm" className="text-xs" />
+  ) : (
+    <Chip value="Oculta" color="gray" variant="outlined" size="sm" className="text-xs" />
+  );
+  
 
 
 export const CategoriaRow = memo(function CategoriaRow({
@@ -25,7 +33,10 @@ export const CategoriaRow = memo(function CategoriaRow({
   expandida,
   onToggle,
   onAbrirModal,
-  onAgregarSubcategoria
+  onAgregarSubcategoria,
+  onDeleteCategoria,
+  onAbrirSubcategoria,
+  onEliminarSubcategoria
 }) {
   const subcatsOrdenadas = useMemo(
     () => [...(categoria.subcategorias ?? [])].sort((a, b) => a?.nombre?.localeCompare(b?.nombre ?? "") || 0),
@@ -47,6 +58,7 @@ export const CategoriaRow = memo(function CategoriaRow({
                   {categoria.nombre}
                 </Typography>
                 <EstadoBadge estado={categoria.activo} />
+                <VisibleEdge visible={categoria.visible}/>
               </div>
               <Typography variant="small" color="gray">
                 {categoria.descripcion}
@@ -82,14 +94,22 @@ export const CategoriaRow = memo(function CategoriaRow({
               </MenuHandler>
               <MenuList>
                 <MenuItem onClick={() => onAbrirModal(categoria, false)}>
+                <div className="flex items-center">
                   <Eye className="h-4 w-4 mr-2" /> Ver detalles
+                </div>
                 </MenuItem>
                 <MenuItem onClick={() => onAbrirModal(categoria, true)}>
+                <div className="flex items-center">
                   <Edit className="h-4 w-4 mr-2" /> Editar
+
+                </div>
                 </MenuItem>
                 
-                <MenuItem className="text-red-600">
+                <MenuItem className="text-red-600" onClick={() => onDeleteCategoria(categoria.id)}>
+                <div className="flex items-center">
+
                   <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                </div>
                 </MenuItem>
               </MenuList>
             </Menu>
@@ -106,7 +126,8 @@ export const CategoriaRow = memo(function CategoriaRow({
                   <Typography variant="small" className="font-medium">
                     {subcategoria.nombre}
                   </Typography>
-                  <EstadoBadge estado={subcategoria.activo} />
+                  <EstadoBadge estado={subcategoria.estado} />
+                  <VisibleEdge visible={subcategoria.visible}/>
                 </div>
                 <div className="flex items-center gap-4">
                   <Typography variant="small" color="gray">
@@ -119,8 +140,16 @@ export const CategoriaRow = memo(function CategoriaRow({
                       </Button>
                     </MenuHandler>
                     <MenuList>
-                      <MenuItem><Edit className="h-4 w-4 mr-2" />Editar</MenuItem>
-                      <MenuItem className="text-red-600"><Trash2 className="h-4 w-4 mr-2" />Eliminar</MenuItem>
+                      <MenuItem onClick={() => onAbrirSubcategoria(subcategoria, true)}>
+                      <div className="flex items-center">
+                      <Edit className="h-4 w-4 mr-2" />Editar
+                      </div>
+                      </MenuItem>
+                      <MenuItem className="text-red-600" onClick={() => onEliminarSubcategoria(subcategoria.id)}>
+                      <div className="flex items-center">
+                      <Trash2 className="h-4 w-4 mr-2" />Eliminar
+                      </div>
+                      </MenuItem>
                     </MenuList>
                   </Menu>
                 </div>
@@ -142,6 +171,9 @@ export const CategoriaRow = memo(function CategoriaRow({
     prev.categoria.nombre === next.categoria.nombre &&
     prev.categoria.descripcion === next.categoria.descripcion &&
     prev.categoria.activo === next.categoria.activo &&
-    (prev.categoria.subcategorias?.length ?? 0) === (next.categoria.subcategorias?.length ?? 0)
+    (prev.categoria.subcategorias?.length ?? 0) === (next.categoria.subcategorias?.length ?? 0),
+    prev.onAbrirModal === next.onAbrirModal,
+    prev.onAgregarSubcategoria === next.onAgregarSubcategoria,
+    prev.onDeleteCategoria === next.onDeleteCategoria
   );
 });

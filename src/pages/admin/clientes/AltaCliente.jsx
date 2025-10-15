@@ -138,7 +138,7 @@ export const AltaCliente = () => {
   }
 
   return (
-    <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
+    <div className="text-black flex flex-col w-full py-6 px-8">
       {/* Alerta flotante */}
       {mostrarAlerta && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">
@@ -156,7 +156,7 @@ export const AltaCliente = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight uppercase">Registrar Nuevo Cliente</h1>
+            <h1 className="text-3xl font-semibold tracking-tight uppercase">Registrar Nuevo Cliente</h1>
             <p className="text-gray-600 mt-1">
               Agrega la información completa del cliente para mejorar la experiencia de compra.
             </p>

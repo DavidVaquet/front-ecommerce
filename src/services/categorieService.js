@@ -64,3 +64,42 @@ export const getStatsCategorias = async () => {
         throw new Error(error);
     }
 }
+
+export const deleteCategoryServices = async (id) => {
+    try {
+        const res = await apiFetch(`${API_URL}/delete-category/${id}`, {
+            method: 'DELETE'
+        });
+
+        return res;
+    } catch (error) {
+        throw new Error(error.message);
+    }
+}
+
+
+export const updateCategoryServices = async ({ id, nombre, descripcion, visible, activo }) => {
+    try {
+        const res = await apiFetch(`${API_URL}/editCategory/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ nombre, descripcion, visible, activo })
+        });
+
+        return res;
+    } catch (error) {
+        throw new Error(error.message);
+    }
+}
+
+export const toggleCategoryState = async ({ id, activo }) => {
+    try {
+        const res = await apiFetch(`${API_URL}/toggleCategoryState/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ activo })
+        });
+
+        return res;
+    } catch (error) {
+        throw new Error(error.message);
+    }
+}

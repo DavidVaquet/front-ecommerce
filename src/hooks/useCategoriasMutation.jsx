@@ -1,5 +1,5 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { createCategoryService } from "../services/categorieService";
+import { createCategoryService, updateCategoryServices, toggleCategoryState, deleteCategoryServices } from "../services/categorieService";
 import { qkCategoriasSubcategoria } from "./useCategorias";
 
 export const useCategoriasMutation = () => {
@@ -9,12 +9,36 @@ export const useCategoriasMutation = () => {
 
     const crearCategoria = useMutation({
         mutationFn: (payload) => createCategoryService(payload),
-        onSuccess: async () => {
+        onSuccess: () => {
             invalidate();
-            qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria()});
+            qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria(), exact: false});
+        }
+    });
+
+    const editarCategoria = useMutation({
+        mutationFn: (payload) => updateCategoryServices(payload),
+        onSuccess: () => {
+            invalidate();
+            qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria(), exact: false});
+        }
+    });
+
+    const cambiarEstado = useMutation({
+        mutationFn: (payload) => toggleCategoryState(payload),
+        onSuccess: () => {
+            invalidate();
+            qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria(), exact: false});
+        }
+    });
+
+    const eliminarCategoria = useMutation({
+        mutationFn: (payload) => deleteCategoryServices(payload),
+        onSuccess: () => {
+            invalidate();
+            qc.invalidateQueries({ queryKey: qkCategoriasSubcategoria(), exact: false});
         }
     });
 
     
-    return { crearCategoria }
+    return { crearCategoria, editarCategoria, cambiarEstado, eliminarCategoria }
 };

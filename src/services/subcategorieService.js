@@ -35,3 +35,28 @@ export const getSubcategories = async ({ activo } = {}) => {
 };
 
 
+export const deleteSubcategoryServices = async (id) => {
+    try {
+        const res = await apiFetch(`${API_URL}/delete-subcategory/${id}`, {
+            method: 'DELETE'
+        });
+
+        return res;
+    } catch (error) {
+        throw new Error(error.message);
+    }
+}
+
+
+export const updateSubcategoryServices = async ({ id, nombre, descripcion, visible, activo }) => {
+    try {
+        const res = await apiFetch(`${API_URL}/editSubcategory/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ nombre, descripcion, visible, activo })
+        });
+
+        return res;
+    } catch (error) {
+        throw new Error(error.message);
+    }
+}

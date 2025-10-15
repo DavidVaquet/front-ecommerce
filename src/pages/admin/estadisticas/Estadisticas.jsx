@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router";
 import {
   formatearPesos,
   formatearPesosRedondeo,
@@ -55,7 +56,9 @@ import { useEstadisticasDashboard } from "../../../hooks/useEstadisticas.jsx";
 import { useNavigate } from "react-router";
 
 export const Estadisticas = () => {
-  const [activeTab, setActiveTab] = useState("resumen");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(initialTab ?? "resumen");
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState("30");
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -166,7 +169,7 @@ export const Estadisticas = () => {
   }
 
   return (
-    <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
+    <div className="text-black flex flex-col w-full py-6 px-8">
       {/* Alerta flotante */}
       {componenteAlerta}
 
@@ -174,7 +177,7 @@ export const Estadisticas = () => {
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2 uppercase">
+            <h1 className="text-3xl font-semibold text-gray-900 mb-2 uppercase">
               Estadísticas del sistema
             </h1>
             <p className="text-gray-600">

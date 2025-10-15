@@ -411,7 +411,7 @@ const { componenteAlerta, mostrarNotificacion } = useNotificacion();
 );
 
   return (
-    <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
+    <div className="text-black flex flex-col w-full py-6 px-8">
       {/* Título y Botón */}
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

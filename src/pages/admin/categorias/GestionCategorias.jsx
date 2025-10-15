@@ -1,16 +1,19 @@
 "use client"
 
-import { useMemo, useState, useCallback, useEffect } from "react"
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router";
 import {
-  Search,
   Plus,
   Tag,
   Folder,
   Grid3X3,
   Package,
   TrendingUp,
-  Filter,
-  Save
+  Save,
+  Pencil,
+  Info,
+  PlusCircle,
+  ChartNoAxesColumnIncreasing
 } from "lucide-react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import {
@@ -18,7 +21,6 @@ import {
   CardBody,
   Button,
   Input,
-  Avatar,
   Tabs,
   TabsHeader,
   TabsBody,
@@ -35,7 +37,8 @@ import {
   Typography,
   IconButton,
   Chip
-} from "@material-tailwind/react"
+} from "@material-tailwind/react";
+import Swal from "sweetalert2";
 import StatsCard from "../../../components/StatsCard"
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue"
 import { useCategoriaSubcategoria, useStatsCategoriaSubcategorias } from "../../../hooks/useCategorias"
@@ -43,14 +46,14 @@ import { CategoriaRow } from "../../../components/Categorias/CategoriaRow";
 import { useNotificacion } from "../../../hooks/useNotificacion"
 import { useCategoriasMutation } from "../../../hooks/useCategoriasMutation";
 import { useSubcategoriasMutation } from "../../../hooks/useSubcategoriaMutation";
+import withReactContent from "sweetalert2-react-content";
 
-const EstadoBadge = (estado) =>
-  estado == true ? (
-    <Chip value='Activo' color="green" size="sm" className="text-xs" />
+const EstadoBadge = ({ estado }) =>
+  estado ? (
+    <Chip value="Activo" color="green" variant="filled" size="sm" className="text-xs" />
   ) : (
-    <Chip value='Inactivo' color="red" size="sm" className="text-xs" />
+    <Chip value="Inactivo" color="red" variant="filled" size="sm" className="text-xs" />
   );
-
 
 export const GestionCategorias = () => {
   const [activeTab, setActiveTab] = useState("todas");
@@ -61,8 +64,11 @@ export const GestionCategorias = () => {
   const [filtroVisibleSubcat, setFiltroVisibleSubcat] = useState(""); 
   const [categoriasExpandidas, setCategoriasExpandidas] = useState(new Set([1, 2]));
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [modalAbiertoSub, setModalAbiertoSub] = useState(false);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
+  const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] = useState(null);
   const [modoEdicion, setModoEdicion] = useState(false);
+  const [modoEdicionSub, setModoEdicionSub] = useState(false);
   const [open, setOpen] = useState(false);
   const [openSub, setOpenSub] = useState(false);
   const [nuevaCategoria, setNuevaCategoria] = useState({
@@ -75,12 +81,31 @@ export const GestionCategorias = () => {
     descripcion: "",
     estado: "",
     categoria_id: null
-  })
+  });
+  const [formEdit, setFormEdit] = useState({
+    nombre: "",
+    descripcion: "",
+    categoria_id: "",
+    visible: "",
+    activo: ""
+  });
+  const [formEditSub, setFormEditSub] = useState({
+    nombre: "",
+    descripcion: "",
+    id: "",
+    visible: "",
+    activo: ""
+  });
+  
+  const navigate = useNavigate();
+
+  // SWAL COMPONENT
+  const MySwal = withReactContent(Swal);
 
   // NOTIFICACIONES
   const {componenteAlerta, mostrarNotificacion} = useNotificacion();
 
-  const categoriasPerPage = 25;
+  const categoriasPerPage = 10;
   const debouncedSearch = useDebouncedValue(busqueda, 500);
   const limit = categoriasPerPage;
   const offset = (currentPage - 1) * categoriasPerPage;
@@ -94,8 +119,10 @@ export const GestionCategorias = () => {
     if (filtroVisibleCat === "0") f.visible = "0";
     if (filtroVisibleSubcat === "1") f.visibleSub = "1";
     if (filtroVisibleSubcat === "0") f.visibleSub = "0";
+    if (filtroEstadoSubcategoria === 'true') f.estadoSub = true;
+    if (filtroEstadoSubcategoria === 'false') f.estadoSub = false;
     return f;
-  }, [limit, offset, debouncedSearch, activeTab, filtroVisibleCat, filtroVisibleSubcat]);
+  }, [limit, offset, debouncedSearch, activeTab, filtroVisibleCat, filtroVisibleSubcat, filtroEstadoSubcategoria]);
 
   const { data, isLoading } = useCategoriaSubcategoria(filtros);
   const categorias = useMemo(() => data?.rows ?? [], [data]);
@@ -104,6 +131,7 @@ export const GestionCategorias = () => {
   const totalCategorias = stats?.total_categorias ?? 0;
   const categoriasActivas = stats?.categorias_activas ?? 0;
   const categoriasInactivas = stats?.categorias_inactivas ?? 0;
+  const totalSubcategorias = stats?.total_subcategorias;
 
   // paginación
   const total = data?.total ?? 0;
@@ -114,7 +142,19 @@ export const GestionCategorias = () => {
   // CATEGORIAS
   const handleOpen = () => setOpen(!open);
 
-  const { crearCategoria } = useCategoriasMutation();
+  const { crearCategoria, editarCategoria, eliminarCategoria } = useCategoriasMutation();
+
+  useEffect(() => {
+    if (!categoriaSeleccionada) return;
+    setFormEdit({
+      nombre: categoriaSeleccionada?.nombre,
+      descripcion: categoriaSeleccionada?.descripcion,
+      visible: Number(categoriaSeleccionada?.visible),
+      categoria_id: categoriaSeleccionada?.id,
+      activo: categoriaSeleccionada?.activo
+    })
+  }, [categoriaSeleccionada, modalAbierto])
+  
 
   const resetFieldsCategorys = () => {
     setNuevaCategoria(prev => ({
@@ -147,8 +187,57 @@ export const GestionCategorias = () => {
       mostrarNotificacion('error', error.message || 'Error al crear la categoría');
     }
     
-    
   };
+
+  const editCategoria = async () => {
+    try {
+      const payload = {
+        nombre: formEdit?.nombre,
+        descripcion: formEdit?.descripcion,
+        visible: parseInt(formEdit?.visible),
+        id: parseInt(formEdit?.categoria_id),
+        activo: formEdit?.activo
+      };
+
+      console.log('payload update:', payload);
+
+      const edit = await editarCategoria.mutateAsync(payload);
+
+      if (edit?.ok) {
+        mostrarNotificacion('success', 'Categoría actualizada correctamente');
+        setCategoriaSeleccionada(null);
+        setModalAbierto(false);
+
+      }
+    } catch (error) {
+      mostrarNotificacion('error', error.message || 'Error al actualizar la categoría')
+    }
+  }
+
+  const handleDeleteCategoria = useCallback((id) => {
+    MySwal.fire({
+      title: "¿Estás seguro?",
+      text: "No podrás revertir esta acción",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+       if (!result.isConfirmed) return;
+
+       try {
+        const resultado = await eliminarCategoria.mutateAsync(id);
+        if (resultado?.ok) {
+          mostrarNotificacion('success', 'Categoría eliminada correctamente');
+        }
+       } catch (error) {
+        mostrarNotificacion('error', error.message || 'Error al eliminar la categoría');
+       }
+    })
+
+  }, [mostrarNotificacion, MySwal, eliminarCategoria])
 
 
   // SUBCATEGORIAS
@@ -163,13 +252,25 @@ export const GestionCategorias = () => {
   }, []);
 
   // MUTATION
-  const {crearSubcategoria} = useSubcategoriasMutation();
+  const { crearSubcategoria, editarSubcategoria, eliminarSubcategoria } = useSubcategoriasMutation();
 
   useEffect(() => {
     if (openSub && categoriaSeleccionada) {
       setNuevaSubcategoria(prev => ({ ...prev, categoria_id: categoriaSeleccionada.id}))
     }
   }, [openSub, categoriaSeleccionada]);
+
+  useEffect(() => {
+    if (!subcategoriaSeleccionada) return;
+    setFormEditSub({
+      nombre: subcategoriaSeleccionada?.nombre,
+      descripcion: subcategoriaSeleccionada?.descripcion,
+      activo: subcategoriaSeleccionada?.estado,
+      visible: subcategoriaSeleccionada?.visible,
+      id: subcategoriaSeleccionada?.id
+    })
+  }, [subcategoriaSeleccionada, modalAbiertoSub])
+  
 
   const resetFieldsSubCategorys = () => {
     setNuevaSubcategoria(prev => ({
@@ -205,6 +306,56 @@ export const GestionCategorias = () => {
     }
   };
 
+  const editSubcategoria = async () => {
+    try {
+      const payload = {
+        nombre: formEditSub?.nombre,
+        descripcion: formEditSub?.descripcion,
+        visible: parseInt(formEditSub?.visible),
+        id: parseInt(formEditSub?.id),
+        activo: formEditSub?.activo
+      };
+
+      console.log('payload update:', payload);
+
+      const edit = await editarSubcategoria.mutateAsync(payload);
+
+      if (edit?.ok) {
+        mostrarNotificacion('success', 'Subcategoría actualizada correctamente');
+        setSubcategoriaSeleccionada(null);
+        setModalAbiertoSub(false);
+
+      }
+    } catch (error) {
+      mostrarNotificacion('error', error.message || 'Error al actualizar la subcategoría')
+    }
+  }
+
+  const handleDeleteSubcategoria = useCallback((id) => {
+    MySwal.fire({
+      title: "¿Estás seguro?",
+      text: "No podrás revertir esta acción",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+       if (!result.isConfirmed) return;
+
+       try {
+        const resultado = await eliminarSubcategoria.mutateAsync(id);
+        if (resultado?.ok) {
+          mostrarNotificacion('success', 'Subcategoría eliminada correctamente');
+        }
+       } catch (error) {
+        mostrarNotificacion('error', error.message || 'Error al eliminar la subcategoría');
+       }
+    })
+
+  }, [mostrarNotificacion, MySwal, eliminarSubcategoria])
+
 
 
   const toggleExpansion = useCallback((categoriaId) => {
@@ -227,13 +378,26 @@ export const GestionCategorias = () => {
     setModoEdicion(false);
   }, []);
 
+  // SUBCATEGORIAS
+  const abrirModalSub = useCallback((subcategoria = null, edicion = false) => {
+    setSubcategoriaSeleccionada(subcategoria);
+    setModoEdicionSub(edicion);
+    setModalAbiertoSub(true);
+  }, []);
+
+  const cerrarModalSub = useCallback(() => {
+    setModalAbiertoSub(false);
+    setSubcategoriaSeleccionada(null);
+    setModoEdicionSub(false);
+  }, []);
+
   return (
     <div className="flex flex-col w-full py-6 px-8 space-y-8">
       {/* Notificaciones */}
       {componenteAlerta}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <Typography variant="h3" className="font-semibold text-black tracking-tight uppercase">
+          <Typography className="font-semibold text-black tracking-tight uppercase text-3xl">
             GESTIÓN DE CATEGORÍAS
           </Typography>
           <Typography variant="paragraph" color="gray" className="mt-1">
@@ -241,9 +405,9 @@ export const GestionCategorias = () => {
           </Typography>
         </div>
         <div className="flex gap-3">
-          <Button variant="outlined" className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Exportar
+          <Button variant="outlined" className="flex items-center gap-2" onClick={() => navigate('/admin/estadisticas?tab=categorias')}>
+            <ChartNoAxesColumnIncreasing className="h-4 w-4" />
+            ESTADISTICAS
           </Button>
           <Button className="flex items-center gap-2 bg-orange-500" onClick={handleOpen}>
             <Plus className="h-5 w-5" />
@@ -258,29 +422,29 @@ export const GestionCategorias = () => {
           titulo="Total Categorías"
           icono={<Tag className="h-6 w-6 text-blue-500" />}
           iconoBackground="blue-50"
-          colorTyppography="blue-gray"
+          colorTyppography="blue"
           valor={totalCategorias}
         />
         <StatsCard
           titulo="Categorías Activas"
           icono={<Grid3X3 className="h-6 w-6 text-green-500" />}
           iconoBackground="green-50"
-          colorTyppography="blue-gray"
+          colorTyppography="green"
           valor={categoriasActivas}
         />
         <StatsCard
           titulo="Categorías Inactivas"
           icono={<Grid3X3 className="h-6 w-6 text-red-500" />}
           iconoBackground="red-50"
-          colorTyppography="blue-gray"
+          colorTyppography="red"
           valor={categoriasInactivas}
         />
         <StatsCard
-          titulo="Subcategorías"
+          titulo="Total Subcategorías"
           icono={<Folder className="h-6 w-6 text-purple-500" />}
           iconoBackground="purple-50"
-          colorTyppography="blue-gray"
-          valor={categorias.reduce((acc, c) => acc + (c.subcategorias?.length ?? 0), 0)}
+          colorTyppography="purple"
+          valor={totalSubcategorias}
         />
       </div>
 
@@ -289,12 +453,11 @@ export const GestionCategorias = () => {
         <CardBody className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 label="Buscar categorías..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-10"
+                className=""
               />
             </div>
             <Select label="Estado de las subcategorías" value={filtroEstadoSubcategoria} onChange={(val) => setFiltroEstadoSubcategoria(val)}>
@@ -303,12 +466,12 @@ export const GestionCategorias = () => {
               <Option value="false">Inactivas</Option>
             </Select>
             <Select label="Visibilidad de las subcategorías" value={filtroVisibleSubcat} onChange={(val) => setFiltroVisibleSubcat(val)}>
-              <Option value="">Todos los estados</Option>
+              <Option value="">Mostrar todas</Option>
               <Option value="1">Visible</Option>
               <Option value="0">Oculta</Option>
             </Select>
             <Select label="Visibilidad de las categorías" value={filtroVisibleCat} onChange={(val) => setFiltroVisibleCat(val)}>
-              <Option value="">Todos los estados</Option>
+              <Option value="">Mostrar todas</Option>
               <Option value="1">Visible</Option>
               <Option value="0">Oculta</Option>
             </Select>
@@ -374,6 +537,9 @@ export const GestionCategorias = () => {
                       onToggle={toggleExpansion}
                       onAbrirModal={abrirModal}
                       onAgregarSubcategoria={handleOpenModalSub}
+                      onDeleteCategoria={handleDeleteCategoria}
+                      onAbrirSubcategoria={abrirModalSub}
+                      onEliminarSubcategoria={handleDeleteSubcategoria}
                     />
                   ))}
                 </div>
@@ -503,10 +669,91 @@ export const GestionCategorias = () => {
             </Dialog>
 
       {/* Modal */}
-      <Dialog open={modalAbierto} handler={cerrarModal} size="xl">
-        <DialogHeader>
-          <Typography variant="h4">
-            {modoEdicion ? (categoriaSeleccionada ? "Editar Categoría" : "Nueva Categoría") : "Detalles de Categoría"}
+      <Dialog open={modalAbiertoSub} handler={cerrarModalSub} size="md">
+        <DialogHeader className="flex items-center gap-2">
+          {modoEdicionSub && subcategoriaSeleccionada ? <Pencil className="h-5 w-5 text-blue-600" aria-hidden="true" />
+                              : <PlusCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
+                              }
+          <Typography variant="h4" className="uppercase">
+            {modoEdicionSub  && subcategoriaSeleccionada ? "Editar Subcategoría" : ''}
+          </Typography>
+        </DialogHeader>
+
+        <DialogBody className="space-y-6">
+          {modoEdicionSub && subcategoriaSeleccionada && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Input 
+                  label="Nombre de la subcategoría" 
+                  placeholder="Ej: Fundas" 
+                  value={formEditSub?.nombre}
+                  onChange={(e) => setFormEditSub(prev => ({ ...prev, nombre: e.target.value}))}
+                   />
+                </div>
+                <div>
+                  <Select 
+                  label="Estado"
+                  value={formEditSub?.activo ? "true" : "false"}
+                  onChange={(val) => setFormEditSub(prev => ({ ...prev, activo: val}))}
+                  >
+                    <Option value="true">Activo</Option>
+                    <Option value="false">Inactivo</Option>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                <Input
+                label="Descripción" 
+                placeholder="Describe la subcategoría..." 
+                value={formEditSub?.descripcion}
+                onChange={(e) => setFormEditSub(prev => ({ ...prev, descripcion: e.target.value}))}
+                />
+                </div>
+                <div>
+                  <Select 
+                  label="Visibilidad"
+                  value={formEditSub?.visible === 1 ? "1" : formEditSub?.visible === 0 ? "0" : ""}
+                  onChange={(val) => setFormEditSub(prev => ({ ...prev, visible: Number(val)}))}
+                  >
+                    <Option value="1">Visible</Option>
+                    <Option value="0">Oculta</Option>
+                  </Select>
+                </div>
+              </div>
+
+              {/* <div className="flex items-center gap-2">
+                <Switch id="destacada" />
+                <Typography variant="small">Categoría destacada</Typography>
+              </div> */}
+            </div>
+          )}
+        </DialogBody>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outlined" onClick={cerrarModalSub}>Cancelar</Button>
+          {modoEdicionSub && (
+            <Button className="bg-orange-500" onClick={editSubcategoria} disabled={editarSubcategoria.isPending}>
+              <div className="flex items-center">
+              <Save className="h-4 w-4 mr-2" /> Guardar Cambios
+              </div>
+            </Button>
+          )}
+        </DialogFooter>
+      </Dialog>
+
+
+      {/* Modal */}
+      <Dialog open={modalAbierto} handler={cerrarModal} size="md">
+        <DialogHeader className="flex items-center gap-2">
+          {modoEdicion  ? (categoriaSeleccionada
+                        ? <Pencil className="h-5 w-5 text-blue-600" aria-hidden="true" />
+                        : <PlusCircle className="h-5 w-5 text-green-600" aria-hidden="true" />)
+                        : <Info className="h-5 w-5 text-gray-600" aria-hidden="true" /> }
+          <Typography variant="h4" className="uppercase">
+            {modoEdicion ? (categoriaSeleccionada ? "Editar Categoría" : "Nueva Categoría") : "Detalles de la Categoría"}
           </Typography>
         </DialogHeader>
 
@@ -515,34 +762,57 @@ export const GestionCategorias = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Input label="Nombre de la categoría" placeholder="Ej: Electrónicos" defaultValue={categoriaSeleccionada?.nombre || ""} />
+                  <Input 
+                  label="Nombre de la categoría" 
+                  placeholder="Ej: Electrónicos" 
+                  value={formEdit?.nombre}
+                  onChange={(e) => setFormEdit(prev => ({ ...prev, nombre: e.target.value}))}
+                   />
                 </div>
                 <div>
-                  <Select label="Estado" defaultValue={categoriaSeleccionada?.estado || "activo"}>
-                    <Option value="activo">Activo</Option>
-                    <Option value="inactivo">Inactivo</Option>
+                  <Select 
+                  label="Estado"
+                  value={formEdit?.activo ? "true" : "false"}
+                  onChange={(val) => setFormEdit(prev => ({ ...prev, activo: val}))}
+                  >
+                    <Option value="true">Activo</Option>
+                    <Option value="false">Inactivo</Option>
                   </Select>
                 </div>
               </div>
 
-              <div>
-                <Textarea label="Descripción" placeholder="Describe la categoría..." defaultValue={categoriaSeleccionada?.descripcion || ""} />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                <Input
+                label="Descripción" 
+                placeholder="Describe la categoría..." 
+                value={formEdit?.descripcion}
+                rows={4}
+                onChange={(e) => setFormEdit(prev => ({ ...prev, descripcion: e.target.value}))}
+                />
+                </div>
+                <div>
+                  <Select 
+                  label="Visibilidad"
+                  value={formEdit?.visible === 1 ? "1" : formEdit?.visible === 0 ? "0" : ""}
+                  onChange={(val) => setFormEdit(prev => ({ ...prev, visible: Number(val)}))}
+                  >
+                    <Option value="1">Visible</Option>
+                    <Option value="0">Oculta</Option>
+                  </Select>
+                </div>
               </div>
 
-              <div>
-                <Input label="URL de imagen" placeholder="https://ejemplo.com/imagen.jpg" defaultValue={categoriaSeleccionada?.imagen || ""} />
-              </div>
-
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <Switch id="destacada" />
                 <Typography variant="small">Categoría destacada</Typography>
-              </div>
+              </div> */}
             </div>
           ) : (
             categoriaSeleccionada && (
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <Avatar src={categoriaSeleccionada.imagen || "/placeholder.svg"} alt={categoriaSeleccionada.nombre} size="xl" />
+                  
                   <div>
                     <Typography variant="h4" className="font-semibold">{categoriaSeleccionada.nombre}</Typography>
                     <Typography variant="paragraph" color="gray">{categoriaSeleccionada.descripcion}</Typography>
@@ -593,18 +863,20 @@ export const GestionCategorias = () => {
           )}
         </DialogBody>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <Button variant="outlined" onClick={cerrarModal}>Cancelar</Button>
           {modoEdicion && (
-            <Button className="bg-orange-500" onClick={cerrarModal}>
+            <Button className="bg-orange-500" onClick={editCategoria} disabled={editarCategoria.isPending}>
+              <div className="flex items-center">
               <Save className="h-4 w-4 mr-2" /> Guardar Cambios
+              </div>
             </Button>
           )}
         </DialogFooter>
       </Dialog>
 
       {/* Modal - SubCategorias*/}
-            <Dialog size="sm" open={openSub} handler={handleOpenModalSub} className="p-4">
+            <Dialog size="sm" open={openSub} handler={handleCloseModalSub} className="p-4">
               <form onSubmit={handleNewSubcategory}>
                 <DialogHeader className="relative m-0 block">
                   <Typography variant="h4" color="blue-gray">

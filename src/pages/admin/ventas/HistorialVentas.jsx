@@ -191,12 +191,12 @@ export const HistorialVentas = () => {
 
 
   return (
-    <div className="text-black flex flex-col w-full py-6 px-8 font-worksans">
+    <div className="text-black flex flex-col w-full py-6 px-8 ">
       {/* Header */}
       <div className="flex w-full flex-col mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight uppercase">Historial de Ventas</h1>
+            <h1 className="text-3xl font-semibold tracking-tight uppercase">Historial de Ventas</h1>
             <p className="text-gray-600 mt-1 lg:text-base text-[14px]">
               Visualiza y analiza todas las ventas realizadas tanto en el local como en la tienda e-commerce.
             </p>
