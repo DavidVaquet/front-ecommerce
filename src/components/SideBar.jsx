@@ -1,9 +1,9 @@
-import React from "react";
-import logo from "../assets/logosidebar.webp";
+import React, { useEffect, useState, useContext } from "react";
+import logoFallback from "../assets/logosidebar.webp";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import { useContext } from "react";
 import { logout } from "../helpers/logout";
+import { getSettingsCompany } from "../services/settingServices";
 import {
   Card,
   Typography,
@@ -26,6 +26,9 @@ import { ChevronRightIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 export function Sidebar() {
   const [open, setOpen] = React.useState(0);
   const [subOpen, setSubOpen] = React.useState(0);
+  const [companySettings, setCompanySettings] = useState(null);
+  const [logoBust, setLogoBust] = useState(Date.now());
+
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
 
@@ -33,14 +36,51 @@ export function Sidebar() {
     setOpen(open === value ? 0 : value);
   };
 
+ 
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const sett = await getSettingsCompany();
+        setCompanySettings(sett);
+      } catch (error) {
+        console.error("Error obteniendo settings:", error);
+      }
+    }
+    fetchSettings();
+  }, []);
+
+
+  
+useEffect(() => {
+    const onLogoUpdated = async () => {
+      console.log("Evento logo-updated recibido");
+      setLogoBust(Date.now());
+
+    };
+    window.addEventListener("logo-updated", onLogoUpdated);
+    return () => window.removeEventListener("logo-updated", onLogoUpdated);
+  }, []);
+
+ 
+  const base = companySettings?.logo_url || "/logo-placeholder.svg";
+  const logoSrc = `${base}${base.includes("?") ? "&" : "?"}v=${logoBust}`;
+
+
   return (
-    <aside className="hidden lg:block lg:sticky top-0 h-screen ">
-      <Card className="min-h-screen w-full max-w-[20rem]  shadow-xl shadow-blue-gray-900/5 bg-white">
+    <aside className="hidden lg:block lg:sticky top-0 h-screen">
+      <Card className="min-h-screen w-full max-w-[20rem] shadow-xl shadow-blue-gray-900/5 bg-white">
         <div className="h-[80px] w-full overflow-hidden">
           <img
-            src={logo}
+            key={logoBust}
+            src={logoSrc}
             alt="brand"
             className="w-full h-full object-cover mx-auto"
+            loading="eager"
+            decoding="async"
+            onError={(e) => {
+              
+              e.currentTarget.src = logoFallback;
+            }}
           />
         </div>
 
@@ -57,10 +97,7 @@ export function Sidebar() {
             }
           >
             <ListItem className="p-0" selected={open === 1}>
-              <AccordionHeader
-                onClick={() => handleOpen(1)}
-                className="border-b-0 p-3"
-              >
+              <AccordionHeader onClick={() => handleOpen(1)} className="border-b-0 p-3">
                 <ListItemPrefix>
                   <PresentationChartBarIcon className="h-5 w-5" />
                 </ListItemPrefix>
@@ -86,6 +123,7 @@ export function Sidebar() {
               </List>
             </AccordionBody>
           </Accordion>
+
           <Accordion
             open={open === 2}
             icon={
@@ -98,10 +136,7 @@ export function Sidebar() {
             }
           >
             <ListItem className="p-0" selected={open === 2}>
-              <AccordionHeader
-                onClick={() => handleOpen(2)}
-                className="border-b-0 p-3"
-              >
+              <AccordionHeader onClick={() => handleOpen(2)} className="border-b-0 p-3">
                 <ListItemPrefix>
                   <ShoppingBagIcon className="h-5 w-5" />
                 </ListItemPrefix>
@@ -127,57 +162,41 @@ export function Sidebar() {
                           }`}
                         />
                       </ListItemPrefix>
-                      <Typography
-                        color="blue-gray"
-                        className="mr-auto font-normal"
-                      >
+                      <Typography color="blue-gray" className="mr-auto font-normal">
                         Productos
                       </Typography>
                     </AccordionHeader>
                   </ListItem>
                   <AccordionBody className="py-1 pl-9">
                     <List className="p-0">
-                      <ListItem
-                        onClick={() => navigate("/admin/productos/nuevo")}
-                      >
+                      <ListItem onClick={() => navigate("/admin/productos/nuevo")}>
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Nuevo producto
                       </ListItem>
                       <ListItem onClick={() => navigate("/admin/productos")}>
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Ver productos
                       </ListItem>
                       <ListItem onClick={() => navigate("/admin/categorias")}>
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Gestión de categorías
                       </ListItem>
                       <ListItem onClick={() => navigate("/admin/productos")}>
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Publicar productos
                       </ListItem>
                     </List>
                   </AccordionBody>
                 </Accordion>
+
                 {/* SUBMENU VENTAS */}
                 <Accordion open={subOpen === 3}>
                   <ListItem className="p-0" selected={subOpen === 3}>
@@ -193,45 +212,29 @@ export function Sidebar() {
                           }`}
                         />
                       </ListItemPrefix>
-                      <Typography
-                        color="blue-gray"
-                        className="mr-auto font-normal"
-                      >
+                      <Typography color="blue-gray" className="mr-auto font-normal">
                         Ventas
                       </Typography>
                     </AccordionHeader>
                   </ListItem>
                   <AccordionBody className="py-1 pl-9">
                     <List className="p-0">
-                      <ListItem
-                        onClick={() =>
-                          navigate("/admin/ventas/registrar-venta")
-                        }
-                      >
+                      <ListItem onClick={() => navigate("/admin/ventas/registrar-venta")}>
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Generar venta
                       </ListItem>
-                      <ListItem
-                        onClick={() =>
-                          navigate("/admin/ventas/historial-ventas")
-                        }
-                      >
+                      <ListItem onClick={() => navigate("/admin/ventas/historial-ventas")}>
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Historial de ventas
                       </ListItem>
                     </List>
                   </AccordionBody>
                 </Accordion>
+
                 {/* SUBMENU STOCK */}
                 <Accordion open={subOpen === 6}>
                   <ListItem className="p-0" selected={subOpen === 6}>
@@ -247,10 +250,7 @@ export function Sidebar() {
                           }`}
                         />
                       </ListItemPrefix>
-                      <Typography
-                        color="blue-gray"
-                        className="mr-auto font-normal"
-                      >
+                      <Typography color="blue-gray" className="mr-auto font-normal">
                         Stock
                       </Typography>
                     </AccordionHeader>
@@ -258,40 +258,30 @@ export function Sidebar() {
                   <AccordionBody className="py-1 pl-9">
                     <List className="p-0">
                       <ListItem
-                        onClick={() =>
-                          navigate("/admin/stock/registrar-movimiento-stock")
-                        }
+                        onClick={() => navigate("/admin/stock/registrar-movimiento-stock")}
                       >
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Generar movimiento
                       </ListItem>
-                      <ListItem
-                        onClick={() =>
-                          navigate("/admin/stock/movimientos-stock")
-                        }
-                      >
+                      <ListItem onClick={() => navigate("/admin/stock/movimientos-stock")}>
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Historial de movimientos
                       </ListItem>
                     </List>
                   </AccordionBody>
                 </Accordion>
+
                 <ListItem onClick={() => navigate("/admin/ordenes")}>
                   <ListItemPrefix>
                     <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
                   </ListItemPrefix>
                   Ordenes
                 </ListItem>
+
                 {/* SUBMENU CLIENTES */}
                 <Accordion open={subOpen === 5}>
                   <ListItem className="p-0" selected={subOpen === 5}>
@@ -307,35 +297,22 @@ export function Sidebar() {
                           }`}
                         />
                       </ListItemPrefix>
-                      <Typography
-                        color="blue-gray"
-                        className="mr-auto font-normal"
-                      >
+                      <Typography color="blue-gray" className="mr-auto font-normal">
                         Clientes
                       </Typography>
                     </AccordionHeader>
                   </ListItem>
                   <AccordionBody className="py-1 pl-9">
                     <List className="p-0">
-                      <ListItem
-                        onClick={() =>
-                          navigate("/admin/clientes/registrar-cliente")
-                        }
-                      >
+                      <ListItem onClick={() => navigate("/admin/clientes/registrar-cliente")}>
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Registrar cliente
                       </ListItem>
                       <ListItem onClick={() => navigate("/admin/clientes")}>
                         <ListItemPrefix>
-                          <ChevronRightIcon
-                            strokeWidth={2}
-                            className="h-3 w-3"
-                          />
+                          <ChevronRightIcon strokeWidth={2} className="h-3 w-3" />
                         </ListItemPrefix>
                         Ver clientes
                       </ListItem>
@@ -345,22 +322,9 @@ export function Sidebar() {
               </List>
             </AccordionBody>
           </Accordion>
+
           <hr className="my-2 border-blue-gray-50" />
-          {/* <ListItem>
-          <ListItemPrefix>
-            <InboxIcon className="h-5 w-5" />
-          </ListItemPrefix>
-          Inbox
-          <ListItemSuffix>
-            <Chip
-              value="14"
-              size="sm"
-              variant="ghost"
-              color="blue-gray"
-              className="rounded-full"
-            />
-          </ListItemSuffix>
-        </ListItem> */}
+
           <ListItem onClick={() => navigate("/admin/perfil")}>
             <ListItemPrefix>
               <UserCircleIcon className="h-5 w-5" />

@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Drawer,
   Button,
@@ -23,11 +23,14 @@ import { AuthContext } from "../context/AuthContext";
 import { logout } from "../helpers/logout";
 import { ChevronRightIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useNavigate } from "react-router";
+import { getSettingsCompany } from "../services/settingServices";
 
 export function MenuDrawer({ titleNombre }) {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [accordionOpen, setAccordionOpen] = React.useState(0);
   const [subOpen, setSubOpen] = React.useState(0);
+  const [companySettings, setCompanySettings] = useState(null);
+  const [logoBust, setLogoBust] = useState(Date.now());
 
   
   const { setUser } = useContext(AuthContext);
@@ -46,6 +49,34 @@ export function MenuDrawer({ titleNombre }) {
 
   }
 
+  useEffect(() => {
+      async function fetchSettings() {
+        try {
+          const sett = await getSettingsCompany();
+          setCompanySettings(sett);
+        } catch (error) {
+          console.error("Error obteniendo settings:", error);
+        }
+      }
+      fetchSettings();
+    }, []);
+  
+  
+    
+  useEffect(() => {
+      const onLogoUpdated = async () => {
+        console.log("Evento logo-updated recibido");
+        setLogoBust(Date.now());
+  
+      };
+      window.addEventListener("logo-updated", onLogoUpdated);
+      return () => window.removeEventListener("logo-updated", onLogoUpdated);
+    }, []);
+  
+   
+    const base = companySettings?.logo_url || "/logo-placeholder.svg";
+    const logoSrc = `${base}${base.includes("?") ? "&" : "?"}v=${logoBust}`;
+
   return (
     <>
       <IconButton size="sm" variant="outlined" color="black" onClick={openDrawer}>
@@ -60,19 +91,19 @@ export function MenuDrawer({ titleNombre }) {
       >
         {/* Layout a alto completo */}
         <div className="flex flex-col h-[100dvh]">
-          <div className="flex items-center justify-between p-4 flex-none">
-            <Typography variant="h5" color="blue-gray">
-              {titleNombre}
-            </Typography>
-            <IconButton variant="text" color="blue-gray" onClick={closeDrawer}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                   viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"
-                   className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </IconButton>
+          <div className="flex items-center justify-center p-4 flex-none border-b">
+          {/* Contenedor con altura fija y padding lateral */}
+          <div className="h-[70px] w-full px-2">
+            <img
+              key={logoBust}
+              src={logoSrc}
+              alt="brand"
+              loading="eager"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
           </div>
+        </div>
 
           {/* Cuerpo scrollable (ocupa el resto) */}
           <div className="flex-1 overflow-y-auto">

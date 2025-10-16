@@ -187,9 +187,9 @@ const ConfiguracionesDashboard = () => {
   const onChange = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    const allowed = ["image/png", "image/jpeg"];
+    const allowed = ["image/png", "image/jpeg", "image/webp"];
     if (!allowed.includes(f.type)) {
-      mostrarNotificacion("error", "Formato no soportado. Usá PNG o JPG.");
+      mostrarNotificacion("error", "Formato no soportado. Usá PNG/JPG/WEBP.");
       e.target.value = "";
       return;
     }
@@ -209,6 +209,7 @@ const ConfiguracionesDashboard = () => {
       if (config) {
         mostrarNotificacion("success", "Configuración general guardada");
         setConfigGeneral((prev) => ({ ...prev, ...config.data }));
+        window.dispatchEvent(new CustomEvent("logo-updated"));
       }
     } catch (error) {
       console.error(error);
