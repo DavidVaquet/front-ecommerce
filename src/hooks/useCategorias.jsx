@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAllCategories, getCategoriasSubCategorias, getStatsCategorias } from "../services/categorieService";
+import { getAllCategories, getCategoriasSubCategorias, getStatsCategorias, obtenerCategoriasEcommerce } from "../services/categorieService";
+import { useMemo } from "react";
 
 export const qkCategorias = (f = {}) => ['categorias', f];
 export const qkCategoriasSubcategoria = (f = {}) => ['categorias', 'subcategorias', f];
@@ -47,5 +48,42 @@ export const useStatsCategoriaSubcategorias = () => {
             }
         
     }
+    })
+}
+
+export const useCategoriasEcommerce = (rawOpts = {}) => {
+
+    const opts = {
+        limiteCategorias: rawOpts?.limiteCategorias ?? null,
+        offset: rawOpts?.offset ?? 0,
+        activo: rawOpts?.activo ?? true,
+        visible: rawOpts?.visible ?? 1,
+        includeCounts: rawOpts?.includeCounts ?? true,
+        includeSubcats: rawOpts?.includeSubcats ?? true,
+        orderBy: rawOpts?.orderBy ?? "",
+        publicadoProd: rawOpts?.publicadoProd ?? 1,
+        estadoProd: rawOpts?.estadoProd ?? 1
+    };
+
+    const filtros = useMemo(() => opts, [JSON.stringify(opts)]);
+    console.log(filtros);
+    return useQuery({
+        queryKey: ['ecommerce', 'categorias', filtros],
+        queryFn: () => obtenerCategoriasEcommerce(filtros),
+        staleTime: 60_000,
+        gcTime: 5 * 60_000
+    })
+};
+
+
+export const useCategoriasEcommerceNavbar = () => {
+    return useCategoriasEcommerce({
+    limiteCategorias: 6,
+    offset: 0,
+    activo: true,
+    visible: 1,
+    includeCounts: false,
+    includeSubcats: true,
+    orderBy: '', 
     })
 }

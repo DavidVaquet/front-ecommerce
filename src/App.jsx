@@ -20,6 +20,7 @@ import RegistrarMovimientoStock from './pages/admin/stock/RegistrarMovimientoSto
 import { RestablecerContrasena } from './pages/auth/RecoveryPassword';
 import { ShoppingCart, Users, BarChart3, FileText, Package, Settings, User as UserIcon, ClipboardList, LayoutGrid } from "lucide-react";
 import { GestionCategorias } from './pages/admin/categorias/GestionCategorias';
+import { HomeEcommerce } from './components/Ecommerce/HomeEcommerce';
 
 
 
@@ -30,7 +31,15 @@ export const router = createBrowserRouter([
   { path: "/restablecer-password", element: <RestablecerContrasena /> },
 
   // TIENDA PUBLICA
-  { path: "/", element: <TiendaLayout /> },
+  { path: "/",
+    element: <TiendaLayout />,
+    children: [
+      {
+        index: true,
+        element: <HomeEcommerce/>
+      }
+    ] 
+  },
 
   // RUTAS PRIVADAS
   { 

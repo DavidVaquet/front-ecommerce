@@ -1,6 +1,7 @@
 import React from "react";
 import { Outlet } from "react-router";
 import { NavbarEcommerce } from "../components/Ecommerce/NavbarEcommerce";
+import { FooterEcommerce } from "../components/Ecommerce/Footer";
 
 const TiendaLayout = () => {
     return (
@@ -10,6 +11,7 @@ const TiendaLayout = () => {
                 <Outlet />
             </main>
             {/* Footer */}
+            {/* <FooterEcommerce /> */}
         </div>
     )
 }

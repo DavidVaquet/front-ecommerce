@@ -551,7 +551,7 @@ export const GestionCategorias = () => {
                 </div>
               )}
               {/* paginación simple */}
-              <div className="lg:flex flex-col lg:items-center lg:justify-between mt-6 text-black">
+              <div className="lg:flex flex-col lg:flex-row lg:items-center lg:justify-between mt-6 text-black">
                 <Typography variant="small" color="gray" className="mb-4">
                   {total === 0 ? "Sin resultados" : `Mostrando ${start}-${end} de ${total} categorías`}
                 </Typography>

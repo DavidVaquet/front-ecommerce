@@ -1,3 +1,4 @@
+import { act } from "react";
 import { apiFetch } from "../helpers/auth";
 const API_URL = `${import.meta.env.VITE_API_URL}/categories`;
 
@@ -101,5 +102,40 @@ export const toggleCategoryState = async ({ id, activo }) => {
         return res;
     } catch (error) {
         throw new Error(error.message);
+    }
+}
+
+export const obtenerCategoriasEcommerce = async ({
+    limiteCategorias, 
+    offset, 
+    activo,
+    visible,
+    includeCounts,
+    includeSubcats,
+    orderBy,
+    publicadoProd,
+    estadoProd 
+}) => {
+    try {
+        const url = new URL(`${API_URL}/get-categorias`);
+        if (limiteCategorias > 0) url.searchParams.set('limiteCategorias', limiteCategorias);
+        if (offset != null) url.searchParams.set('offset', offset);
+        if (activo != null) url.searchParams.set('activo', activo);
+        if (visible != null) url.searchParams.set('visible', visible);
+        if (includeCounts != null) url.searchParams.set('includeCounts', includeCounts);
+        if (includeSubcats != null) url.searchParams.set('includeSubcats', includeSubcats);
+        if (orderBy != null) url.searchParams.set('orderBy', orderBy);
+        if (publicadoProd != null) url.searchParams.set('publicadoProd', publicadoProd);
+        if (estadoProd != null) url.searchParams.set('estadoProd', estadoProd);
+
+        const res = await fetch(`${url}`, {
+            method: 'GET'
+        });
+
+        if (!res.ok) throw new Error(res.message || 'Error al obtener las categorías');
+
+        return res.json();
+    } catch (error) {
+        throw new Error(error.message || 'Error al obtener las categorías');
     }
 }
