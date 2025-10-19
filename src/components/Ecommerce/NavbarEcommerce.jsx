@@ -46,7 +46,7 @@ export const NavbarEcommerce = ({ organizacion }) => {
             <NavLink to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
               <img src="/imagenes/logoapplenegro.png" className="h-9 w-9" alt="Logo iClub" />
               <div className="hidden sm:block">
-                <h1 className="text-gray-900 text-lg font-bold">iClub</h1>
+                <h1 className="text-black text-lg font-bold">iClub</h1>
                 <p className="text-xs text-gray-500 -mt-1">Tienda</p>
               </div>
             </NavLink>
@@ -73,11 +73,11 @@ export const NavbarEcommerce = ({ organizacion }) => {
               {/* Carrito */}
               <NavLink
                 to="/carrito"
-                className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors relative"
+                className="flex items-center gap-2 px-3 py-2 text-black rounded-full transition-colors relative"
               >
                 <ShoppingCart className="h-5 w-5" />
                 <span className="hidden sm:inline text-sm font-medium">Carrito</span>
-                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                <span className="absolute -top-1 -right-1 bg-azul text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
                   3
                 </span>
               </NavLink>
@@ -85,7 +85,7 @@ export const NavbarEcommerce = ({ organizacion }) => {
               {/* Usuario */}
               <NavLink
                 to="/cuenta"
-                className="hidden sm:flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                className="hidden sm:flex items-center gap-2 px-3 py-2 text-black  rounded-full transition-colors"
               >
                 <User className="h-5 w-5" />
                 <span className="text-sm font-medium">Cuenta</span>
@@ -166,7 +166,7 @@ export const NavbarEcommerce = ({ organizacion }) => {
       </nav>
 
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
+        <div className="lg:hidden fixed inset-0 z-60">
           {/* Overlay */}
           <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)} />
 

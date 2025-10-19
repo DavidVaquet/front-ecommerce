@@ -17,7 +17,7 @@ export const Marque = () => {
             key={i.id}
             className="flex flex-row items-center gap-2 px-8 py-2 text-sm font-medium text-gray-800"
           >
-            <i.icon className="w-4 h-4 text-blue-600" />
+            <i.icon className="w-4 h-4 text-azul" />
             <span>{i.text}</span>
           </div>
         ))}

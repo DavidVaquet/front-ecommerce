@@ -108,7 +108,7 @@ export const FooterEcommerce = () => {
         </div>
 
         {/* Newsletter Section */}
-        <div className="border-t border-gray-800 py-8">
+        {/* <div className="border-t border-gray-800 py-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div>
               <h3 className="text-white font-semibold text-lg mb-2">Suscríbete a nuestro Newsletter</h3>
@@ -125,7 +125,7 @@ export const FooterEcommerce = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Bottom Section */}
         <div className="border-t border-gray-800 py-6 flex flex-col md:flex-row items-center justify-between gap-4">

@@ -11,7 +11,7 @@ const TiendaLayout = () => {
                 <Outlet />
             </main>
             {/* Footer */}
-            {/* <FooterEcommerce /> */}
+            <FooterEcommerce />
         </div>
     )
 }

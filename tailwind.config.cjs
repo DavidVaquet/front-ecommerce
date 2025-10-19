@@ -16,6 +16,7 @@ module.exports = withMT ({
   			negro: '#181A2F',
   			gris: '#242F49',
   			bclaro: '#f9f9f9',
+  			azul: '#006EFF',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
